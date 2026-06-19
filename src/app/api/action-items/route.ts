@@ -1,31 +1,34 @@
 import { NextRequest } from 'next/server';
-import { readDb, writeDb, ActionItem } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const db = readDb();
     const searchParams = request.nextUrl.searchParams;
     const projectId = searchParams.get('projectId');
     const status = searchParams.get('status');
 
-    let items = [...db.action_items];
+    const whereClause: any = {};
 
     if (projectId) {
-      items = items.filter((item) => item.project_id === projectId);
+      whereClause.projectId = projectId;
     }
 
     if (status) {
-      items = items.filter((item) => item.status === status);
+      whereClause.status = status;
     }
 
-    // Sort by deadline ascending (nearest first) then created_at descending
+    const items = await prisma.actionItem.findMany({
+      where: whereClause
+    });
+
+    // Sort items: empty deadlines last, otherwise nearest deadline first
     items.sort((a, b) => {
       if (a.deadline && b.deadline) {
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
       }
       if (a.deadline) return -1;
       if (b.deadline) return 1;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     return Response.json(items);
@@ -37,27 +40,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const db = readDb();
     const body = await request.json();
 
     if (!body.title) {
       return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const newItem: ActionItem = {
-      id: `action-${Date.now()}`,
-      title: body.title,
-      description: body.description || '',
-      deadline: body.deadline || '',
-      pic: body.pic || '',
-      status: body.status || 'open',
-      source_note_id: body.source_note_id || undefined,
-      project_id: body.project_id || undefined,
-      created_at: new Date().toISOString(),
-    };
-
-    db.action_items.push(newItem);
-    writeDb(db);
+    const newItem = await prisma.actionItem.create({
+      data: {
+        title: body.title,
+        description: body.description || '',
+        deadline: body.deadline || '',
+        pic: body.pic || '',
+        status: body.status || 'open',
+        sourceNoteId: body.source_note_id || undefined,
+        projectId: body.project_id || undefined,
+      }
+    });
 
     return Response.json(newItem, { status: 201 });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { readDb, writeDb } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: Request,
@@ -7,49 +7,55 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const db = readDb();
 
-    const projectIndex = db.projects.findIndex((p) => p.id === id);
-    if (projectIndex === -1) {
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        stages: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
+
+    if (!project) {
       return Response.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const project = db.projects[projectIndex];
-    const stages = db.project_stages
-      .filter((s) => s.project_id === id)
-      .sort((a, b) => a.order - b.order);
-
-    if (stages.length === 0) {
+    if (project.stages.length === 0) {
       return Response.json({ error: 'No stages defined for this project' }, { status: 400 });
     }
 
-    const currentStageIdx = project.current_stage_index;
+    const currentStageIdx = project.currentStageIndex;
 
     // Mark current stage as completed
-    if (currentStageIdx < stages.length) {
-      const currentStage = stages[currentStageIdx];
-      const stageIdxInDb = db.project_stages.findIndex((s) => s.id === currentStage.id);
-      if (stageIdxInDb !== -1) {
-        db.project_stages[stageIdxInDb].completed_at = new Date().toISOString();
-      }
+    if (currentStageIdx < project.stages.length) {
+      const currentStage = project.stages[currentStageIdx];
+      await prisma.projectStage.update({
+        where: { id: currentStage.id },
+        data: { completedAt: new Date() }
+      });
     }
 
-    // Advance project stage index (but don't exceed the last stage)
-    const nextStageIdx = Math.min(currentStageIdx + 1, stages.length);
-    project.current_stage_index = nextStageIdx;
+    // Advance project stage index
+    const nextStageIdx = Math.min(currentStageIdx + 1, project.stages.length);
     
-    db.projects[projectIndex] = project;
-    writeDb(db);
+    const updatedProject = await prisma.project.update({
+      where: { id },
+      data: {
+        currentStageIndex: nextStageIdx
+      },
+      include: {
+        stages: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
 
-    // Re-fetch updated stages
-    const updatedStages = db.project_stages
-      .filter((s) => s.project_id === id)
-      .sort((a, b) => a.order - b.order);
+    const currentStage = updatedProject.stages[updatedProject.currentStageIndex] || null;
 
     return Response.json({
-      ...project,
-      stages: updatedStages,
-      currentStage: updatedStages[project.current_stage_index] || null
+      ...updatedProject,
+      currentStage
     });
   } catch (error) {
     console.error('Error advancing project stage:', error);

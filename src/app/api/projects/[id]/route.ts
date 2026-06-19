@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { readDb, writeDb } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -7,25 +7,34 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const db = readDb();
 
-    const project = db.projects.find((p) => p.id === id);
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        stages: {
+          orderBy: { order: 'asc' }
+        },
+        actions: true,
+        artifacts: true
+      }
+    });
+
     if (!project) {
       return Response.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const stages = db.project_stages
-      .filter((s) => s.project_id === id)
-      .sort((a, b) => a.order - b.order);
-
-    const actionItems = db.action_items.filter((item) => item.project_id === id);
-    const artifacts = db.artifacts.filter((a) => a.project_id === id);
-
+    // Map Prisma schema model properties to client JSON contract names
     return Response.json({
-      ...project,
-      stages,
-      actionItems,
-      artifacts,
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      deadline: project.deadline,
+      pic: project.pic,
+      current_stage_index: project.currentStageIndex,
+      stages: project.stages,
+      actionItems: project.actions,
+      artifacts: project.artifacts,
+      created_at: project.createdAt
     });
   } catch (error) {
     console.error('Error fetching project detail:', error);
@@ -39,27 +48,18 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const db = readDb();
     const body = await request.json();
 
-    const projectIdx = db.projects.findIndex((p) => p.id === id);
-    if (projectIdx === -1) {
-      return Response.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    const existingProject = db.projects[projectIdx];
-    
-    const updatedProject = {
-      ...existingProject,
-      name: body.name !== undefined ? body.name : existingProject.name,
-      description: body.description !== undefined ? body.description : existingProject.description,
-      deadline: body.deadline !== undefined ? body.deadline : existingProject.deadline,
-      pic: body.pic !== undefined ? body.pic : existingProject.pic,
-      current_stage_index: body.current_stage_index !== undefined ? body.current_stage_index : existingProject.current_stage_index,
-    };
-
-    db.projects[projectIdx] = updatedProject;
-    writeDb(db);
+    const updatedProject = await prisma.project.update({
+      where: { id },
+      data: {
+        name: body.name !== undefined ? body.name : undefined,
+        description: body.description !== undefined ? body.description : undefined,
+        deadline: body.deadline !== undefined ? body.deadline : undefined,
+        pic: body.pic !== undefined ? body.pic : undefined,
+        currentStageIndex: body.current_stage_index !== undefined ? body.current_stage_index : undefined,
+      }
+    });
 
     return Response.json(updatedProject);
   } catch (error) {
@@ -74,26 +74,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const db = readDb();
 
-    const initialLength = db.projects.length;
-    db.projects = db.projects.filter((p) => p.id !== id);
-
-    if (db.projects.length === initialLength) {
-      return Response.json({ error: 'Project not found' }, { status: 404 });
-    }
-
-    // Clean up related stages, artifacts, and disassociate action items
-    db.project_stages = db.project_stages.filter((s) => s.project_id !== id);
-    db.artifacts = db.artifacts.filter((art) => art.project_id !== id);
-    db.action_items = db.action_items.map((item) => {
-      if (item.project_id === id) {
-        return { ...item, project_id: undefined };
-      }
-      return item;
+    // Delete project
+    // Cascade deletes are configured on the DB level via Prisma schema (onDelete: Cascade)
+    // So stages, artifacts, and action items will automatically be deleted by PostgreSQL!
+    await prisma.project.delete({
+      where: { id }
     });
 
-    writeDb(db);
     return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting project:', error);

@@ -14,11 +14,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Enrich with currentStage
+    // Enrich with currentStage and map camelCase to snake_case
     const enrichedProjects = projects.map((proj) => {
       const currentStage = proj.stages[proj.currentStageIndex] || null;
       return {
         ...proj,
+        current_stage_index: proj.currentStageIndex,
         currentStage
       };
     });
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       ...newProject,
+      current_stage_index: newProject.currentStageIndex,
       currentStage
     }, { status: 201 });
   } catch (error) {

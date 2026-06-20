@@ -29,6 +29,11 @@ function NotesContent() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Button Loading States
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+
   // Filtering & Folders
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('All');
@@ -41,7 +46,7 @@ function NotesContent() {
   
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   // Popover State (Convert checklist to action item)
   const [showPopover, setShowPopover] = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
@@ -171,6 +176,8 @@ function NotesContent() {
 
   // Create new note
   const handleNewNote = async () => {
+    if (isCreatingNote) return;
+    setIsCreatingNote(true);
     try {
       const res = await fetch('/api/notes', {
         method: 'POST',
@@ -191,14 +198,17 @@ function NotesContent() {
       }
     } catch (error) {
       console.error('Error creating note:', error);
+    } finally {
+      setIsCreatingNote(false);
     }
   };
 
   // Delete note
   const handleDeleteNote = async () => {
-    if (!selectedNote) return;
+    if (!selectedNote || isDeletingNote) return;
     if (!confirm('Apakah Anda yakin ingin menghapus note ini?')) return;
 
+    setIsDeletingNote(true);
     try {
       const res = await fetch(`/api/notes/${selectedNote.id}`, {
         method: 'DELETE'
@@ -217,6 +227,8 @@ function NotesContent() {
       }
     } catch (error) {
       console.error('Error deleting note:', error);
+    } finally {
+      setIsDeletingNote(false);
     }
   };
 
@@ -365,8 +377,9 @@ function NotesContent() {
 
   // Convert checklist to Action Item
   const handleConvertToActionItem = async () => {
-    if (!popoverFields.title) return;
+    if (!popoverFields.title || isConverting) return;
 
+    setIsConverting(true);
     try {
       const res = await fetch('/api/action-items', {
         method: 'POST',
@@ -420,6 +433,8 @@ function NotesContent() {
       }
     } catch (error) {
       console.error('Error converting checklist to action item:', error);
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -441,8 +456,8 @@ function NotesContent() {
       <div className={styles.notesSidebar}>
         <div className={styles.sidebarHeader}>
           <h2>Catatan saya</h2>
-          <button className={styles.newNoteBtn} onClick={handleNewNote}>
-            + Note Baru
+          <button className={styles.newNoteBtn} onClick={handleNewNote} disabled={isCreatingNote}>
+            {isCreatingNote ? 'Membuat...' : '+ Note Baru'}
           </button>
         </div>
 
@@ -553,14 +568,30 @@ function NotesContent() {
                     className={styles.metaInput}
                   />
                 </div>
-                <button className={styles.deleteBtn} onClick={handleDeleteNote}>
-                  🗑️ Hapus Note
+                <button className={styles.deleteBtn} onClick={handleDeleteNote} disabled={isDeletingNote}>
+                  🗑️ {isDeletingNote ? 'Menghapus...' : 'Hapus Note'}
                 </button>
               </div>
             </div>
 
             {/* Custom Rich Text Formatting Toolbar */}
             <div className={styles.toolbar}>
+              <select 
+                title="Ukuran Teks" 
+                onChange={(e) => {
+                  if (e.target.value) {
+                    executeCmd('fontSize', e.target.value);
+                    e.target.value = ''; // Reset select after action
+                  }
+                }}
+                className={styles.fontSizeSelect}
+                defaultValue=""
+              >
+                <option value="" disabled>Aa Teks</option>
+                <option value="2">Kecil</option>
+                <option value="3">Sedang</option>
+                <option value="4">Besar</option>
+              </select>
               <button title="Heading" onClick={() => executeCmd('formatBlock', '<h3>')}><b>H1</b></button>
               <button title="Paragraph" onClick={() => executeCmd('formatBlock', '<p>')}>P</button>
               <button title="Bold" onClick={() => executeCmd('bold')}><b>B</b></button>
@@ -658,8 +689,8 @@ function NotesContent() {
                         rows={2}
                       />
                     </div>
-                    <button className={styles.convertSubmitBtn} onClick={handleConvertToActionItem}>
-                      Convert Jadi Action Item
+                    <button className={styles.convertSubmitBtn} onClick={handleConvertToActionItem} disabled={isConverting}>
+                      {isConverting ? 'Mengonversi...' : 'Convert Jadi Action Item'}
                     </button>
                   </div>
                 </div>
@@ -670,8 +701,8 @@ function NotesContent() {
           <div className={styles.emptyEditor}>
             <span className={styles.emptyIcon}>📝</span>
             <p>Silakan buat catatan baru atau pilih catatan yang ada di sidebar kiri.</p>
-            <button className={styles.newNoteBtnLarge} onClick={handleNewNote}>
-              + Buat Catatan Baru
+            <button className={styles.newNoteBtnLarge} onClick={handleNewNote} disabled={isCreatingNote}>
+              {isCreatingNote ? 'Membuat...' : '+ Buat Catatan Baru'}
             </button>
           </div>
         )}

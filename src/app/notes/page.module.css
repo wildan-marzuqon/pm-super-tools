@@ -333,6 +333,25 @@
   background-color: #FEF08A !important;
 }
 
+.fontSizeSelect {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted-text);
+  border: 1px solid #E5E7EB;
+  background-color: #ffffff;
+  height: 29px;
+  cursor: pointer;
+  outline: none;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.fontSizeSelect:hover {
+  background-color: #F3F4F6;
+  color: var(--foreground);
+}
+
 /* Editor Body container */
 .editorBodyContainer {
   flex-grow: 1;

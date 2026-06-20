@@ -25,6 +25,7 @@ interface Project {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   
   // Modal / Form state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -56,8 +57,9 @@ export default function ProjectsPage() {
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProject.name.trim()) return;
+    if (!newProject.name.trim() || isCreatingProject) return;
 
+    setIsCreatingProject(true);
     // Parse stages input
     const parsedStages = newProject.stagesInput
       .split(',')
@@ -90,6 +92,8 @@ export default function ProjectsPage() {
       }
     } catch (error) {
       console.error('Error creating project:', error);
+    } finally {
+      setIsCreatingProject(false);
     }
   };
 
@@ -298,8 +302,8 @@ export default function ProjectsPage() {
                 <button type="button" className={styles.cancelBtn} onClick={() => setShowAddModal(false)}>
                   Batal
                 </button>
-                <button type="submit" className={styles.submitBtn}>
-                  Buat Proyek
+                <button type="submit" className={styles.submitBtn} disabled={isCreatingProject}>
+                  {isCreatingProject ? 'Membuat...' : 'Buat Proyek'}
                 </button>
               </div>
             </form>

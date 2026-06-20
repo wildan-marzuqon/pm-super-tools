@@ -25,6 +25,18 @@ export default function ActionItemsPage() {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreatingAction, setIsCreatingAction] = useState(false);
+
+  // Edit action item state
+  const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
+  const [editActionFields, setEditActionFields] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    pic: 'Wildan',
+    projectId: '',
+    status: 'open' as 'open' | 'in_progress' | 'done'
+  });
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'done'>('pending');
@@ -99,8 +111,9 @@ export default function ActionItemsPage() {
 
   const handleCreateAction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAction.title.trim()) return;
+    if (!newAction.title.trim() || isCreatingAction) return;
 
+    setIsCreatingAction(true);
     try {
       const res = await fetch('/api/action-items', {
         method: 'POST',
@@ -121,6 +134,45 @@ export default function ActionItemsPage() {
       }
     } catch (error) {
       console.error('Error creating action item:', error);
+    } finally {
+      setIsCreatingAction(false);
+    }
+  };
+
+  const handleStartEdit = (item: ActionItem) => {
+    setEditingAction(item);
+    setEditActionFields({
+      title: item.title,
+      description: item.description || '',
+      deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      pic: item.pic || '',
+      projectId: item.project_id || '',
+      status: item.status
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAction) return;
+    try {
+      const res = await fetch(`/api/action-items/${editingAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editActionFields.title,
+          description: editActionFields.description,
+          deadline: editActionFields.deadline,
+          pic: editActionFields.pic,
+          project_id: editActionFields.projectId || null,
+          status: editActionFields.status
+        })
+      });
+      if (res.ok) {
+        setEditingAction(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error saving action item edit:', error);
     }
   };
 
@@ -232,8 +284,8 @@ export default function ActionItemsPage() {
               />
             </div>
           </div>
-          <button type="submit" className={styles.submitBtn}>
-            Simpan Action Item
+          <button type="submit" className={styles.submitBtn} disabled={isCreatingAction}>
+            {isCreatingAction ? 'Menyimpan...' : 'Simpan Action Item'}
           </button>
         </form>
       )}
@@ -331,15 +383,104 @@ export default function ActionItemsPage() {
                     {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
                   </div>
 
-                  <button className={styles.deleteBtn} onClick={() => handleDeleteAction(item.id)}>
-                    🗑️
-                  </button>
+                  <div className={styles.itemActions}>
+                    <button className={styles.editBtn} onClick={() => handleStartEdit(item)}>
+                      ✏️ Edit
+                    </button>
+                    <button className={styles.deleteBtn} onClick={() => handleDeleteAction(item.id)}>
+                      🗑️ Hapus
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Edit Action Item Modal */}
+      {editingAction && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} animate-popover`}>
+            <div className={styles.modalHeader}>
+              <h3>Ubah Action Item 📋</h3>
+              <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
+            </div>
+            <form onSubmit={handleSaveEdit}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Judul Tugas *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editActionFields.title}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, title: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Deskripsi / Keterangan</label>
+                  <textarea
+                    value={editActionFields.description}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>PIC (freetext)</label>
+                    <input
+                      type="text"
+                      value={editActionFields.pic}
+                      onChange={(e) => setEditActionFields({ ...editActionFields, pic: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Deadline</label>
+                    <input
+                      type="date"
+                      value={editActionFields.deadline}
+                      onChange={(e) => setEditActionFields({ ...editActionFields, deadline: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Kaitkan ke Project</label>
+                  <select
+                    value={editActionFields.projectId}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, projectId: e.target.value })}
+                  >
+                    <option value="">-- Tanpa Project (Standalone) --</option>
+                    {projects.map((proj) => (
+                      <option key={proj.id} value={proj.id}>
+                        {proj.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Status</label>
+                  <select
+                    value={editActionFields.status}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, status: e.target.value as 'open' | 'in_progress' | 'done' })}
+                  >
+                    <option value="open">Open / Belum Mulai</option>
+                    <option value="in_progress">In Progress / Sedang Dikerjakan</option>
+                    <option value="done">Done / Selesai</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditingAction(null)}>
+                  Batal
+                </button>
+                <button type="submit" className={styles.submitBtn}>
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

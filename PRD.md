@@ -1,7 +1,7 @@
 # PRD — PM Workspace (Notes + Project Tracker)
 
 **Author:** PM  
-**Status:** Draft v3  
+**Status:** Draft v4  
 **Last Updated:** 2026-06-20
 
 ---
@@ -38,10 +38,11 @@ PM di startup AI Indonesia yang butuh tools personal (bukan tim besar), sederhan
 | # | Fitur | Deskripsi |
 |---|-------|-----------|
 | N1 | Rich text formatting | Bold, italic, heading, bullet list, numbered list |
-| N2 | Checklist | Checkbox item di dalam notes |
-| N3 | Convert to Action Item | Checklist item bisa di-convert jadi action item via **inline popover** di samping item (tidak memblok halaman) — isi deadline, PIC, keterangan, dan pilih project (opsional) langsung dari popover |
-| N4 | Organisasi | Notes bisa dikelompokkan per folder/tag |
-| N5 | Search | Full-text search di semua notes |
+| N2 | Checklist | Checkbox item di dalam notes yang **berbentuk lingkaran** (bullet-style checklist) |
+| N3 | Text Size | Pengaturan ukuran teks editor (Small, Normal, Large) |
+| N4 | Convert to Action Item | Checklist item bisa di-convert jadi action item via **inline popover** di samping item (tidak memblok halaman) — isi deadline, PIC, keterangan, dan pilih project (opsional) langsung dari popover |
+| N5 | Organisasi | Notes bisa dikelompokkan per folder/tag |
+| N6 | Search | Full-text search di semua notes |
 
 ### 4.2 Action Items
 
@@ -51,28 +52,31 @@ PM di startup AI Indonesia yang butuh tools personal (bukan tim besar), sederhan
 | A2 | Status | Open / In Progress / Done |
 | A3 | Sumber | Dari notes (convert) atau dibuat manual |
 | A4 | Link ke Project | Action item bisa dikaitkan ke project tertentu |
+| A5 | Edit & Hapus | Action item bisa diedit (inline/modal) dan dihapus baik di halaman list maupun di tab project |
 
 ### 4.3 Project Tracker (Step-by-Step Pipeline)
 
 | # | Fitur | Deskripsi |
 |---|-------|-----------|
-| P1 | Project list | Daftar semua project dengan info ringkas (nama, tahap saat ini, deadline, PIC) |
+| P1 | Project list | Daftar semua project dengan info ringkas (nama, tahap saat ini secara dinamis, deadline, PIC) |
 | P2 | Step visualizer | Setiap project punya tampilan step-by-step horizontal: tahap yang selesai berubah jadi centang (✓), tahap aktif di-highlight, tahap berikutnya abu-abu |
 | P3 | Tahapan custom per project | Setiap project punya daftar tahapannya sendiri, bisa ditambah/edit/hapus via Project Settings |
 | P4 | Default stages | Ideation → POC → Kick Off → Implementation → Live (bisa dimodif) |
 | P5 | Advance stage | Tombol untuk menandai tahap saat ini selesai dan lanjut ke tahap berikutnya |
 | P6 | Project detail | Nama, deskripsi, deadline, PIC, action items terkait, artifacts |
-| P7 | Action Items per project | List action items yang terhubung ke project ini |
-| P8 | Artifacts | Lampiran berupa link (Google Drive, Notion, Figma, dll.) dengan label dan deskripsi singkat |
+| P7 | Action Items per project | List action items yang terhubung ke project ini (bisa diedit dan dihapus) |
+| P8 | Artifacts | Lampiran berupa link (Google Drive, Notion, Figma, dll.) ditampilkan sebagai **list/tabel**, bisa ditambahkan, diedit, dan dihapus |
 | P9 | Project Settings | Menu per project untuk edit info dasar dan manage daftar tahapan (tambah, edit, urutkan, hapus) |
 
 ### 4.4 Dashboard
 
 | # | Fitur | Deskripsi |
 |---|-------|-----------|
-| D1 | Project overview | Ringkasan semua project dengan tahap saat ini dan progress bar |
-| D2 | Upcoming action items | Action items dengan deadline terdekat (7 hari ke depan) |
-| D3 | Recent notes | Notes yang terakhir diedit |
+| D1 | Project overview | Ringkasan semua project dengan tahap saat ini (dinamis, tidak default 'Selesai') |
+| D2 | Action items pending | Card KPI berisi deskripsi "segera selesaikan task secepatnya" |
+| D3 | Action items due this week | Card KPI baru menampilkan jumlah action item yang jatuh tempo pada minggu berjalan (Senin - Minggu) |
+| D4 | Upcoming action items | Action items dengan deadline terdekat (7 hari ke depan) |
+| D5 | Recent notes | Notes yang terakhir diedit |
 
 ---
 
@@ -189,3 +193,6 @@ DELETE /api/artifacts/[id]
 | Auth | Tidak ada — no login, langsung akses |
 | Convert checklist → action item | Muncul sebagai **inline popover kecil** di samping checklist item yang diklik, memuat field: Title (auto-fill dari teks checklist), PIC, Deadline, Keterangan, Link ke Project (dropdown, opsional). Tidak memblok halaman. |
 | PIC | Free text di semua tempat |
+| Checklist Notes | Berbentuk lingkaran (bullet checklist) |
+| UI & Button Loading | Tombol aksi menampilkan indikator "Loading..." / "Saving..." dan ter-disable saat request dikirim |
+| Layout Padding | Compact padding dan card list item memiliki border & bayangan yang lebih rapi |

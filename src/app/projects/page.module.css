@@ -1,5 +1,5 @@
 .container {
-  padding: 32px;
+  padding: 20px 24px;
   overflow-y: auto;
   height: 100%;
 }
@@ -32,7 +32,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .title {
@@ -94,7 +94,7 @@
   background-color: #ffffff;
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  padding: 24px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-sm);
   transition: all var(--transition-fast);
   display: flex;

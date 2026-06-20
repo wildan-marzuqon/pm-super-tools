@@ -81,7 +81,7 @@ export default function Dashboard() {
         </header>
 
         <section className={styles.metricsGrid}>
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className={styles.metricCard}>
               <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '12px' }}></div>
               <div className="skeleton" style={{ height: '36px', width: '50px', marginBottom: '8px' }}></div>
@@ -132,6 +132,36 @@ export default function Dashboard() {
   const pendingActions = actionItems.filter((item) => item.status !== 'done');
   const pendingActionsCount = pendingActions.length;
   
+  // Calculate action items due this week (Monday to Sunday)
+  const getWeekRange = () => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + distanceToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    return { monday, sunday };
+  };
+
+  const { monday, sunday } = getWeekRange();
+
+  const dueThisWeekActions = actionItems.filter((item) => {
+    if (!item.deadline || item.status === 'done') return false;
+    const d = new Date(item.deadline);
+    return d >= monday && d <= sunday;
+  });
+  const dueThisWeekCount = dueThisWeekActions.length;
+
+  const formatShortDate = (d: Date) => {
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  };
+  const weekRangeStr = `${formatShortDate(monday)} - ${formatShortDate(sunday)}`;
+
   // Urgent actions (deadline in the next 7 days or overdue, sorted by date)
   const urgentActions = [...pendingActions]
     .filter((item) => item.deadline)
@@ -191,7 +221,16 @@ export default function Dashboard() {
             <span className={styles.metricIcon}>⏳</span>
           </div>
           <p className={styles.metricVal}>{pendingActionsCount}</p>
-          <p className={styles.metricSub}>Segera selesaikan target minggu ini</p>
+          <p className={styles.metricSub}>segera selesaikan task secepatnya</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricHeader}>
+            <span className={styles.metricLabel}>Due This Week</span>
+            <span className={styles.metricIcon}>📅</span>
+          </div>
+          <p className={styles.metricVal}>{dueThisWeekCount}</p>
+          <p className={styles.metricSub}>Rentang: {weekRangeStr}</p>
         </div>
 
         <div className={styles.metricCard}>

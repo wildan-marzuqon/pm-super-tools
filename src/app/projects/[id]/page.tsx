@@ -49,6 +49,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'actions' | 'artifacts' | 'settings'>('overview');
 
+  // Loading States
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isAddingAction, setIsAddingAction] = useState(false);
+  const [isAddingArtifact, setIsAddingArtifact] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingStages, setIsSavingStages] = useState(false);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+
+  // Edit Modals / Forms state
+  const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
+  const [editActionFields, setEditActionFields] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    pic: 'Wildan',
+    status: 'open' as 'open' | 'in_progress' | 'done'
+  });
+
+  const [editingArtifact, setEditingArtifact] = useState<Artifact | null>(null);
+  const [editArtifactFields, setEditArtifactFields] = useState({
+    label: '',
+    url: '',
+    description: ''
+  });
+
   // New Action Item Form State
   const [newAction, setNewAction] = useState({
     title: '',
@@ -104,7 +129,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   // Handle Advance Stage
   const handleAdvanceStage = async () => {
-    if (!project) return;
+    if (!project || isAdvancing) return;
+    setIsAdvancing(true);
     try {
       const res = await fetch(`/api/projects/${project.id}/advance`, {
         method: 'POST'
@@ -114,14 +140,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error advancing project stage:', error);
+    } finally {
+      setIsAdvancing(false);
     }
   };
 
   // Add Action Item
   const handleAddAction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAction.title.trim() || !project) return;
+    if (!newAction.title.trim() || !project || isAddingAction) return;
 
+    setIsAddingAction(true);
     try {
       const res = await fetch('/api/action-items', {
         method: 'POST',
@@ -142,6 +171,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error adding action item:', error);
+    } finally {
+      setIsAddingAction(false);
     }
   };
 
@@ -162,11 +193,64 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  // Start Action Item Edit
+  const handleStartEditAction = (item: ActionItem) => {
+    setEditingAction(item);
+    setEditActionFields({
+      title: item.title,
+      description: item.description || '',
+      deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      pic: item.pic || '',
+      status: item.status
+    });
+  };
+
+  // Save Action Item Edit
+  const handleSaveActionEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAction) return;
+    try {
+      const res = await fetch(`/api/action-items/${editingAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editActionFields.title,
+          description: editActionFields.description,
+          deadline: editActionFields.deadline,
+          pic: editActionFields.pic,
+          status: editActionFields.status
+        })
+      });
+      if (res.ok) {
+        setEditingAction(null);
+        fetchProjectDetail();
+      }
+    } catch (error) {
+      console.error('Error saving action item edit:', error);
+    }
+  };
+
+  // Delete Action Item
+  const handleDeleteActionItem = async (itemId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus Action Item ini?')) return;
+    try {
+      const res = await fetch(`/api/action-items/${itemId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        fetchProjectDetail();
+      }
+    } catch (error) {
+      console.error('Error deleting action item:', error);
+    }
+  };
+
   // Add Artifact Link
   const handleAddArtifact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newArtifact.label.trim() || !newArtifact.url.trim() || !project) return;
+    if (!newArtifact.label.trim() || !newArtifact.url.trim() || !project || isAddingArtifact) return;
 
+    setIsAddingArtifact(true);
     try {
       const res = await fetch(`/api/projects/${project.id}/artifacts`, {
         method: 'POST',
@@ -181,6 +265,42 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error creating artifact:', error);
+    } finally {
+      setIsAddingArtifact(false);
+    }
+  };
+
+  // Start Artifact Edit
+  const handleStartEditArtifact = (art: Artifact) => {
+    setEditingArtifact(art);
+    setEditArtifactFields({
+      label: art.label,
+      url: art.url,
+      description: art.description || ''
+    });
+  };
+
+  // Save Artifact Edit
+  const handleSaveArtifactEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingArtifact || !project) return;
+    try {
+      const res = await fetch(`/api/projects/${project.id}/artifacts`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingArtifact.id,
+          label: editArtifactFields.label,
+          url: editArtifactFields.url,
+          description: editArtifactFields.description
+        })
+      });
+      if (res.ok) {
+        setEditingArtifact(null);
+        fetchProjectDetail();
+      }
+    } catch (error) {
+      console.error('Error saving artifact edit:', error);
     }
   };
 
@@ -204,8 +324,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Save Settings (General project info)
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!project) return;
+    if (!project || isSavingSettings) return;
 
+    setIsSavingSettings(true);
     try {
       const res = await fetch(`/api/projects/${project.id}`, {
         method: 'PUT',
@@ -223,12 +344,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error updating project settings:', error);
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
   // Delete Project
   const handleDeleteProject = async () => {
+    if (isDeletingProject) return;
     if (!confirm('Apakah Anda yakin ingin menghapus seluruh proyek ini beserta semua stages dan artifacts terkait?')) return;
+
+    setIsDeletingProject(true);
     try {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'DELETE'
@@ -238,6 +364,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error deleting project:', error);
+    } finally {
+      setIsDeletingProject(false);
     }
   };
 
@@ -259,12 +387,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const handleSaveStages = async () => {
-    if (!project) return;
+    if (!project || isSavingStages) return;
     if (stagesList.length === 0) {
       alert('Project harus memiliki minimal 1 stage.');
       return;
     }
     
+    setIsSavingStages(true);
     try {
       const res = await fetch(`/api/projects/${project.id}/stages`, {
         method: 'PUT',
@@ -278,6 +407,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Error saving stages:', error);
+    } finally {
+      setIsSavingStages(false);
     }
   };
 
@@ -562,8 +693,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     rows={2}
                   />
                 </div>
-                <button type="submit" className={styles.submitBtn}>
-                  Simpan Action Item
+                <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
+                  {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
                 </button>
               </form>
             )}
@@ -575,21 +706,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               ) : (
                 project.actionItems.map((item) => (
                   <div key={item.id} className={`${styles.actionCard} ${item.status === 'done' ? styles.actionDoneCard : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={item.status === 'done'}
-                      onChange={() => handleToggleActionStatus(item)}
-                      className={styles.actionCheckbox}
-                    />
-                    <div className={styles.actionDetails}>
-                      <h4 className={styles.actionTitle}>{item.title}</h4>
-                      {item.description && <p className={styles.actionDesc}>{item.description}</p>}
-                      <div className={styles.actionMetaTags}>
-                        <span className={styles.actionPic}>PIC: {item.pic}</span>
-                        {item.deadline && (
-                          <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={item.status === 'done'}
+                        onChange={() => handleToggleActionStatus(item)}
+                        className={styles.actionCheckbox}
+                      />
+                      <div className={styles.actionDetails}>
+                        <h4 className={styles.actionTitle}>{item.title}</h4>
+                        {item.description && <p className={styles.actionDesc}>{item.description}</p>}
+                        <div className={styles.actionMetaTags}>
+                          <span className={styles.actionPic}>PIC: {item.pic}</span>
+                          {item.deadline && (
+                            <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
+                          )}
+                        </div>
                       </div>
+                    </div>
+                    <div className={styles.actionItemRight}>
+                      <button className={styles.editActionBtn} onClick={() => handleStartEditAction(item)}>✏️ Edit</button>
+                      <button className={styles.deleteActionBtn} onClick={() => handleDeleteActionItem(item.id)}>🗑️ Hapus</button>
                     </div>
                   </div>
                 ))
@@ -646,34 +783,55 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     placeholder="Dokumen ini berisi tentang..."
                   />
                 </div>
-                <button type="submit" className={styles.submitBtn}>
-                  Simpan Link Artifact
+                <button type="submit" className={styles.submitBtn} disabled={isAddingArtifact}>
+                  {isAddingArtifact ? 'Menyimpan...' : 'Simpan Link Artifact'}
                 </button>
               </form>
             )}
 
-            {/* Artifacts List */}
-            <div className={styles.artifactsGrid}>
+            {/* Artifacts List as structured table list */}
+            <div className={styles.artifactsList}>
               {project.artifacts.length === 0 ? (
                 <p className={styles.emptyTabMsg}>Belum ada link dokumen yang disimpan.</p>
               ) : (
-                project.artifacts.map((art) => (
-                  <div key={art.id} className={styles.artifactCard}>
-                    <div className={styles.artIcon}>🔗</div>
-                    <div className={styles.artContent}>
-                      <h4>
-                        <a href={art.url} target="_blank" rel="noopener noreferrer" className={styles.artLink}>
-                          {art.label}
-                        </a>
-                      </h4>
-                      {art.description && <p className={styles.artDesc}>{art.description}</p>}
-                      <span className={styles.artUrl}>{art.url}</span>
-                    </div>
-                    <button className={styles.artDeleteBtn} onClick={() => handleDeleteArtifact(art.id)}>
-                      🗑️ Hapus
-                    </button>
-                  </div>
-                ))
+                <div className={styles.artifactsTableContainer}>
+                  <table className={styles.artifactsTable}>
+                    <thead>
+                      <tr>
+                        <th>Dokumen / Link</th>
+                        <th>Deskripsi</th>
+                        <th>URL</th>
+                        <th style={{ width: '150px', textAlign: 'center' }}>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {project.artifacts.map((art) => (
+                        <tr key={art.id}>
+                          <td className={styles.artLabelCell}>
+                            <span className={styles.artIconCell}>🔗</span>
+                            <a href={art.url} target="_blank" rel="noopener noreferrer" className={styles.artTableLink}>
+                              {art.label}
+                            </a>
+                          </td>
+                          <td>{art.description || '-'}</td>
+                          <td className={styles.artUrlCell} title={art.url}>
+                            <span className={styles.artUrlText}>{art.url}</span>
+                          </td>
+                          <td>
+                            <div className={styles.artTableActions}>
+                              <button className={styles.artEditBtn} onClick={() => handleStartEditArtifact(art)}>
+                                ✏️ Edit
+                              </button>
+                              <button className={styles.artDeleteBtn} onClick={() => handleDeleteArtifact(art.id)}>
+                                🗑️ Hapus
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
@@ -719,15 +877,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     onChange={(e) => setSettingsDeadline(e.target.value)}
                   />
                 </div>
-                <button type="submit" className={styles.saveSettingsBtn}>
-                  Simpan Perubahan Detail
+                <button type="submit" className={styles.saveSettingsBtn} disabled={isSavingSettings}>
+                  {isSavingSettings ? 'Menyimpan...' : 'Simpan Perubahan Detail'}
                 </button>
               </form>
               <div className={styles.dangerZone}>
                 <h4>Danger Zone 🚨</h4>
                 <p>Hapus proyek ini secara permanen dari Workspace.</p>
-                <button className={styles.deleteProjBtn} onClick={handleDeleteProject}>
-                  Hapus Proyek Ini
+                <button className={styles.deleteProjBtn} onClick={handleDeleteProject} disabled={isDeletingProject}>
+                  {isDeletingProject ? 'Menghapus...' : 'Hapus Proyek Ini'}
                 </button>
               </div>
             </div>
@@ -770,14 +928,134 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </button>
                 </div>
 
-                <button className={styles.saveStagesBtn} onClick={handleSaveStages}>
-                  Simpan Pipeline Stages baru
+                <button className={styles.saveStagesBtn} onClick={handleSaveStages} disabled={isSavingStages}>
+                  {isSavingStages ? 'Menyimpan...' : 'Simpan Pipeline Stages baru'}
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Edit Action Item Modal */}
+      {editingAction && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} animate-popover`}>
+            <div className={styles.modalHeader}>
+              <h3>Ubah Action Item 📋</h3>
+              <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
+            </div>
+            <form onSubmit={handleSaveActionEdit}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Judul Tugas *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editActionFields.title}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, title: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Deskripsi / Keterangan</label>
+                  <textarea
+                    value={editActionFields.description}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>PIC (freetext)</label>
+                    <input
+                      type="text"
+                      value={editActionFields.pic}
+                      onChange={(e) => setEditActionFields({ ...editActionFields, pic: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Deadline</label>
+                    <input
+                      type="date"
+                      value={editActionFields.deadline}
+                      onChange={(e) => setEditActionFields({ ...editActionFields, deadline: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Status</label>
+                  <select
+                    value={editActionFields.status}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, status: e.target.value as 'open' | 'in_progress' | 'done' })}
+                  >
+                    <option value="open">Open / Belum Mulai</option>
+                    <option value="in_progress">In Progress / Sedang Dikerjakan</option>
+                    <option value="done">Done / Selesai</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditingAction(null)}>
+                  Batal
+                </button>
+                <button type="submit" className={styles.submitBtn}>
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Artifact Modal */}
+      {editingArtifact && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} animate-popover`}>
+            <div className={styles.modalHeader}>
+              <h3>Ubah Dokumen / Artifact 🔗</h3>
+              <button className={styles.closeBtn} onClick={() => setEditingArtifact(null)}>×</button>
+            </div>
+            <form onSubmit={handleSaveArtifactEdit}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Label / Judul Dokumen *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editArtifactFields.label}
+                    onChange={(e) => setEditArtifactFields({ ...editArtifactFields, label: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>URL Link *</label>
+                  <input
+                    type="url"
+                    required
+                    value={editArtifactFields.url}
+                    onChange={(e) => setEditArtifactFields({ ...editArtifactFields, url: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Deskripsi Singkat</label>
+                  <input
+                    type="text"
+                    value={editArtifactFields.description}
+                    onChange={(e) => setEditArtifactFields({ ...editArtifactFields, description: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditingArtifact(null)}>
+                  Batal
+                </button>
+                <button type="submit" className={styles.submitBtn}>
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

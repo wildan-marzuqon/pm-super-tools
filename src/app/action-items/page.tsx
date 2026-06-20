@@ -368,6 +368,15 @@ export default function ActionItemsPage() {
                         </Link>
                       )}
                       <span className={styles.picBadge}>PIC: {item.pic}</span>
+                      <span className={`${styles.statusBadge} ${
+                        item.status === 'done' ? styles.statusDone : 
+                        item.status === 'in_progress' ? styles.statusInProgress : 
+                        styles.statusOpen
+                      }`}>
+                        {item.status === 'done' ? 'Selesai' : 
+                         item.status === 'in_progress' ? 'In Progress' : 
+                         'Open'}
+                      </span>
                       {item.source_note_id && (
                         <Link href={`/notes?id=${item.source_note_id}`} className={styles.noteLink}>
                           📝 Lihat Note Asal

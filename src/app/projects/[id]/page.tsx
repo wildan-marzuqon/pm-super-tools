@@ -718,6 +718,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         {item.description && <p className={styles.actionDesc}>{item.description}</p>}
                         <div className={styles.actionMetaTags}>
                           <span className={styles.actionPic}>PIC: {item.pic}</span>
+                          <span className={`${styles.statusBadge} ${
+                            item.status === 'done' ? styles.statusDone : 
+                            item.status === 'in_progress' ? styles.statusInProgress : 
+                            styles.statusOpen
+                          }`}>
+                            {item.status === 'done' ? 'Selesai' : 
+                             item.status === 'in_progress' ? 'In Progress' : 
+                             'Open'}
+                          </span>
                           {item.deadline && (
                             <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
                           )}

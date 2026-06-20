@@ -366,6 +366,82 @@
   color: var(--muted-text);
 }
 
+/* Greeting Banner & Clock Widget */
+.greetingBanner {
+  background: linear-gradient(135deg, #FFFDF5 0%, #FEF9E7 100%);
+  border: 1px solid #FDE047;
+  border-radius: var(--border-radius-lg);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.greetingText h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #854D0E;
+  margin-bottom: 2px;
+}
+
+.greetingText p {
+  font-size: 13px;
+  color: #A16207;
+}
+
+.dateTimeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.liveClock {
+  font-size: 24px;
+  font-weight: 800;
+  color: #854D0E;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.5px;
+}
+
+.liveDate {
+  font-size: 12px;
+  color: #A16207;
+}
+
+/* Action Status Badges */
+.statusBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.25px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.statusOpen {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.statusInProgress {
+  background-color: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
+}
+
+.statusDone {
+  background-color: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
 @media (max-width: 1024px) {
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
@@ -373,6 +449,18 @@
 }
 
 @media (max-width: 768px) {
+  .greetingBanner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .dateTimeContainer {
+    align-items: flex-start;
+    text-align: left;
+  }
+
   .metricsGrid {
     grid-template-columns: 1fr;
     gap: 16px;

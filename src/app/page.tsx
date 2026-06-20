@@ -42,6 +42,19 @@ export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Time & Date State
+  const [mounted, setMounted] = useState(false);
+  const [time, setTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    setTime(new Date());
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -69,6 +82,26 @@ export default function Dashboard() {
 
     fetchData();
   }, []);
+
+  const formatDateTime = (date: Date) => {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    
+    const dayName = days[date.getDay()];
+    const dateNum = date.getDate();
+    const monthName = months[date.getMonth()];
+    const year = date.getFullYear();
+    
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return {
+      dayName,
+      dateString: `${dateNum} ${monthName} ${year}`,
+      timeString: `${hours}:${minutes}:${seconds}`
+    };
+  };
 
   if (loading) {
     return (
@@ -188,6 +221,24 @@ export default function Dashboard() {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
+      {/* Dynamic Clock & Greeting Banner */}
+      <div className={styles.greetingBanner}>
+        <div className={styles.greetingText}>
+          <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan Marzuqon! 👋</h2>
+          <p>Berikut ringkasan workspace Anda hari ini.</p>
+        </div>
+        <div className={styles.dateTimeContainer}>
+          <div className={styles.liveClock}>{mounted && time ? formatDateTime(time).timeString : '--:--:--'}</div>
+          <div className={styles.liveDate}>
+            {mounted && time ? (
+              <><strong>{formatDateTime(time).dayName}</strong>, {formatDateTime(time).dateString}</>
+            ) : (
+              '...'
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <header className={styles.header}>
         <div>
@@ -272,6 +323,15 @@ export default function Dashboard() {
                             <span className={styles.projectTag}>{associatedProject.name}</span>
                           )}
                           <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
+                          <span className={`${styles.statusBadge} ${
+                            item.status === 'done' ? styles.statusDone : 
+                            item.status === 'in_progress' ? styles.statusInProgress : 
+                            styles.statusOpen
+                          }`}>
+                            {item.status === 'done' ? 'Selesai' : 
+                             item.status === 'in_progress' ? 'In Progress' : 
+                             'Open'}
+                          </span>
                         </div>
                       </div>
                       <div className={styles.actionDateContainer}>

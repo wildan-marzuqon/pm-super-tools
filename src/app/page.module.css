@@ -746,3 +746,39 @@
   background: transparent;
 }
 
+.addBtn {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 18px;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: none;
+}
+
+.addBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.submitBtn {
+  background-color: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.submitBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+

@@ -726,72 +726,86 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h3>Action Items Terkait Project</h3>
               <button
                 className={styles.addTabBtn}
-                onClick={() => setShowAddActionForm(!showAddActionForm)}
+                onClick={() => setShowAddActionForm(true)}
               >
-                {showAddActionForm ? 'Batal' : '+ Action Item Baru'}
+                + Action Item Baru
               </button>
             </div>
 
-            {/* Inline Add Action Item Form */}
+            {/* Add Action Item Modal */}
             {showAddActionForm && (
-              <form id="addActionFormSection" onSubmit={handleAddAction} className={styles.inlineForm}>
-                <h4>Tambah Action Item</h4>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label>Judul Tugas *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newAction.title}
-                      onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
-                      placeholder="Apa yang perlu diselesaikan?"
-                    />
+              <div className={styles.modalOverlay} onClick={() => setShowAddActionForm(false)}>
+                <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
+                  <div className={styles.modalHeader}>
+                    <h3>Buat Action Item Baru ⚡</h3>
+                    <button type="button" className={styles.closeBtn} onClick={() => setShowAddActionForm(false)}>×</button>
                   </div>
-                  <div className={styles.formGroup}>
-                    <label>PIC (freetext)</label>
-                    <input
-                      type="text"
-                      value={newAction.pic}
-                      onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
-                      placeholder="Nama PIC..."
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Kategori</label>
-                    <select
-                      value={newAction.categoryId}
-                      onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
-                    >
-                      <option value="">Tanpa Kategori</option>
-                      {project.categories && project.categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Deadline</label>
-                    <input
-                      type="date"
-                      value={newAction.deadline}
-                      onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
-                    />
-                  </div>
+                  <form onSubmit={handleAddAction}>
+                    <div className={styles.modalBody}>
+                      <div className={styles.formGroup}>
+                        <label>Judul Tugas *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAction.title}
+                          onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                          placeholder="Apa yang perlu diselesaikan?"
+                        />
+                      </div>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label>PIC (freetext)</label>
+                          <input
+                            type="text"
+                            value={newAction.pic}
+                            onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
+                            placeholder="Nama PIC..."
+                          />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label>Deadline</label>
+                          <input
+                            type="date"
+                            value={newAction.deadline}
+                            onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Kategori</label>
+                        <select
+                          value={newAction.categoryId}
+                          onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
+                        >
+                          <option value="">Tanpa Kategori</option>
+                          {project.categories && project.categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Deskripsi / Keterangan</label>
+                        <textarea
+                          value={newAction.description}
+                          onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                          placeholder="Keterangan tambahan..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.modalFooter}>
+                      <button type="button" className={styles.cancelBtn} onClick={() => setShowAddActionForm(false)}>
+                        Batal
+                      </button>
+                      <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
+                        {isAddingAction ? 'Menyimpan...' : 'Buat Action Item'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Keterangan / Detail</label>
-                  <textarea
-                    value={newAction.description}
-                    onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
-                    placeholder="Instruksi detail..."
-                    rows={2}
-                  />
-                </div>
-                <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
-                  {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
-                </button>
-              </form>
+              </div>
             )}
 
             {/* Actions List */}

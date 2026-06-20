@@ -66,6 +66,17 @@ export default function Dashboard() {
   // Dropdown state for task completion
   const [showCompleteDropdown, setShowCompleteDropdown] = useState(false);
 
+  // Add Action Item Modal State
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newAction, setNewAction] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    pic: 'Wildan',
+    projectId: '',
+    categoryId: ''
+  });
+
   useEffect(() => {
     setMounted(true);
     setTime(new Date());
@@ -196,15 +207,62 @@ export default function Dashboard() {
         }
         
         if (createNew) {
-          if (assocProj) {
-            router.push(`/projects/${assocProj.id}?add_action=true`);
-          } else {
-            router.push('/action-items');
-          }
+          setNewAction(prev => ({
+            ...prev,
+            projectId: assocProj ? assocProj.id : '',
+            categoryId: ''
+          }));
+          setShowAddForm(true);
         }
       }
     } catch (error) {
       console.error('Error completing action item:', error);
+    }
+  };
+
+  const handleCreateAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAction.title) return;
+    try {
+      const res = await fetch('/api/action-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newAction.title,
+          description: newAction.description,
+          deadline: newAction.deadline,
+          pic: newAction.pic,
+          completed: false,
+          project_id: newAction.projectId || null,
+          category_id: newAction.categoryId || null
+        })
+      });
+      if (res.ok) {
+        setNewAction({
+          title: '',
+          description: '',
+          deadline: '',
+          pic: 'Wildan',
+          projectId: '',
+          categoryId: ''
+        });
+        setShowAddForm(false);
+        
+        // Refresh dashboard data
+        const [projRes, actionRes, notesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/action-items'),
+          fetch('/api/notes'),
+        ]);
+
+        if (projRes.ok && actionRes.ok && notesRes.ok) {
+          setProjects(await projRes.json());
+          setActionItems(await actionRes.json());
+          setNotes(await notesRes.json());
+        }
+      }
+    } catch (error) {
+      console.error('Error creating action item:', error);
     }
   };
 
@@ -371,6 +429,9 @@ export default function Dashboard() {
           <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau notes & pipeline proyek startup AI.</p>
         </div>
         <div className={styles.actions}>
+          <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
+            + Action Item Baru
+          </button>
           <Link href="/notes" className={styles.primaryBtn}>
             <span>+ Note Baru</span>
           </Link>
@@ -646,6 +707,98 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Action Item Modal */}
+      {showAddForm && (
+        <div className={styles.modalOverlay} onClick={() => setShowAddForm(false)}>
+          <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Buat Action Item Baru ⚡</h3>
+              <button type="button" className={styles.closeBtn} onClick={() => setShowAddForm(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreateAction}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Judul Tugas *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newAction.title}
+                    onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                    placeholder="Tulis nama tugas..."
+                  />
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>PIC (freetext)</label>
+                    <input
+                      type="text"
+                      value={newAction.pic}
+                      onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
+                      placeholder="Nama PIC..."
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Deadline</label>
+                    <input
+                      type="date"
+                      value={newAction.deadline}
+                      onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Kaitkan ke Project</label>
+                  <select
+                    value={newAction.projectId}
+                    onChange={(e) => setNewAction({ ...newAction, projectId: e.target.value, categoryId: '' })}
+                  >
+                    <option value="">-- Tanpa Project (Standalone) --</option>
+                    {projects.map((proj) => (
+                      <option key={proj.id} value={proj.id}>
+                        {proj.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {newAction.projectId && (
+                  <div className={styles.formGroup}>
+                    <label>Kategori</label>
+                    <select
+                      value={newAction.categoryId}
+                      onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
+                    >
+                      <option value="">Tanpa Kategori</option>
+                      {projects.find(p => p.id === newAction.projectId)?.categories?.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className={styles.formGroup}>
+                  <label>Deskripsi / Keterangan</label>
+                  <textarea
+                    value={newAction.description}
+                    onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                    placeholder="Keterangan tambahan..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setShowAddForm(false)}>
+                  Batal
+                </button>
+                <button type="submit" className={styles.submitBtn}>
+                  Buat Action Item
+                </button>
               </div>
             </form>
           </div>

@@ -60,8 +60,11 @@ export default function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logoArea}>
-        <div className={styles.logoIcon}>⚡</div>
-        <span className={styles.logoText}>SuperPM</span>
+        <div className={styles.logoIcon}>WM</div>
+        <div className={styles.logoTextContainer}>
+          <span className={styles.logoText}>PM⚡</span>
+          <span className={styles.logoSubtext}>AI Startup Workspace</span>
+        </div>
       </div>
 
       <nav className={styles.nav}>

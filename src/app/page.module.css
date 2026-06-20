@@ -1,45 +1,76 @@
 .container {
-  padding: 20px 24px;
+  padding: var(--container-margin);
   overflow-y: auto;
   height: 100%;
-}
-
-.loadingContainer {
   display: flex;
   flex-direction: column;
+  gap: var(--container-margin);
+  padding-bottom: 80px; /* space for mobile nav if needed */
+}
+
+/* Digital Clock & Greeting Banner */
+.greetingBanner {
+  background: linear-gradient(135deg, rgba(73, 75, 214, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(73, 75, 214, 0.15);
+  border-radius: var(--border-radius-lg);
+  padding: var(--comfortable-padding);
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 16px;
-  color: var(--muted-text);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--primary-light);
-  border-top: 4px solid var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.greetingText h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 4px;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.greetingText p {
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dateTimeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.liveClock {
+  font-family: 'Geist', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1px;
+  text-shadow: 0 0 20px rgba(73, 75, 214, 0.15);
+}
+
+.liveDate {
+  font-size: 12px;
+  color: var(--on-surface-variant);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-top: 4px;
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.75px;
-  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 2px;
 }
 
 .subtitle {
@@ -52,62 +83,43 @@
   gap: 12px;
 }
 
-.primaryBtn, .secondaryBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  border-radius: var(--border-radius-md);
-  font-size: 13px;
-  font-weight: 600;
-  transition: all var(--transition-fast);
-  text-decoration: none;
-}
-
 .primaryBtn {
   background-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .primaryBtn:hover {
   background-color: var(--primary-hover);
-  transform: translateY(-1px);
 }
 
-.secondaryBtn {
-  background-color: #ffffff;
-  color: var(--foreground);
-  border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-sm);
-}
-
-.secondaryBtn:hover {
-  background-color: var(--background);
-  transform: translateY(-1px);
-}
-
-/* Metrics Row */
+/* Metrics KPI Cards */
 .metricsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--gutter);
 }
 
 .metricCard {
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-lg);
-  padding: 16px;
+  border-radius: var(--border-radius-md);
+  padding: var(--comfortable-padding);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .metricCard:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: #FDE047; /* Yellow border highlight */
+  border-color: var(--primary);
 }
 
 .metricHeader {
@@ -117,105 +129,157 @@
   margin-bottom: 12px;
 }
 
+.metricIconContainer {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconPrimary {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.iconWarning {
+  background-color: var(--warning-light);
+  color: var(--warning-text);
+}
+
+.iconError {
+  background-color: var(--error-light);
+  color: var(--error-text);
+}
+
+.iconSecondary {
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+}
+
 .metricLabel {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.metricIcon {
-  font-size: 20px;
-}
-
 .metricVal {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 26px;
+  font-weight: 700;
   color: var(--foreground);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  font-family: 'Outfit', sans-serif;
 }
 
 .metricSub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-text);
 }
 
-/* Main Grid Layout */
+.metricSubWarning {
+  color: var(--warning-text);
+  font-weight: 500;
+}
+
+/* Split Main Grid Layout */
 .mainGrid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--gutter);
 }
 
 .cardSection {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  overflow: hidden;
 }
 
 .sectionHeader {
+  padding: var(--comfortable-padding);
+  border-bottom: 1px solid var(--outline-variant);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: var(--surface-container-low);
 }
 
 .sectionHeader h2 {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .viewAll {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #D97706;
+  color: var(--primary);
   text-decoration: none;
-  transition: color var(--transition-fast);
 }
 
 .viewAll:hover {
   color: var(--primary-hover);
 }
 
-.sectionCard {
-  background-color: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-lg);
-  padding: 20px;
-  box-shadow: var(--shadow-sm);
-  min-height: 250px;
-}
-
 /* Urgent Action Items */
 .actionList {
   display: flex;
   flex-direction: column;
+  padding: 8px;
 }
 
 .actionItemRow {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #F3F4F6;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
 }
 
-.actionItemRow:last-child {
-  border-bottom: none;
+.actionItemRow:hover {
+  background-color: var(--surface-container-low);
+  border-color: var(--outline-variant);
+}
+
+.checkboxContainer {
+  padding-top: 2px;
 }
 
 .actionMain {
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.actionHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .actionTitle {
   font-size: 14px;
   font-weight: 600;
   color: var(--foreground);
+}
+
+.actionDesc {
+  font-size: 12px;
+  color: var(--muted-text);
+  line-height: 1.4;
 }
 
 .actionMeta {
@@ -225,59 +289,80 @@
   flex-wrap: wrap;
 }
 
-.projectTag {
-  font-size: 11px;
-  font-weight: 600;
-  background-color: #FEF3C7;
-  color: #D97706;
+.picTag {
+  font-size: 10px;
+  font-weight: 500;
+  background-color: var(--surface-container-highest);
+  color: var(--on-surface-variant);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
-.picTag {
-  font-size: 11px;
-  color: var(--muted-text);
-  background-color: #F3F4F6;
+.statusBadge {
+  font-size: 10px;
+  font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.statusOpen {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.statusInProgress {
+  background-color: var(--warning-light);
+  color: var(--warning-text);
+}
+
+.projectTagBadge {
+  font-size: 10px;
+  font-weight: 500;
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actionDateContainer {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 4px;
 }
 
-.actionDate {
-  font-size: 13px;
+.itemDate {
+  font-family: 'Geist', monospace;
+  font-size: 11px;
   color: var(--muted-text);
-  font-weight: 500;
 }
 
-.actionDate.overdue {
-  color: #EF4444;
+.overdue {
+  color: var(--error);
   font-weight: 600;
 }
 
 .overdueBadge {
   font-size: 9px;
   font-weight: 700;
-  background-color: #FEE2E2;
-  color: #EF4444;
-  padding: 2px 6px;
-  border-radius: 4px;
+  background-color: var(--error-light);
+  color: var(--error);
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
-/* Empty State */
-.emptyState, .emptyNotesState {
+.emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 200px;
-  color: var(--muted-text);
+  padding: 40px 20px;
   text-align: center;
+  color: var(--muted-text);
   gap: 8px;
 }
 
@@ -285,182 +370,107 @@
   font-size: 32px;
 }
 
-.createLink {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  text-decoration: none;
-  margin-top: 4px;
-}
-
-.createLink:hover {
-  text-decoration: underline;
-}
-
-/* Recent Notes Grid */
+/* Recent Notes */
 .notesGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 16px;
 }
 
 .noteCard {
   background-color: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-lg);
-  padding: 18px;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--border-radius-sm);
+  padding: 12px 16px;
   text-decoration: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
+  transition: all var(--transition-fast);
 }
 
 .noteCard:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: #FDE047;
+  transform: translateY(-1px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
 }
 
-.noteFolderTag {
+.noteHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.noteFolder {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  background-color: #FFFBEB;
-  color: #B45309;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  border: 1px solid #FEF3C7;
+  color: var(--secondary);
+  background-color: var(--secondary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .noteTitle {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--foreground);
 }
 
 .noteSnippet {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-text);
-  line-height: 1.5;
+  line-height: 1.4;
+  height: 34px;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .noteFooter {
-  width: 100%;
   display: flex;
   justify-content: flex-end;
-  border-top: 1px solid #F9FAFB;
-  padding-top: 8px;
-  margin-top: 4px;
 }
 
 .noteDate {
-  font-size: 11px;
+  font-family: 'Geist', monospace;
+  font-size: 10px;
   color: var(--muted-text);
 }
 
-/* Greeting Banner & Clock Widget */
-.greetingBanner {
-  background: linear-gradient(135deg, #FFFDF5 0%, #FEF9E7 100%);
-  border: 1px solid #FDE047;
-  border-radius: var(--border-radius-lg);
-  padding: 16px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-sm);
-}
-
-.greetingText h2 {
-  font-size: 18px;
-  font-weight: 800;
-  color: #854D0E;
-  margin-bottom: 2px;
-}
-
-.greetingText p {
-  font-size: 13px;
-  color: #A16207;
-}
-
-.dateTimeContainer {
+.addNoteCard {
+  border: 1px dashed var(--outline-variant);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-}
-
-.liveClock {
-  font-size: 24px;
-  font-weight: 800;
-  color: #854D0E;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  letter-spacing: 0.5px;
-}
-
-.liveDate {
-  font-size: 12px;
-  color: #A16207;
-}
-
-/* Action Status Badges */
-.statusBadge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.25px;
-  display: inline-flex;
   align-items: center;
-  margin-left: 4px;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted-text);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-height: 110px;
 }
 
-.statusOpen {
-  background-color: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+.addNoteCard:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: var(--primary-subtle);
 }
 
-.statusInProgress {
-  background-color: #FFF7ED;
-  color: #C2410C;
-  border: 1px solid #FED7AA;
+.addNoteIcon {
+  font-size: 24px;
 }
 
-.statusDone {
-  background-color: #ECFDF5;
-  color: #047857;
-  border: 1px solid #A7F3D0;
-}
-
-.projectTagBadge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  vertical-align: middle;
-  background-color: #F3E8FF;
-  color: #6B21A8;
-  border: 1px solid #E9D5FF;
-}
-
+/* Responsiveness */
 @media (max-width: 1024px) {
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .mainGrid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -469,36 +479,14 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
-    padding: 16px;
   }
-
+  
   .dateTimeContainer {
     align-items: flex-start;
     text-align: left;
   }
-
+  
   .metricsGrid {
     grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .mainGrid {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  
-  .actions {
-    width: 100%;
-  }
-  
-  .primaryBtn, .secondaryBtn {
-    flex: 1;
   }
 }
-

@@ -98,26 +98,46 @@ export default function Dashboard() {
     
     return {
       dayName,
-      dateString: `${dateNum} ${monthName} ${year}`,
+      dateString: `${dayName}, ${dateNum} ${monthName} ${year}`,
       timeString: `${hours}:${minutes}:${seconds}`
     };
+  };
+
+  const handleToggleStatus = async (item: ActionItem) => {
+    const nextStatus = item.status === 'done' ? 'open' : 'done';
+    try {
+      const res = await fetch(`/api/action-items/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
+      });
+
+      if (res.ok) {
+        setActionItems((prev) =>
+          prev.map((ai) => (ai.id === item.id ? { ...ai, status: nextStatus } : ai))
+        );
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   if (loading) {
     return (
       <div className={styles.container}>
-        <header className={styles.header}>
-          <div>
-            <div className="skeleton" style={{ height: '32px', width: '200px', marginBottom: '8px' }}></div>
-            <div className="skeleton" style={{ height: '16px', width: '380px' }}></div>
+        <div className={styles.greetingBanner}>
+          <div className={styles.greetingText}>
+            <div className="skeleton" style={{ height: '28px', width: '220px', marginBottom: '8px' }}></div>
+            <div className="skeleton" style={{ height: '16px', width: '180px' }}></div>
           </div>
-        </header>
+          <div className="skeleton" style={{ height: '36px', width: '120px' }}></div>
+        </div>
 
         <section className={styles.metricsGrid}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className={styles.metricCard}>
               <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '12px' }}></div>
-              <div className="skeleton" style={{ height: '36px', width: '50px', marginBottom: '8px' }}></div>
+              <div className="skeleton" style={{ height: '36px', width: '55px', marginBottom: '8px' }}></div>
               <div className="skeleton" style={{ height: '12px', width: '120px' }}></div>
             </div>
           ))}
@@ -125,29 +145,32 @@ export default function Dashboard() {
 
         <div className={styles.mainGrid}>
           <section className={styles.cardSection}>
-            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
-            <div className={styles.sectionCard} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className={styles.sectionHeader}>
+              <div className="skeleton" style={{ height: '20px', width: '180px' }}></div>
+            </div>
+            <div className={styles.actionList}>
               {[1, 2, 3].map((i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F3F4F6' }}>
-                  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div key={i} className={styles.actionItemRow} style={{ padding: '16px 12px' }}>
+                  <div className="skeleton" style={{ height: '20px', width: '20px', borderRadius: '50%', marginRight: '12px' }}></div>
+                  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="skeleton" style={{ height: '14px', width: '60%' }}></div>
                     <div className="skeleton" style={{ height: '10px', width: '100px' }}></div>
                   </div>
-                  <div className="skeleton" style={{ height: '14px', width: '60px' }}></div>
                 </div>
               ))}
             </div>
           </section>
 
           <section className={styles.cardSection}>
-            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
+            <div className={styles.sectionHeader}>
+              <div className="skeleton" style={{ height: '20px', width: '150px' }}></div>
+            </div>
             <div className={styles.notesGrid}>
               {[1, 2].map((i) => (
-                <div key={i} className={styles.noteCard}>
-                  <div className="skeleton" style={{ height: '16px', width: '40px', marginBottom: '8px' }}></div>
-                  <div className="skeleton" style={{ height: '18px', width: '80%', marginBottom: '8px' }}></div>
-                  <div className="skeleton" style={{ height: '12px', width: '100%', marginBottom: '4px' }}></div>
-                  <div className="skeleton" style={{ height: '12px', width: '90%' }}></div>
+                <div key={i} className={styles.noteCard} style={{ minHeight: '110px' }}>
+                  <div className="skeleton" style={{ height: '14px', width: '60px', marginBottom: '6px' }}></div>
+                  <div className="skeleton" style={{ height: '16px', width: '80%', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ height: '12px', width: '100%' }}></div>
                 </div>
               ))}
             </div>
@@ -195,7 +218,7 @@ export default function Dashboard() {
   };
   const weekRangeStr = `${formatShortDate(monday)} - ${formatShortDate(sunday)}`;
 
-  // Urgent actions (deadline in the next 7 days or overdue, sorted by date)
+  // Urgent actions (sorted by deadline ascending)
   const urgentActions = [...pendingActions]
     .filter((item) => item.deadline)
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
@@ -221,167 +244,173 @@ export default function Dashboard() {
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* Dynamic Clock & Greeting Banner */}
-      <div className={styles.greetingBanner}>
+      {/* Top Banner */}
+      <section className={styles.greetingBanner}>
         <div className={styles.greetingText}>
-          <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan Marzuqon! 👋</h2>
-          <p>Berikut ringkasan workspace Anda hari ini.</p>
+          <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan 👋</h2>
+          <p>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span style={{ marginLeft: '4px' }}>
+              {mounted && time ? formatDateTime(time).dateString : '...'}
+            </span>
+          </p>
         </div>
         <div className={styles.dateTimeContainer}>
-          <div className={styles.liveClock}>{mounted && time ? formatDateTime(time).timeString : '--:--:--'}</div>
-          <div className={styles.liveDate}>
-            {mounted && time ? (
-              <><strong>{formatDateTime(time).dayName}</strong>, {formatDateTime(time).dateString}</>
-            ) : (
-              '...'
-            )}
-          </div>
+          <div className={styles.liveClock}>{mounted && time ? formatDateTime(time).timeString : '00:00:00'}</div>
         </div>
-      </div>
+      </section>
 
-      {/* Header */}
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>💡 PM Workspace</h1>
-          <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau notes & pipeline proyek startup AI.</p>
-        </div>
-        <div className={styles.actions}>
-          <Link href="/notes" className={styles.primaryBtn}>
-            <span>+ Note Baru</span>
-          </Link>
-          <Link href="/projects" className={styles.secondaryBtn}>
-            <span>+ Proyek Baru</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Metrics Row */}
+      {/* KPI Cards Row */}
       <section className={styles.metricsGrid}>
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Proyek Aktif</span>
-            <span className={styles.metricIcon}>🚀</span>
+            <p className={styles.metricLabel}>Total Proyek Aktif</p>
+            <div className={`${styles.metricIconContainer} ${styles.iconPrimary}`}>📁</div>
           </div>
-          <p className={styles.metricVal}>{activeProjectsCount}</p>
-          <p className={styles.metricSub}>Dari total {projects.length} proyek terdaftar</p>
+          <h3 className={styles.metricVal}>{activeProjectsCount}</h3>
+          <p className={styles.metricSub}>Dari total {projects.length} proyek</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Action Items Pending</span>
-            <span className={styles.metricIcon}>⏳</span>
+            <p className={styles.metricLabel}>Action Item Pending</p>
+            <div className={`${styles.metricIconContainer} ${styles.iconWarning}`}>⏳</div>
           </div>
-          <p className={styles.metricVal}>{pendingActionsCount}</p>
-          <p className={styles.metricSub}>segera selesaikan task secepatnya</p>
+          <h3 className={styles.metricVal}>{pendingActionsCount}</h3>
+          <p className={`${styles.metricSub} ${styles.metricSubWarning}`}>Segera selesaikan task secepatnya</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Due This Week</span>
-            <span className={styles.metricIcon}>📅</span>
+            <p className={styles.metricLabel}>Due This Week</p>
+            <div className={`${styles.metricIconContainer} ${styles.iconError}`}>📅</div>
           </div>
-          <p className={styles.metricVal}>{dueThisWeekCount}</p>
+          <h3 className={styles.metricVal}>{dueThisWeekCount}</h3>
           <p className={styles.metricSub}>Rentang: {weekRangeStr}</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Total Notes</span>
-            <span className={styles.metricIcon}>📝</span>
+            <p className={styles.metricLabel}>Total Notes</p>
+            <div className={`${styles.metricIconContainer} ${styles.iconSecondary}`}>📝</div>
           </div>
-          <p className={styles.metricVal}>{notes.length}</p>
-          <p className={styles.metricSub}>Terbagi dalam {Array.from(new Set(notes.map(n => n.folder))).length} folder</p>
+          <h3 className={styles.metricVal}>{notes.length}</h3>
+          <p className={styles.metricSub}>Di dalam {Array.from(new Set(notes.map(n => n.folder))).length} folder</p>
         </div>
       </section>
 
-      {/* Content Grid */}
+      {/* Main Split Layout */}
       <div className={styles.mainGrid}>
-        {/* Left Column: Urgent Action Items */}
+        {/* Urgent Action Items */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>Urgent Action Items ⚡</h2>
-            <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
+            <h2>⚠️ Action Items Mendesk</h2>
+            <Link href="/action-items" className={styles.viewAll}>Lihat Semua</Link>
           </div>
-          <div className={styles.sectionCard}>
-            {urgentActions.length === 0 ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>🎉</span>
-                <p>Tidak ada action item mendesak.</p>
-                <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
-              </div>
-            ) : (
-              <div className={styles.actionList}>
-                {urgentActions.map((item) => {
-                  const associatedProject = projects.find((p) => p.id === item.project_id);
-                  const overdue = isOverdue(item.deadline);
-                  return (
-                    <div key={item.id} className={styles.actionItemRow}>
-                      <div className={styles.actionMain}>
-                        <p className={styles.actionTitle}>{item.title}</p>
-                        <div className={styles.actionMeta}>
-                          <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
-                          <span className={`${styles.statusBadge} ${
-                            item.status === 'done' ? styles.statusDone : 
-                            item.status === 'in_progress' ? styles.statusInProgress : 
-                            styles.statusOpen
-                          }`}>
-                            {item.status === 'done' ? 'Selesai' : 
-                             item.status === 'in_progress' ? 'In Progress' : 
-                             'Open'}
+          
+          {urgentActions.length === 0 ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}>🎉</span>
+              <p>Tidak ada action item mendesak.</p>
+            </div>
+          ) : (
+            <div className={styles.actionList}>
+              {urgentActions.map((item) => {
+                const assocProject = projects.find((p) => p.id === item.project_id);
+                const overdue = isOverdue(item.deadline);
+                
+                return (
+                  <div key={item.id} className={styles.actionItemRow}>
+                    <div className={styles.checkboxContainer}>
+                      <input
+                        type="checkbox"
+                        checked={item.status === 'done'}
+                        onChange={() => handleToggleStatus(item)}
+                      />
+                    </div>
+                    
+                    <div className={styles.actionMain}>
+                      <div className={styles.actionHeaderRow}>
+                        <h4 className={styles.actionTitle}>{item.title}</h4>
+                        <div className={styles.actionDateContainer}>
+                          <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
+                            {formatDate(item.deadline)}
                           </span>
-                          {associatedProject && (
-                            <span className={styles.projectTagBadge} title={associatedProject.name}>
-                              📁 {associatedProject.name}
-                            </span>
-                          )}
+                          {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
                         </div>
                       </div>
-                      <div className={styles.actionDateContainer}>
-                        <span className={`${styles.actionDate} ${overdue ? styles.overdue : ''}`}>
-                          {formatDate(item.deadline)}
+                      
+                      {item.description && <p className={styles.actionDesc}>{item.description}</p>}
+                      
+                      <div className={styles.actionMeta}>
+                        <span className={styles.picTag}>👤 {item.pic || 'Unassigned'}</span>
+                        <span className={`${styles.statusBadge} ${
+                          item.status === 'done' ? styles.statusDone : 
+                          item.status === 'in_progress' ? styles.statusInProgress : 
+                          styles.statusOpen
+                        }`}>
+                          {item.status === 'done' ? 'Selesai' : 
+                           item.status === 'in_progress' ? 'In Progress' : 
+                           'Open'}
                         </span>
-                        {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                        {assocProject && (
+                          <Link href={`/projects/${assocProject.id}`} className={styles.projectTagBadge} title={assocProject.name}>
+                            📁 {assocProject.name}
+                          </Link>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
-        {/* Right Column: Recent Notes */}
+        {/* Recent Notes */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>Notes Terakhir Diedit 📝</h2>
-            <Link href="/notes" className={styles.viewAll}>Buka Notes</Link>
+            <h2>📝 Catatan Terbaru</h2>
+            <Link href="/notes" className={styles.viewAll}>Lihat Semua</Link>
           </div>
+          
           <div className={styles.notesGrid}>
             {recentNotes.length === 0 ? (
-              <div className={styles.emptyNotesState}>
-                <span className={styles.emptyIcon}>✍️</span>
-                <p>Belum ada notes dibuat.</p>
-                <Link href="/notes" className={styles.createLink}>Buat note pertama</Link>
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>📝</span>
+                <p>Belum ada catatan.</p>
               </div>
             ) : (
               recentNotes.map((note) => (
                 <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
-                  <div className={styles.noteFolderTag}>{note.folder}</div>
-                  <h3 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h3>
-                  <div 
+                  <div className={styles.noteHeader}>
+                    <span className={styles.noteFolder}>{note.folder || 'Work'}</span>
+                  </div>
+                  <h4 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h4>
+                  <p 
                     className={styles.noteSnippet}
                     dangerouslySetInnerHTML={{ 
                       __html: note.content 
-                        ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + '...'
-                        : 'No content yet...'
+                        ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + (note.content.length > 100 ? '...' : '')
+                        : 'Mulai menulis catatan...'
                     }}
                   />
                   <div className={styles.noteFooter}>
-                    <span className={styles.noteDate}>Update: {formatDate(note.updated_at)}</span>
+                    <span className={styles.noteDate}>{formatDate(note.updated_at)}</span>
                   </div>
                 </Link>
               ))
             )}
+            
+            <Link href="/notes" className={styles.addNoteCard}>
+              <span className={styles.addNoteIcon}>➕</span>
+              <span className={styles.addNoteText}>Buat Catatan Baru</span>
+            </Link>
           </div>
         </section>
       </div>

@@ -645,58 +645,72 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h3>Action Items Terkait Project</h3>
               <button
                 className={styles.addTabBtn}
-                onClick={() => setShowAddActionForm(!showAddActionForm)}
+                onClick={() => setShowAddActionForm(true)}
               >
-                {showAddActionForm ? 'Batal' : '+ Action Item Baru'}
+                + Action Item Baru
               </button>
             </div>
 
-            {/* Inline Add Action Item Form */}
+            {/* Modal Add Action Item Form */}
             {showAddActionForm && (
-              <form onSubmit={handleAddAction} className={styles.inlineForm}>
-                <h4>Tambah Action Item</h4>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label>Judul Tugas *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newAction.title}
-                      onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
-                      placeholder="Apa yang perlu diselesaikan?"
-                    />
+              <div className={styles.modalOverlay}>
+                <div className={`${styles.modal} animate-popover`}>
+                  <div className={styles.modalHeader}>
+                    <h3>Tambah Action Item 📋</h3>
+                    <button className={styles.closeBtn} onClick={() => setShowAddActionForm(false)}>×</button>
                   </div>
-                  <div className={styles.formGroup}>
-                    <label>PIC (freetext)</label>
-                    <input
-                      type="text"
-                      value={newAction.pic}
-                      onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
-                      placeholder="Nama PIC..."
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Deadline</label>
-                    <input
-                      type="date"
-                      value={newAction.deadline}
-                      onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
-                    />
-                  </div>
+                  <form onSubmit={handleAddAction}>
+                    <div className={styles.modalBody}>
+                      <div className={styles.formGroup}>
+                        <label>Judul Tugas *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newAction.title}
+                          onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                          placeholder="Apa yang perlu diselesaikan?"
+                        />
+                      </div>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label>PIC (freetext)</label>
+                          <input
+                            type="text"
+                            value={newAction.pic}
+                            onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
+                            placeholder="Nama PIC..."
+                          />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label>Deadline</label>
+                          <input
+                            type="date"
+                            value={newAction.deadline}
+                            onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Keterangan / Detail</label>
+                        <textarea
+                          value={newAction.description}
+                          onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                          placeholder="Instruksi detail..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.modalFooter}>
+                      <button type="button" className={styles.cancelBtn} onClick={() => setShowAddActionForm(false)}>
+                        Batal
+                      </button>
+                      <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
+                        {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Keterangan / Detail</label>
-                  <textarea
-                    value={newAction.description}
-                    onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
-                    placeholder="Instruksi detail..."
-                    rows={2}
-                  />
-                </div>
-                <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
-                  {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
-                </button>
-              </form>
+              </div>
             )}
 
             {/* Actions List */}
@@ -756,51 +770,63 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h3>Dokumen & Artifacts Proyek</h3>
               <button
                 className={styles.addTabBtn}
-                onClick={() => setShowAddArtForm(!showAddArtForm)}
+                onClick={() => setShowAddArtForm(true)}
               >
-                {showAddArtForm ? 'Batal' : 'Tambah Baru'}
+                Tambah Baru
               </button>
             </div>
 
-            {/* Inline Add Artifact Link Form */}
+            {/* Modal Add Artifact Link Form */}
             {showAddArtForm && (
-              <form onSubmit={handleAddArtifact} className={styles.inlineForm}>
-                <h4>Tambah Dokumen / Link</h4>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label>Label / Judul Dokumen *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newArtifact.label}
-                      onChange={(e) => setNewArtifact({ ...newArtifact, label: e.target.value })}
-                      placeholder="Contoh: Folder Google Drive POC"
-                    />
+              <div className={styles.modalOverlay}>
+                <div className={`${styles.modal} animate-popover`}>
+                  <div className={styles.modalHeader}>
+                    <h3>Tambah Dokumen / Link 🔗</h3>
+                    <button className={styles.closeBtn} onClick={() => setShowAddArtForm(false)}>×</button>
                   </div>
-                  <div className={styles.formGroup}>
-                    <label>URL Link *</label>
-                    <input
-                      type="url"
-                      required
-                      value={newArtifact.url}
-                      onChange={(e) => setNewArtifact({ ...newArtifact, url: e.target.value })}
-                      placeholder="https://drive.google.com/..."
-                    />
-                  </div>
+                  <form onSubmit={handleAddArtifact}>
+                    <div className={styles.modalBody}>
+                      <div className={styles.formGroup}>
+                        <label>Label / Judul Dokumen *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newArtifact.label}
+                          onChange={(e) => setNewArtifact({ ...newArtifact, label: e.target.value })}
+                          placeholder="Contoh: Folder Google Drive POC"
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>URL Link *</label>
+                        <input
+                          type="url"
+                          required
+                          value={newArtifact.url}
+                          onChange={(e) => setNewArtifact({ ...newArtifact, url: e.target.value })}
+                          placeholder="https://drive.google.com/..."
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Deskripsi Singkat</label>
+                        <input
+                          type="text"
+                          value={newArtifact.description}
+                          onChange={(e) => setNewArtifact({ ...newArtifact, description: e.target.value })}
+                          placeholder="Dokumen ini berisi tentang..."
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.modalFooter}>
+                      <button type="button" className={styles.cancelBtn} onClick={() => setShowAddArtForm(false)}>
+                        Batal
+                      </button>
+                      <button type="submit" className={styles.submitBtn} disabled={isAddingArtifact}>
+                        {isAddingArtifact ? 'Menyimpan...' : 'Simpan Link Artifact'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Deskripsi Singkat</label>
-                  <input
-                    type="text"
-                    value={newArtifact.description}
-                    onChange={(e) => setNewArtifact({ ...newArtifact, description: e.target.value })}
-                    placeholder="Dokumen ini berisi tentang..."
-                  />
-                </div>
-                <button type="submit" className={styles.submitBtn} disabled={isAddingArtifact}>
-                  {isAddingArtifact ? 'Menyimpan...' : 'Simpan Link Artifact'}
-                </button>
-              </form>
+              </div>
             )}
 
             {/* Artifacts List as structured table list */}

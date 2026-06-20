@@ -59,7 +59,7 @@ function NotesContent() {
     description: ''
   });
 
-  // Fetch initial notes and projects
+  // 1. Fetch initial notes and projects on mount
   useEffect(() => {
     async function fetchData() {
       try {
@@ -74,12 +74,15 @@ function NotesContent() {
           setProjects(projectsData);
 
           // If a note ID is provided in query, select it
-          if (selectedNoteId) {
-            const activeNote = notesData.find((n: Note) => n.id === selectedNoteId);
+          const urlNoteId = new URLSearchParams(window.location.search).get('id');
+          if (urlNoteId) {
+            const activeNote = notesData.find((n: Note) => n.id === urlNoteId);
             if (activeNote) {
               selectNote(activeNote);
+              return;
             }
-          } else if (notesData.length > 0) {
+          }
+          if (notesData.length > 0) {
             selectNote(notesData[0]);
           }
         }
@@ -90,7 +93,34 @@ function NotesContent() {
       }
     }
     fetchData();
-  }, [selectedNoteId]);
+  }, []);
+
+  // 2. Select note when selectedNoteId in query changes (external navigations like back/forward or click from dashboard)
+  useEffect(() => {
+    if (!loading && selectedNoteId && notes.length > 0) {
+      if (selectedNote?.id !== selectedNoteId) {
+        const activeNote = notes.find((n) => n.id === selectedNoteId);
+        if (activeNote) {
+          setSelectedNote(activeNote);
+          setEditorTitle(activeNote.title);
+          setEditorFolder(activeNote.folder);
+          setEditorTags(activeNote.tags.join(', '));
+          setShowPopover(false);
+          setSaveStatus('Saved');
+        }
+      }
+    }
+  }, [selectedNoteId, notes, loading]);
+
+  // 3. Keep editor innerHTML synchronized with selectedNote.id changes (fixing blank editor on first mount)
+  useEffect(() => {
+    if (editorRef.current && selectedNote) {
+      if (editorRef.current.getAttribute('data-note-id') !== selectedNote.id) {
+        editorRef.current.setAttribute('data-note-id', selectedNote.id);
+        editorRef.current.innerHTML = selectedNote.content || '<p><br></p>';
+      }
+    }
+  }, [selectedNote]);
 
   // Handle note selection
   const selectNote = (note: Note) => {
@@ -101,9 +131,11 @@ function NotesContent() {
     setShowPopover(false);
     
     if (editorRef.current) {
+      editorRef.current.setAttribute('data-note-id', note.id);
       editorRef.current.innerHTML = note.content || '<p><br></p>';
     }
     setSaveStatus('Saved');
+    router.push(`/notes?id=${note.id}`, { scroll: false });
   };
 
   // Helper to trigger save

@@ -1,12 +1,13 @@
 .sidebar {
-  width: 220px;
+  width: 240px;
   height: 100vh;
-  background-color: var(--surface-container-lowest);
-  border-right: 1px solid var(--outline-variant);
+  background-color: #ffffff;
+  border-right: 1px solid var(--card-border);
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .logoArea {
@@ -18,35 +19,22 @@
 }
 
 .logoIcon {
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 20px;
   background-color: var(--primary-light);
-  color: var(--primary);
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--border-radius-sm);
-}
-
-.logoTextContainer {
-  display: flex;
-  flex-direction: column;
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
 }
 
 .logoText {
   font-weight: 700;
   font-size: 18px;
-  color: var(--primary);
-  font-family: 'Outfit', sans-serif;
-  line-height: 1.2;
-}
-
-.logoSubtext {
-  font-size: 11px;
-  color: var(--muted-text);
-  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.5px;
+  color: var(--foreground);
 }
 
 .nav {
@@ -60,37 +48,44 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  color: var(--on-surface-variant);
-  border-radius: var(--border-radius-sm);
-  font-size: 13px;
+  padding: 12px 16px;
+  color: var(--muted-text);
+  border-radius: var(--border-radius-md);
+  font-size: 14px;
   font-weight: 500;
   transition: all var(--transition-fast);
   text-decoration: none;
 }
 
 .navItem:hover {
-  color: var(--primary);
-  background-color: var(--surface-container-low);
+  color: var(--foreground);
+  background-color: var(--background);
 }
 
 .navItem.active {
-  color: var(--primary);
+  color: #B45309; /* Deep yellow-brown text */
   background-color: var(--primary-light);
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
 }
 
-.navItem :global(.material-symbols-outlined) {
-  font-size: 20px;
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast);
+}
+
+.navItem:hover .icon {
+  transform: translateX(2px);
 }
 
 .footer {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0 0 0;
-  border-top: 1px solid var(--outline-variant);
-  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid var(--card-border);
 }
 
 .version {
@@ -102,10 +97,10 @@
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  background-color: var(--secondary-light);
-  color: var(--secondary);
+  background-color: #FEF3C7;
+  color: #D97706;
   padding: 4px 8px;
-  border-radius: var(--border-radius-full);
+  border-radius: 9999px;
   width: max-content;
 }
 
@@ -120,9 +115,9 @@
     flex-direction: row;
     padding: 0;
     border-right: none;
-    border-top: 1px solid var(--outline-variant);
+    border-top: 1px solid var(--card-border);
     z-index: 1000;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   }
 
   .logoArea, .footer {
@@ -151,7 +146,12 @@
     background-color: transparent;
   }
 
-  .navItem :global(.material-symbols-outlined) {
-    font-size: 18px;
+  .navItem:hover .icon {
+    transform: none;
+  }
+
+  .icon svg {
+    width: 18px;
+    height: 18px;
   }
 }

@@ -83,8 +83,6 @@ export default function ActionItemsPage() {
     fetchData();
   }, []);
 
-
-
   const handleDeleteAction = async (id: string) => {
     if (!confirm('Hapus action item ini?')) return;
     try {
@@ -250,112 +248,92 @@ export default function ActionItemsPage() {
     <div className={`${styles.container} animate-fade-in`}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>
-            <span className="material-symbols-outlined" style={{ fontSize: '28px', marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>checklist</span>
-            <span style={{ verticalAlign: 'middle' }}>Action Items Tracker</span>
-          </h1>
+          <h1 className={styles.title}>📋 Action Items Tracker</h1>
           <p className={styles.subtitle}>Daftar semua tugas dan to-do list yang perlu diselesaikan.</p>
         </div>
-        <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
-          + Action Item Baru
+        <button className={styles.addBtn} onClick={() => setShowAddForm(!showAddForm)}>
+          {showAddForm ? 'Batal' : '+ Action Item Baru'}
         </button>
       </header>
 
-      {/* Add Action Item Modal */}
+      {/* Add Action Item inline form */}
       {showAddForm && (
-        <div className={styles.modalOverlay} onClick={() => setShowAddForm(false)}>
-          <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>
-                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>playlist_add</span>
-                <span style={{ verticalAlign: 'middle' }}>Buat Action Item Baru</span>
-              </h3>
-              <button className={styles.closeBtn} onClick={() => setShowAddForm(false)}>×</button>
+        <form id="addActionTrackerForm" onSubmit={handleCreateAction} className={styles.addForm}>
+          <h3>Buat Action Item Baru</h3>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label>Judul Tugas *</label>
+              <input
+                type="text"
+                required
+                value={newAction.title}
+                onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                placeholder="Tulis nama tugas..."
+              />
             </div>
-            <form onSubmit={handleCreateAction}>
-              <div className={styles.modalBody}>
-                <div className={styles.formGroup}>
-                  <label>Judul Tugas *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newAction.title}
-                    onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
-                    placeholder="Tulis nama tugas..."
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label>PIC (freetext)</label>
-                    <input
-                      type="text"
-                      value={newAction.pic}
-                      onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
-                      placeholder="Nama PIC..."
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Deadline</label>
-                    <input
-                      type="date"
-                      value={newAction.deadline}
-                      onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label>Kaitkan ke Project</label>
-                    <select
-                      value={newAction.projectId}
-                      onChange={(e) => setNewAction({ ...newAction, projectId: e.target.value, categoryId: '' })}
-                    >
-                      <option value="">-- Tanpa Project (Standalone) --</option>
-                      {projects.map((proj) => (
-                        <option key={proj.id} value={proj.id}>
-                          {proj.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {newAction.projectId && (
-                    <div className={styles.formGroup}>
-                      <label>Kategori</label>
-                      <select
-                        value={newAction.categoryId}
-                        onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
-                      >
-                        <option value="">Tanpa Kategori</option>
-                        {projects.find(p => p.id === newAction.projectId)?.categories?.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Keterangan / Keterangan Tambahan</label>
-                  <input
-                    type="text"
-                    value={newAction.description}
-                    onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
-                    placeholder="Detail tambahan..."
-                  />
-                </div>
-              </div>
-              <div className={styles.modalFooter}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setShowAddForm(false)}>
-                  Batal
-                </button>
-                <button type="submit" className={styles.submitBtn} disabled={isCreatingAction}>
-                  {isCreatingAction ? 'Menyimpan...' : 'Simpan Action Item'}
-                </button>
-              </div>
-            </form>
+            <div className={styles.formGroup}>
+              <label>PIC (freetext)</label>
+              <input
+                type="text"
+                value={newAction.pic}
+                onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
+                placeholder="Nama PIC..."
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Deadline</label>
+              <input
+                type="date"
+                value={newAction.deadline}
+                onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
+              />
+            </div>
           </div>
-        </div>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label>Kaitkan ke Project</label>
+              <select
+                value={newAction.projectId}
+                onChange={(e) => setNewAction({ ...newAction, projectId: e.target.value, categoryId: '' })}
+              >
+                <option value="">-- Tanpa Project (Standalone) --</option>
+                {projects.map((proj) => (
+                  <option key={proj.id} value={proj.id}>
+                    {proj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {newAction.projectId && (
+              <div className={styles.formGroup}>
+                <label>Kategori</label>
+                <select
+                  value={newAction.categoryId}
+                  onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
+                >
+                  <option value="">Tanpa Kategori</option>
+                  {projects.find(p => p.id === newAction.projectId)?.categories?.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className={styles.formGroup} style={{ flexGrow: 2 }}>
+              <label>Keterangan / Keterangan Tambahan</label>
+              <input
+                type="text"
+                value={newAction.description}
+                onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                placeholder="Detail tambahan..."
+              />
+            </div>
+          </div>
+          <button type="submit" className={styles.submitBtn} disabled={isCreatingAction}>
+            {isCreatingAction ? 'Menyimpan...' : 'Simpan Action Item'}
+          </button>
+        </form>
       )}
 
       {/* Filters Toolbar */}
@@ -367,15 +345,13 @@ export default function ActionItemsPage() {
               onClick={() => setStatusFilter('pending')}
               className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>hourglass_empty</span>
-              <span style={{ verticalAlign: 'middle' }}>Pending</span>
+              ⏳ Pending
             </button>
             <button
               onClick={() => setStatusFilter('done')}
               className={`${styles.filterBtn} ${statusFilter === 'done' ? styles.activeFilter : ''}`}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>task_alt</span>
-              <span style={{ verticalAlign: 'middle' }}>Selesai</span>
+              ✓ Selesai
             </button>
             <button
               onClick={() => setStatusFilter('all')}
@@ -407,7 +383,7 @@ export default function ActionItemsPage() {
       <div className={styles.itemsCard}>
         {filteredItems.length === 0 ? (
           <div className={styles.emptyState}>
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--muted-text)' }}>task_alt</span>
+            <span className={styles.emptyIcon}>🎉</span>
             <p>Tidak ada action item yang sesuai filter.</p>
           </div>
         ) : (
@@ -440,8 +416,7 @@ export default function ActionItemsPage() {
                           title={assocProject.name}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
-                          <span style={{ verticalAlign: 'middle' }}>{assocProject.name}</span>
+                          📁 {assocProject.name}
                         </Link>
                       )}
                       {item.source_note_id && (
@@ -450,8 +425,7 @@ export default function ActionItemsPage() {
                           className={styles.noteLink}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>description</span>
-                          <span style={{ verticalAlign: 'middle' }}>Lihat Note Asal</span>
+                          📝 Lihat Note Asal
                         </Link>
                       )}
                     </div>
@@ -472,8 +446,7 @@ export default function ActionItemsPage() {
                         handleDeleteAction(item.id);
                       }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>delete</span>
-                      <span style={{ verticalAlign: 'middle' }}>Hapus</span>
+                      🗑️ Hapus
                     </button>
                   </div>
                 </div>
@@ -488,10 +461,7 @@ export default function ActionItemsPage() {
         <div className={styles.modalOverlay} onClick={() => setEditingAction(null)}>
           <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>
-                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>edit</span>
-                <span style={{ verticalAlign: 'middle' }}>Detail Action Item</span>
-              </h3>
+              <h3>Detail Action Item 📋</h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
             <form onSubmit={(e) => e.preventDefault()}>
@@ -617,6 +587,10 @@ export default function ActionItemsPage() {
                     projectId: completedItemProject ? completedItemProject.id : ''
                   }));
                   setShowAddForm(true);
+                  const el = document.getElementById('addActionTrackerForm');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  }
                 }}
               >
                 Ya, Tambah Baru

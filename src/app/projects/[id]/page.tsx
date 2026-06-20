@@ -71,6 +71,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     completed: false
   });
 
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
+
   const [editingArtifact, setEditingArtifact] = useState<Artifact | null>(null);
   const [editArtifactFields, setEditArtifactFields] = useState({
     label: '',
@@ -87,11 +91,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     categoryId: ''
   });
   const [showAddActionForm, setShowAddActionForm] = useState(false);
-
-  // Category State
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
 
   // New Artifact Form State
   const [newArtifact, setNewArtifact] = useState({
@@ -136,22 +135,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     fetchProjectDetail();
   }, [id]);
-
-  // URL search parameter check for add_action
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('add_action') === 'true') {
-        setShowAddActionForm(true);
-        setTimeout(() => {
-          const el = document.getElementById('addActionFormSection');
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 300);
-      }
-    }
-  }, []);
 
   // Handle Advance Stage
   const handleAdvanceStage = async () => {
@@ -220,6 +203,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
     if (!editingAction) return;
 
+    // Update local state instantly so the UI feels responsive
     setEditActionFields(prev => ({
       ...prev,
       ...fieldsToUpdate
@@ -231,7 +215,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         description: editActionFields.description,
         deadline: editActionFields.deadline,
         pic: editActionFields.pic,
-        categoryId: editActionFields.categoryId,
+        category_id: editActionFields.categoryId || null,
         completed: editActionFields.completed,
         ...fieldsToUpdate
       };
@@ -244,11 +228,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           description: mergedFields.description,
           deadline: mergedFields.deadline,
           pic: mergedFields.pic,
-          category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
+          category_id: mergedFields.category_id === '' ? null : mergedFields.category_id,
           completed: mergedFields.completed
         })
       });
 
+      // Refresh project to update the title or labels on the card immediately
       fetchProjectDetail();
     } catch (error) {
       console.error('Error auto-saving action item:', error);
@@ -269,6 +254,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) {
         setEditingAction(null);
         fetchProjectDetail();
+        // Prompt user to create a new action item
         setShowNewActionPrompt(true);
       }
     } catch (error) {
@@ -595,21 +581,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Step Visualizer Bar (Horizontal Pipeline) */}
       <section className={styles.visualizerCard}>
         <div className={styles.visualizerHeader}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>history</span>
-            <span>Progress Pipeline Project</span>
-          </h3>
+          <h3>Progress Pipeline Project</h3>
           {!isCompleted && currentStage ? (
-            <button className={styles.advanceBtn} onClick={handleAdvanceStage} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span>
-              <span>Selesaikan Tahap: <b>{currentStage.name}</b></span>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>chevron_right</span>
+            <button className={styles.advanceBtn} onClick={handleAdvanceStage}>
+              ⚡ Selesaikan Tahap: <b>{currentStage.name}</b> →
             </button>
           ) : (
-            <span className={styles.completeBanner} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--success)' }}>check_circle</span>
-              <span>PROYEK TELAH LIVE / SELESAI!</span>
-            </span>
+            <span className={styles.completeBanner}>🎉 PROYEK TELAH LIVE / SELESAI!</span>
           )}
         </div>
 
@@ -656,29 +634,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           onClick={() => setActiveTab('overview')}
           className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.activeTab : ''}`}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>description</span>
-          <span style={{ verticalAlign: 'middle' }}>Ringkasan</span>
+          📄 Overview
         </button>
         <button
           onClick={() => setActiveTab('actions')}
           className={`${styles.tabBtn} ${activeTab === 'actions' ? styles.activeTab : ''}`}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>checklist</span>
-          <span style={{ verticalAlign: 'middle' }}>Action Items ({project.actionItems.length})</span>
+          📋 Action Items ({project.actionItems.length})
         </button>
         <button
           onClick={() => setActiveTab('artifacts')}
           className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.activeTab : ''}`}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>link</span>
-          <span style={{ verticalAlign: 'middle' }}>Dokumen & File ({project.artifacts.length})</span>
+          🔗 Artifacts ({project.artifacts.length})
         </button>
         <button
           onClick={() => setActiveTab('settings')}
           className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.activeTab : ''}`}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>settings</span>
-          <span style={{ verticalAlign: 'middle' }}>Pengaturan & Tahapan</span>
+          ⚙️ Settings & Stages
         </button>
       </div>
 
@@ -742,89 +716,72 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h3>Action Items Terkait Project</h3>
               <button
                 className={styles.addTabBtn}
-                onClick={() => setShowAddActionForm(true)}
+                onClick={() => setShowAddActionForm(!showAddActionForm)}
               >
-                + Action Item Baru
+                {showAddActionForm ? 'Batal' : '+ Action Item Baru'}
               </button>
             </div>
 
-            {/* Modal Add Action Item Form */}
+            {/* Inline Add Action Item Form */}
             {showAddActionForm && (
-              <div className={styles.modalOverlay} onClick={() => setShowAddActionForm(false)}>
-                <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
-                  <div className={styles.modalHeader}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>playlist_add</span>
-                      <span>Tambah Action Item</span>
-                    </h3>
-                    <button className={styles.closeBtn} onClick={() => setShowAddActionForm(false)}>×</button>
+              <form id="addActionFormSection" onSubmit={handleAddAction} className={styles.inlineForm}>
+                <h4>Tambah Action Item</h4>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Judul Tugas *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAction.title}
+                      onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
+                      placeholder="Apa yang perlu diselesaikan?"
+                    />
                   </div>
-                  <form onSubmit={handleAddAction}>
-                    <div className={styles.modalBody}>
-                      <div className={styles.formGroup}>
-                        <label>Judul Tugas *</label>
-                        <input
-                          type="text"
-                          required
-                          value={newAction.title}
-                          onChange={(e) => setNewAction({ ...newAction, title: e.target.value })}
-                          placeholder="Apa yang perlu diselesaikan?"
-                        />
-                      </div>
-                      <div className={styles.formRow}>
-                        <div className={styles.formGroup}>
-                          <label>PIC (freetext)</label>
-                          <input
-                            type="text"
-                            value={newAction.pic}
-                            onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
-                            placeholder="Nama PIC..."
-                          />
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label>Kategori</label>
-                          <select
-                            value={newAction.categoryId}
-                            onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
-                          >
-                            <option value="">Tanpa Kategori</option>
-                            {project.categories && project.categories.map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label>Deadline</label>
-                          <input
-                            type="date"
-                            value={newAction.deadline}
-                            onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label>Keterangan / Detail</label>
-                        <textarea
-                          value={newAction.description}
-                          onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
-                          placeholder="Instruksi detail..."
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.modalFooter}>
-                      <button type="button" className={styles.cancelBtn} onClick={() => setShowAddActionForm(false)}>
-                        Batal
-                      </button>
-                      <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
-                        {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
-                      </button>
-                    </div>
-                  </form>
+                  <div className={styles.formGroup}>
+                    <label>PIC (freetext)</label>
+                    <input
+                      type="text"
+                      value={newAction.pic}
+                      onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
+                      placeholder="Nama PIC..."
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Kategori</label>
+                    <select
+                      value={newAction.categoryId}
+                      onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
+                    >
+                      <option value="">Tanpa Kategori</option>
+                      {project.categories && project.categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Deadline</label>
+                    <input
+                      type="date"
+                      value={newAction.deadline}
+                      onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
+                <div className={styles.formGroup}>
+                  <label>Keterangan / Detail</label>
+                  <textarea
+                    value={newAction.description}
+                    onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
+                    placeholder="Instruksi detail..."
+                    rows={2}
+                  />
+                </div>
+                <button type="submit" className={styles.submitBtn} disabled={isAddingAction}>
+                  {isAddingAction ? 'Menyimpan...' : 'Simpan Action Item'}
+                </button>
+              </form>
             )}
 
             {/* Actions List */}
@@ -844,20 +801,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <h4 className={styles.actionTitle}>{item.title}</h4>
                         {item.description && <p className={styles.actionDesc}>{item.description}</p>}
                         <div className={styles.actionMetaTags}>
-                          <span className={styles.actionPic}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>person</span>
-                            <span style={{ verticalAlign: 'middle' }}>{item.pic}</span>
-                          </span>
+                          <span className={styles.actionPic}>PIC: {item.pic}</span>
                           {item.category_name && (
                             <span className={styles.categoryTagBadge} title={item.category_name}>
                               🏷️ {item.category_name}
                             </span>
                           )}
                           {item.deadline && (
-                            <span className={styles.actionDeadline}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>schedule</span>
-                              <span style={{ verticalAlign: 'middle' }}>{formatDate(item.deadline)}</span>
-                            </span>
+                            <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
                           )}
                         </div>
                       </div>
@@ -868,11 +819,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteActionItem(item.id);
-                        }} 
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        }}
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>delete</span>
-                        <span>Hapus</span>
+                        🗑️ Hapus
                       </button>
                     </div>
                   </div>
@@ -889,63 +838,51 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h3>Dokumen & Artifacts Proyek</h3>
               <button
                 className={styles.addTabBtn}
-                onClick={() => setShowAddArtForm(true)}
+                onClick={() => setShowAddArtForm(!showAddArtForm)}
               >
-                Tambah Baru
+                {showAddArtForm ? 'Batal' : 'Tambah Baru'}
               </button>
             </div>
 
-            {/* Modal Add Artifact Link Form */}
+            {/* Inline Add Artifact Link Form */}
             {showAddArtForm && (
-              <div className={styles.modalOverlay}>
-                <div className={`${styles.modal} animate-popover`}>
-                  <div className={styles.modalHeader}>
-                    <h3>Tambah Dokumen / Link 🔗</h3>
-                    <button className={styles.closeBtn} onClick={() => setShowAddArtForm(false)}>×</button>
+              <form onSubmit={handleAddArtifact} className={styles.inlineForm}>
+                <h4>Tambah Dokumen / Link</h4>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Label / Judul Dokumen *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newArtifact.label}
+                      onChange={(e) => setNewArtifact({ ...newArtifact, label: e.target.value })}
+                      placeholder="Contoh: Folder Google Drive POC"
+                    />
                   </div>
-                  <form onSubmit={handleAddArtifact}>
-                    <div className={styles.modalBody}>
-                      <div className={styles.formGroup}>
-                        <label>Label / Judul Dokumen *</label>
-                        <input
-                          type="text"
-                          required
-                          value={newArtifact.label}
-                          onChange={(e) => setNewArtifact({ ...newArtifact, label: e.target.value })}
-                          placeholder="Contoh: Folder Google Drive POC"
-                        />
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label>URL Link *</label>
-                        <input
-                          type="url"
-                          required
-                          value={newArtifact.url}
-                          onChange={(e) => setNewArtifact({ ...newArtifact, url: e.target.value })}
-                          placeholder="https://drive.google.com/..."
-                        />
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label>Deskripsi Singkat</label>
-                        <input
-                          type="text"
-                          value={newArtifact.description}
-                          onChange={(e) => setNewArtifact({ ...newArtifact, description: e.target.value })}
-                          placeholder="Dokumen ini berisi tentang..."
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.modalFooter}>
-                      <button type="button" className={styles.cancelBtn} onClick={() => setShowAddArtForm(false)}>
-                        Batal
-                      </button>
-                      <button type="submit" className={styles.submitBtn} disabled={isAddingArtifact}>
-                        {isAddingArtifact ? 'Menyimpan...' : 'Simpan Link Artifact'}
-                      </button>
-                    </div>
-                  </form>
+                  <div className={styles.formGroup}>
+                    <label>URL Link *</label>
+                    <input
+                      type="url"
+                      required
+                      value={newArtifact.url}
+                      onChange={(e) => setNewArtifact({ ...newArtifact, url: e.target.value })}
+                      placeholder="https://drive.google.com/..."
+                    />
+                  </div>
                 </div>
-              </div>
+                <div className={styles.formGroup}>
+                  <label>Deskripsi Singkat</label>
+                  <input
+                    type="text"
+                    value={newArtifact.description}
+                    onChange={(e) => setNewArtifact({ ...newArtifact, description: e.target.value })}
+                    placeholder="Dokumen ini berisi tentang..."
+                  />
+                </div>
+                <button type="submit" className={styles.submitBtn} disabled={isAddingArtifact}>
+                  {isAddingArtifact ? 'Menyimpan...' : 'Simpan Link Artifact'}
+                </button>
+              </form>
             )}
 
             {/* Artifacts List as structured table list */}
@@ -967,7 +904,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {project.artifacts.map((art) => (
                         <tr key={art.id}>
                           <td className={styles.artLabelCell}>
-                            <span className={`material-symbols-outlined ${styles.artIconCell}`} style={{ fontSize: '18px' }}>link</span>
+                            <span className={styles.artIconCell}>🔗</span>
                             <a href={art.url} target="_blank" rel="noopener noreferrer" className={styles.artTableLink}>
                               {art.label}
                             </a>
@@ -979,12 +916,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           <td>
                             <div className={styles.artTableActions}>
                               <button className={styles.artEditBtn} onClick={() => handleStartEditArtifact(art)}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>edit</span>
-                                <span style={{ verticalAlign: 'middle' }}>Edit</span>
+                                ✏️ Edit
                               </button>
                               <button className={styles.artDeleteBtn} onClick={() => handleDeleteArtifact(art.id)}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>delete</span>
-                                <span style={{ verticalAlign: 'middle' }}>Hapus</span>
+                                🗑️ Hapus
                               </button>
                             </div>
                           </td>
@@ -1043,7 +978,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </button>
               </form>
               <div className={styles.dangerZone}>
-                <h4>Danger Zone <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', fontSize: '18px', color: 'var(--error)' }}>warning</span></h4>
+                <h4>Danger Zone 🚨</h4>
                 <p>Hapus proyek ini secara permanen dari Workspace.</p>
                 <button className={styles.deleteProjBtn} onClick={handleDeleteProject} disabled={isDeletingProject}>
                   {isDeletingProject ? 'Menghapus...' : 'Hapus Proyek Ini'}
@@ -1061,7 +996,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className={styles.stagesManager}>
                 {stagesList.map((stage, idx) => (
                   <div key={stage.id || idx} className={styles.stageManagerRow}>
-                    <span className="material-symbols-outlined" style={{ color: 'var(--muted-text)', cursor: 'grab', fontSize: '18px' }}>drag_indicator</span>
                     <span className={styles.stageOrderNumber}>{idx + 1}</span>
                     <input
                       type="text"
@@ -1070,8 +1004,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       placeholder="Nama Tahapan..."
                       className={styles.stageManagerInput}
                     />
-                    <button className={styles.removeStageRowBtn} onClick={() => handleRemoveStage(idx)} title="Hapus Tahapan">
-                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
+                    <button className={styles.removeStageRowBtn} onClick={() => handleRemoveStage(idx)}>
+                      ×
                     </button>
                   </div>
                 ))}
@@ -1086,8 +1020,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     className={styles.addStageInput}
                   />
                   <button className={styles.addStageRowBtn} onClick={handleAddStage}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>add</span>
-                    <span style={{ verticalAlign: 'middle' }}>Tambah</span>
+                    + Tambah
                   </button>
                 </div>
 
@@ -1141,10 +1074,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className={styles.modalOverlay} onClick={() => setEditingAction(null)}>
           <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>
-                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>checklist</span>
-                <span style={{ verticalAlign: 'middle' }}>Detail Action Item</span>
-              </h3>
+              <h3>Detail Action Item 📋</h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
             <form onSubmit={(e) => e.preventDefault()}>
@@ -1265,10 +1195,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3>
-                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>link</span>
-                <span style={{ verticalAlign: 'middle' }}>Ubah Dokumen / Artifact</span>
-              </h3>
+              <h3>Ubah Dokumen / Artifact 🔗</h3>
               <button className={styles.closeBtn} onClick={() => setEditingArtifact(null)}>×</button>
             </div>
             <form onSubmit={handleSaveArtifactEdit}>

@@ -13,8 +13,8 @@ interface Project {
   pic: string;
   current_stage_index: number;
   stages: Array<{ id: string; name: string; completed_at?: string }>;
-  currentStage: { name: string } | null;
   categories?: Array<{ id: string; name: string }>;
+  currentStage: { name: string } | null;
 }
 
 interface ActionItem {
@@ -51,7 +51,7 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState<Date | null>(null);
 
-  // Edit action item modal state
+  // Edit/Detail Action Modal State
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
   const [editActionFields, setEditActionFields] = useState({
     title: '',
@@ -63,6 +63,7 @@ export default function Dashboard() {
     completed: false
   });
 
+  // Completion prompt dialog states
   const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
   const [completedItemProject, setCompletedItemProject] = useState<{ id: string; name: string } | null>(null);
 
@@ -75,53 +76,33 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [projRes, actionRes, notesRes] = await Promise.all([
-        fetch('/api/projects'),
-        fetch('/api/action-items'),
-        fetch('/api/notes'),
-      ]);
-
-      if (projRes.ok && actionRes.ok && notesRes.ok) {
-        const projs = await projRes.json();
-        const items = await actionRes.json();
-        const nts = await notesRes.json();
-        
-        setProjects(projs);
-        setActionItems(items);
-        setNotes(nts);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    async function fetchData() {
+      try {
+        const [projRes, actionRes, notesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/action-items'),
+          fetch('/api/notes'),
+        ]);
+
+        if (projRes.ok && actionRes.ok && notesRes.ok) {
+          const projs = await projRes.json();
+          const items = await actionRes.json();
+          const nts = await notesRes.json();
+          
+          setProjects(projs);
+          setActionItems(items);
+          setNotes(nts);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchData();
   }, []);
-
-  const formatDateTime = (date: Date) => {
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    
-    const dayName = days[date.getDay()];
-    const dateNum = date.getDate();
-    const monthName = months[date.getMonth()];
-    const year = date.getFullYear();
-    
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    return {
-      dayName,
-      dateString: `${dayName}, ${dateNum} ${monthName} ${year}`,
-      timeString: `${hours}:${minutes}:${seconds}`
-    };
-  };
 
   const handleStartEdit = (item: ActionItem) => {
     setEditingAction(item);
@@ -139,10 +120,10 @@ export default function Dashboard() {
   const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
     if (!editingAction) return;
 
-    setEditActionFields(prev => {
-      const updated = { ...prev, ...fieldsToUpdate };
-      return updated;
-    });
+    setEditActionFields(prev => ({
+      ...prev,
+      ...fieldsToUpdate
+    }));
 
     try {
       const mergedFields = {
@@ -170,7 +151,18 @@ export default function Dashboard() {
         })
       });
 
-      fetchData();
+      // Refresh dashboard data
+      const [projRes, actionRes, notesRes] = await Promise.all([
+        fetch('/api/projects'),
+        fetch('/api/action-items'),
+        fetch('/api/notes'),
+      ]);
+
+      if (projRes.ok && actionRes.ok && notesRes.ok) {
+        setProjects(await projRes.json());
+        setActionItems(await actionRes.json());
+        setNotes(await notesRes.json());
+      }
     } catch (error) {
       console.error('Error auto-saving action item:', error);
     }
@@ -190,7 +182,20 @@ export default function Dashboard() {
         const assocProj = projects.find(p => p.id === editingAction.project_id);
         setCompletedItemProject(assocProj ? { id: assocProj.id, name: assocProj.name } : null);
         setEditingAction(null);
-        fetchData();
+        
+        // Refresh dashboard data
+        const [projRes, actionRes, notesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/action-items'),
+          fetch('/api/notes'),
+        ]);
+
+        if (projRes.ok && actionRes.ok && notesRes.ok) {
+          setProjects(await projRes.json());
+          setActionItems(await actionRes.json());
+          setNotes(await notesRes.json());
+        }
+        
         setShowNewActionPrompt(true);
       }
     } catch (error) {
@@ -198,22 +203,41 @@ export default function Dashboard() {
     }
   };
 
+  const formatDateTime = (date: Date) => {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    
+    const dayName = days[date.getDay()];
+    const dateNum = date.getDate();
+    const monthName = months[date.getMonth()];
+    const year = date.getFullYear();
+    
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return {
+      dayName,
+      dateString: `${dateNum} ${monthName} ${year}`,
+      timeString: `${hours}:${minutes}:${seconds}`
+    };
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.greetingBanner}>
-          <div className={styles.greetingText}>
-            <div className="skeleton" style={{ height: '28px', width: '220px', marginBottom: '8px' }}></div>
-            <div className="skeleton" style={{ height: '16px', width: '180px' }}></div>
+        <header className={styles.header}>
+          <div>
+            <div className="skeleton" style={{ height: '32px', width: '200px', marginBottom: '8px' }}></div>
+            <div className="skeleton" style={{ height: '16px', width: '380px' }}></div>
           </div>
-          <div className="skeleton" style={{ height: '36px', width: '120px' }}></div>
-        </div>
+        </header>
 
         <section className={styles.metricsGrid}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className={styles.metricCard}>
               <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '12px' }}></div>
-              <div className="skeleton" style={{ height: '36px', width: '55px', marginBottom: '8px' }}></div>
+              <div className="skeleton" style={{ height: '36px', width: '50px', marginBottom: '8px' }}></div>
               <div className="skeleton" style={{ height: '12px', width: '120px' }}></div>
             </div>
           ))}
@@ -221,32 +245,29 @@ export default function Dashboard() {
 
         <div className={styles.mainGrid}>
           <section className={styles.cardSection}>
-            <div className={styles.sectionHeader}>
-              <div className="skeleton" style={{ height: '20px', width: '180px' }}></div>
-            </div>
-            <div className={styles.actionList}>
+            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
+            <div className={styles.sectionCard} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {[1, 2, 3].map((i) => (
-                <div key={i} className={styles.actionItemRow} style={{ padding: '16px 12px' }}>
-                  <div className="skeleton" style={{ height: '20px', width: '20px', borderRadius: '50%', marginRight: '12px' }}></div>
-                  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F3F4F6' }}>
+                  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div className="skeleton" style={{ height: '14px', width: '60%' }}></div>
                     <div className="skeleton" style={{ height: '10px', width: '100px' }}></div>
                   </div>
+                  <div className="skeleton" style={{ height: '14px', width: '60px' }}></div>
                 </div>
               ))}
             </div>
           </section>
 
           <section className={styles.cardSection}>
-            <div className={styles.sectionHeader}>
-              <div className="skeleton" style={{ height: '20px', width: '150px' }}></div>
-            </div>
+            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
             <div className={styles.notesGrid}>
               {[1, 2].map((i) => (
-                <div key={i} className={styles.noteCard} style={{ minHeight: '110px' }}>
-                  <div className="skeleton" style={{ height: '14px', width: '60px', marginBottom: '6px' }}></div>
-                  <div className="skeleton" style={{ height: '16px', width: '80%', marginBottom: '8px' }}></div>
-                  <div className="skeleton" style={{ height: '12px', width: '100%' }}></div>
+                <div key={i} className={styles.noteCard}>
+                  <div className="skeleton" style={{ height: '16px', width: '40px', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ height: '18px', width: '80%', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ height: '12px', width: '100%', marginBottom: '4px' }}></div>
+                  <div className="skeleton" style={{ height: '12px', width: '90%' }}></div>
                 </div>
               ))}
             </div>
@@ -294,7 +315,7 @@ export default function Dashboard() {
   };
   const weekRangeStr = `${formatShortDate(monday)} - ${formatShortDate(sunday)}`;
 
-  // Urgent actions (sorted by deadline ascending)
+  // Urgent actions (deadline in the next 7 days or overdue, sorted by date)
   const urgentActions = [...pendingActions]
     .filter((item) => item.deadline)
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
@@ -310,285 +331,188 @@ export default function Dashboard() {
   };
 
   // Helper to check if date is overdue
-  const isOverdue = (dateStr: string, completed?: boolean) => {
-    if (!dateStr || completed) return false;
+  const isOverdue = (dateStr: string) => {
+    if (!dateStr) return false;
     const deadline = new Date(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return deadline < today;
   };
 
-  const formatRelativeTime = (dateStr: string) => {
-    if (!dateStr) return 'Baru saja';
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit yang lalu`;
-    if (diffHours < 24) return `${diffHours} jam yang lalu`;
-    
-    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-  };
-
-  const getRecentActivities = () => {
-    const activities = [];
-    
-    const sortedNotes = [...notes]
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 2);
-      
-    sortedNotes.forEach((n, idx) => {
-      activities.push({
-        id: `note-${n.id}-${idx}`,
-        time: formatRelativeTime(n.updated_at),
-        text: `Anda memperbarui catatan <strong>${n.title || 'Untitled Note'}</strong>`,
-        dotClass: styles.dotSecondary,
-      });
-    });
-
-    const sortedActions = [...actionItems]
-      .sort((a, b) => new Date(b.created_at || b.deadline || '').getTime() - new Date(a.created_at || a.deadline || '').getTime())
-      .slice(0, 2);
-      
-    sortedActions.forEach((ai, idx) => {
-      activities.push({
-        id: `action-${ai.id}-${idx}`,
-        time: formatRelativeTime(ai.created_at),
-        text: `${ai.pic || 'Wildan'} membuat/mengubah action item <strong>${ai.title}</strong> menjadi ${ai.completed ? 'Selesai' : 'Pending'}`,
-        dotClass: styles.dotPrimary,
-      });
-    });
-
-    if (activities.length === 0) {
-      activities.push({
-        id: 'fallback',
-        time: 'Baru saja',
-        text: 'Selamat datang di workspace PM Super Tools Anda!',
-        dotClass: styles.dotPrimary,
-      });
-    }
-
-    return activities.slice(0, 4);
-  };
-
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* Top Banner */}
-      <section className={styles.greetingBanner}>
+      {/* Dynamic Clock & Greeting Banner */}
+      <div className={styles.greetingBanner}>
         <div className={styles.greetingText}>
-          <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan 👋</h2>
-          <p>
-            <span className="material-symbols-outlined" style={{ fontSize: '16px', display: 'inline-block', verticalAlign: 'middle' }}>calendar_today</span>
-            <span style={{ marginLeft: '6px', verticalAlign: 'middle' }}>
-              {mounted && time ? formatDateTime(time).dateString : '...'}
-            </span>
-          </p>
+          <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan Marzuqon! 👋</h2>
+          <p>Berikut ringkasan workspace Anda hari ini.</p>
         </div>
         <div className={styles.dateTimeContainer}>
-          <div className={styles.liveClock}>{mounted && time ? formatDateTime(time).timeString : '00:00:00'}</div>
+          <div className={styles.liveClock}>{mounted && time ? formatDateTime(time).timeString : '--:--:--'}</div>
+          <div className={styles.liveDate}>
+            {mounted && time ? (
+              <><strong>{formatDateTime(time).dayName}</strong>, {formatDateTime(time).dateString}</>
+            ) : (
+              '...'
+            )}
+          </div>
         </div>
-      </section>
+      </div>
 
-      {/* KPI Cards Row */}
+      {/* Header */}
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.title}>💡 PM Workspace</h1>
+          <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau notes & pipeline proyek startup AI.</p>
+        </div>
+        <div className={styles.actions}>
+          <Link href="/notes" className={styles.primaryBtn}>
+            <span>+ Note Baru</span>
+          </Link>
+          <Link href="/projects" className={styles.secondaryBtn}>
+            <span>+ Proyek Baru</span>
+          </Link>
+        </div>
+      </header>
+
+      {/* Metrics Row */}
       <section className={styles.metricsGrid}>
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <p className={styles.metricLabel}>Total Proyek Aktif</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconPrimary}`}>
-              <span className="material-symbols-outlined">folder_copy</span>
-            </div>
+            <span className={styles.metricLabel}>Proyek Aktif</span>
+            <span className={styles.metricIcon}>🚀</span>
           </div>
-          <h3 className={styles.metricVal}>{activeProjectsCount}</h3>
-          <p className={styles.metricSub}>Dari total {projects.length} proyek</p>
+          <p className={styles.metricVal}>{activeProjectsCount}</p>
+          <p className={styles.metricSub}>Dari total {projects.length} proyek terdaftar</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <p className={styles.metricLabel}>Action Item Pending</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconWarning}`}>
-              <span className="material-symbols-outlined">hourglass_empty</span>
-            </div>
+            <span className={styles.metricLabel}>Action Items Pending</span>
+            <span className={styles.metricIcon}>⏳</span>
           </div>
-          <h3 className={styles.metricVal}>{pendingActionsCount}</h3>
-          <p className={`${styles.metricSub} ${styles.metricSubWarning}`}>Segera selesaikan task secepatnya</p>
+          <p className={styles.metricVal}>{pendingActionsCount}</p>
+          <p className={styles.metricSub}>segera selesaikan task secepatnya</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <p className={styles.metricLabel}>Due This Week</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconError}`}>
-              <span className="material-symbols-outlined">event_busy</span>
-            </div>
+            <span className={styles.metricLabel}>Due This Week</span>
+            <span className={styles.metricIcon}>📅</span>
           </div>
-          <h3 className={styles.metricVal}>{dueThisWeekCount}</h3>
+          <p className={styles.metricVal}>{dueThisWeekCount}</p>
           <p className={styles.metricSub}>Rentang: {weekRangeStr}</p>
         </div>
 
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
-            <p className={styles.metricLabel}>Total Notes</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconSecondary}`}>
-              <span className="material-symbols-outlined">edit_note</span>
-            </div>
+            <span className={styles.metricLabel}>Total Notes</span>
+            <span className={styles.metricIcon}>📝</span>
           </div>
-          <h3 className={styles.metricVal}>{notes.length}</h3>
-          <p className={styles.metricSub}>Di dalam {Array.from(new Set(notes.map(n => n.folder))).length} folder</p>
+          <p className={styles.metricVal}>{notes.length}</p>
+          <p className={styles.metricSub}>Terbagi dalam {Array.from(new Set(notes.map(n => n.folder))).length} folder</p>
         </div>
       </section>
 
-      {/* Main Split Layout */}
+      {/* Content Grid */}
       <div className={styles.mainGrid}>
-        {/* Urgent Action Items */}
+        {/* Left Column: Urgent Action Items */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>
-              <span className="material-symbols-outlined" style={{ color: 'var(--error)', marginRight: '8px', verticalAlign: 'middle' }}>warning_amber</span>
-              <span style={{ verticalAlign: 'middle' }}>Action Items Mendesak</span>
-            </h2>
-            <Link href="/action-items" className={styles.viewAll}>Lihat Semua</Link>
+            <h2>Urgent Action Items ⚡</h2>
+            <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
           </div>
-          
-          {urgentActions.length === 0 ? (
-            <div className={styles.emptyState}>
-              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--outline-variant)', marginBottom: '8px' }}>check_circle</span>
-              <p>Tidak ada action item mendesak.</p>
-            </div>
-          ) : (
-            <div className={styles.actionList}>
-              {urgentActions.map((item) => {
-                const assocProject = projects.find((p) => p.id === item.project_id);
-                const overdue = isOverdue(item.deadline, item.completed);
-                
-                return (
-                  <div 
-                    key={item.id} 
-                    className={styles.actionItemRow}
-                    onClick={() => handleStartEdit(item)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className={styles.actionMain}>
-                      <div className={styles.actionHeaderRow}>
-                        <h4 className={styles.actionTitle}>{item.title}</h4>
-                        <div className={styles.actionDateContainer}>
-                          <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>schedule</span>
-                            <span style={{ verticalAlign: 'middle' }}>{formatDate(item.deadline)}</span>
-                          </span>
-                          {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+          <div className={styles.sectionCard}>
+            {urgentActions.length === 0 ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>🎉</span>
+                <p>Tidak ada action item mendesak.</p>
+                <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
+              </div>
+            ) : (
+              <div className={styles.actionList}>
+                {urgentActions.map((item) => {
+                  const associatedProject = projects.find((p) => p.id === item.project_id);
+                  const overdue = isOverdue(item.deadline);
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`${styles.actionItemRow} ${item.completed ? styles.actionItemRowDone : ''}`}
+                      onClick={() => handleStartEdit(item)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className={styles.actionMain}>
+                        <p className={styles.actionTitle}>{item.title}</p>
+                        <div className={styles.actionMeta}>
+                          <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
+                          {item.category_name && (
+                            <span className={styles.categoryTagBadge} title={item.category_name}>
+                              🏷️ {item.category_name}
+                            </span>
+                          )}
+                          {associatedProject && (
+                            <span className={styles.projectTagBadge} title={associatedProject.name}>
+                              📁 {associatedProject.name}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      
-                      {item.description && <p className={styles.actionDesc}>{item.description}</p>}
-                      
-                      <div className={styles.actionMeta}>
-                        <span className={styles.picTag}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>person</span>
-                          <span style={{ verticalAlign: 'middle' }}>{item.pic || 'Unassigned'}</span>
+                      <div className={styles.actionDateContainer}>
+                        <span className={`${styles.actionDate} ${overdue ? styles.overdue : ''}`}>
+                          {formatDate(item.deadline)}
                         </span>
-                        {item.category_name && (
-                          <span className={styles.categoryTagBadge} title={item.category_name}>
-                            🏷️ {item.category_name}
-                          </span>
-                        )}
-                        {assocProject && (
-                          <Link 
-                            href={`/projects/${assocProject.id}`} 
-                            className={styles.projectTagBadge} 
-                            title={assocProject.name}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
-                            <span style={{ verticalAlign: 'middle' }}>{assocProject.name}</span>
-                          </Link>
-                        )}
+                        {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* Recent Activity Timeline */}
-        <section className={styles.cardSection} style={{ padding: '16px' }}>
-          <div className={styles.sectionHeader} style={{ marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: '600' }}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', marginRight: '8px', verticalAlign: 'middle' }}>history</span>
-              <span style={{ verticalAlign: 'middle' }}>Aktivitas Terbaru</span>
-            </h2>
+        {/* Right Column: Recent Notes */}
+        <section className={styles.cardSection}>
+          <div className={styles.sectionHeader}>
+            <h2>Notes Terakhir Diedit 📝</h2>
+            <Link href="/notes" className={styles.viewAll}>Buka Notes</Link>
           </div>
-          <div className={styles.timelineContainer}>
-            {getRecentActivities().map((act) => (
-              <div key={act.id} className={styles.timelineItem}>
-                <div className={`${styles.timelineDot} ${act.dotClass}`} />
-                <span className={styles.activityTime}>{act.time}</span>
-                <p 
-                  className={styles.activityText}
-                  dangerouslySetInnerHTML={{ __html: act.text }}
-                />
+          <div className={styles.notesGrid}>
+            {recentNotes.length === 0 ? (
+              <div className={styles.emptyNotesState}>
+                <span className={styles.emptyIcon}>✍️</span>
+                <p>Belum ada notes dibuat.</p>
+                <Link href="/notes" className={styles.createLink}>Buat note pertama</Link>
               </div>
-            ))}
+            ) : (
+              recentNotes.map((note) => (
+                <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
+                  <div className={styles.noteFolderTag}>{note.folder}</div>
+                  <h3 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h3>
+                  <div 
+                    className={styles.noteSnippet}
+                    dangerouslySetInnerHTML={{ 
+                      __html: note.content 
+                        ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + '...'
+                        : 'No content yet...'
+                    }}
+                  />
+                  <div className={styles.noteFooter}>
+                    <span className={styles.noteDate}>Update: {formatDate(note.updated_at)}</span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </section>
       </div>
-
-      {/* Catatan Terbaru (Full Width Scrollable Row) */}
-      <section className={styles.notesSection} style={{ marginTop: '24px' }}>
-        <div className={styles.notesSectionHeader}>
-          <h3>
-            <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', verticalAlign: 'middle' }}>sticky_note_2</span>
-            <span style={{ verticalAlign: 'middle' }}>Catatan Terbaru</span>
-          </h3>
-          <Link href="/notes" className={styles.viewAll}>Lihat Semua</Link>
-        </div>
-        
-        <div className={styles.notesScrollRow}>
-          {recentNotes.length === 0 ? (
-            <div className={styles.emptyState} style={{ minWidth: '100%' }}>
-              <p>Belum ada catatan.</p>
-            </div>
-          ) : (
-            recentNotes.map((note) => (
-              <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
-                <div className={styles.noteCardHeader}>
-                  <span className={styles.noteCardFolder}>{note.folder || 'Work'}</span>
-                </div>
-                <h4 className={styles.noteCardTitle}>{note.title || 'Untitled Note'}</h4>
-                <p 
-                  className={styles.noteCardSnippet}
-                  dangerouslySetInnerHTML={{ 
-                    __html: note.content 
-                      ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + (note.content.length > 100 ? '...' : '')
-                      : 'Mulai menulis catatan...'
-                  }}
-                />
-                <div className={styles.noteCardFooter}>
-                  <span className={styles.noteCardDate}>{formatDate(note.updated_at)}</span>
-                </div>
-              </Link>
-            ))
-          )}
-          
-          <Link href="/notes" className={styles.addNoteCard}>
-            <span className="material-symbols-outlined" style={{ fontSize: '32px', marginBottom: '8px' }}>add_circle</span>
-            <span className={styles.addNoteText}>Buat Catatan Baru</span>
-          </Link>
-        </div>
-      </section>
 
       {/* Edit Action Item Modal */}
       {editingAction && (
         <div className={styles.modalOverlay} onClick={() => setEditingAction(null)}>
           <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>
-                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>checklist</span>
-                <span style={{ verticalAlign: 'middle' }}>Detail Action Item</span>
-              </h3>
+              <h3>Detail Action Item 📋</h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
             <form onSubmit={(e) => e.preventDefault()}>

@@ -1,75 +1,40 @@
 :root {
-  /* PM Workspace Color Theme (Light High-Density Warm Workspace) */
   --background: #FAF9F6; /* Warm off-white background */
   --foreground: #1F2937; /* Deep gray text */
-  --card-bg: #ffffff;
+  --card-bg: #FFFFFF;
   --card-border: #F3EFE0; /* Soft warm border */
   
+  /* Yellow / Amber palette */
   --primary: #F59E0B;       /* Warm yellow/amber */
   --primary-hover: #D97706; /* Darker amber */
   --primary-light: #FEF3C7; /* Soft yellow highlight */
   --primary-subtle: #FFFBEB; /* Very light yellow highlight */
   
-  --secondary: #B45309;     /* Warm amber-brown */
-  --secondary-light: #FEF3C7; /* Soft yellow secondary highlight */
-  --secondary-subtle: #FFFBEB;
-
-  --success: #22c55e;
-  --success-light: #dcfce7;
-  --success-text: #15803d;
-
-  --warning: #f59e0b;
-  --warning-light: #fef3c7;
-  --warning-text: #b45309;
-
-  --error: #ba1a1a;
-  --error-light: #ffdad6;
-  --error-text: #410002;
-  
   --muted-text: #6B7280;
-  --on-surface-variant: #4B5563;
-  --outline-variant: #E5E7EB;
-  --outline: #9CA3AF;
-  
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #F9FAFB;
-  --surface-container: #F3F4F6;
-  --surface-container-high: #E5E7EB;
-  --surface-container-highest: #D1D5DB;
-
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
   --border-radius-lg: 16px;
-  --border-radius-full: 9999px;
   
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(245, 158, 11, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
   --shadow-lg: 0 10px 25px rgba(245, 158, 11, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
   
   --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 html, body {
   height: 100%;
   background-color: var(--background);
   color: var(--foreground);
-  overflow: hidden;
-  font-family: var(--font-inter), sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Headings with Outfit font */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-outfit), sans-serif;
-  color: var(--foreground);
-  font-weight: 600;
+  overflow: hidden; /* Main window is fixed, sub-components scroll */
 }
 
 /* Custom Scrollbar */
@@ -81,32 +46,29 @@ h1, h2, h3, h4, h5, h6 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(118, 118, 128, 0.2);
-  border-radius: 4px;
+  background: #E5E7EB;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(118, 118, 128, 0.4);
+  background: #D1D5DB;
 }
 
-/* Buttons */
+/* Common UI Elements */
 button {
   cursor: pointer;
   border: none;
   background: transparent;
   outline: none;
-  font-family: inherit;
-  font-weight: 500;
+  font-size: inherit;
   transition: all var(--transition-fast);
 }
 
-/* Inputs & Form Controls */
 input, textarea, select {
   outline: none;
-  border: 1px solid var(--outline-variant);
+  border: 1px solid var(--card-border);
   border-radius: var(--border-radius-sm);
   padding: 8px 12px;
   font-size: 14px;
-  font-family: inherit;
   color: var(--foreground);
   background: var(--card-bg);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -117,16 +79,16 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
-/* Checkbox customization - Circular iOS/Mac notes style */
+/* Checkbox customization */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
   flex-shrink: 0;
-  border: 2px solid var(--outline-variant);
+  border: 2px solid #D1D5DB;
   border-radius: 50%;
   outline: none;
   cursor: pointer;
@@ -135,12 +97,6 @@ input[type="checkbox"] {
   justify-content: center;
   position: relative;
   transition: all var(--transition-fast);
-  background-color: var(--card-bg);
-}
-
-input[type="checkbox"]:hover {
-  border-color: var(--primary);
-  background-color: var(--primary-subtle);
 }
 
 input[type="checkbox"]:checked {
@@ -151,18 +107,18 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:checked::after {
   content: "✓";
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
 }
 
 /* Micro-animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes popoverIn {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  from { opacity: 0; transform: scale(0.95) translateY(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -174,11 +130,11 @@ input[type="checkbox"]:checked::after {
   animation: popoverIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Rich Editor Checklist style */
-.rich-editor h1, .rich-editor h2, .rich-editor h3 {
-  font-family: 'Outfit', sans-serif;
-  margin-top: 16px;
-  margin-bottom: 8px;
+/* Typography styles inside editor */
+.rich-editor h3 {
+  margin: 16px 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
 }
 .rich-editor p {
   margin-bottom: 8px;
@@ -198,12 +154,16 @@ input[type="checkbox"]:checked::after {
 
 /* Skeleton Loader */
 @keyframes skeletonShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f2f4f6 25%, #e7e8ee 50%, #f2f4f6 75%);
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
   background-size: 200% 100%;
   animation: skeletonShimmer 1.5s infinite linear;
   border-radius: 4px;
@@ -237,7 +197,6 @@ input[type="checkbox"]:checked::after {
   flex-direction: row;
   height: 100vh;
   width: 100vw;
-  background-color: var(--background);
 }
 
 .layout-main {
@@ -254,7 +213,9 @@ input[type="checkbox"]:checked::after {
   }
   
   .layout-main {
-    height: calc(100vh - 60px);
+    height: calc(100vh - 60px); /* Leave room for bottom nav */
     padding-bottom: 0px;
   }
 }
+
+

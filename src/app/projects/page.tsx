@@ -144,22 +144,18 @@ export default function ProjectsPage() {
     <div className={`${styles.container} animate-fade-in`}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>
-            <span className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--primary)', verticalAlign: 'middle', marginRight: '8px' }}>folder_copy</span>
-            <span style={{ verticalAlign: 'middle' }}>Project Pipeline Tracker</span>
-          </h1>
+          <h1 className={styles.title}>📁 Project Pipeline Tracker</h1>
           <p className={styles.subtitle}>Kelola status progress dan detail tahapan project startup Anda.</p>
         </div>
-        <button className={styles.addBtn} onClick={() => setShowAddModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>add</span>
-          <span>Proyek Baru</span>
+        <button className={styles.addBtn} onClick={() => setShowAddModal(true)}>
+          + Proyek Baru
         </button>
       </header>
 
       {/* Projects Grid */}
       {projects.length === 0 ? (
         <div className={styles.emptyState}>
-          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--outline-variant)', marginBottom: '8px' }}>folder_off</span>
+          <span className={styles.emptyIcon}>📁</span>
           <p>Belum ada proyek yang dilacak.</p>
           <button className={styles.addBtnLarge} onClick={() => setShowAddModal(true)}>
             Mulai Tambah Proyek
@@ -175,22 +171,9 @@ export default function ProjectsPage() {
               <div key={proj.id} className={styles.projCard}>
                 <div className={styles.cardHeader}>
                   <h3 className={styles.projName}>{proj.name}</h3>
-                  <div className={`${styles.statusBadge} ${isCompleted ? styles.liveBadge : styles.activeBadge}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {isCompleted ? (
-                      <>
-                        <span className="material-symbols-outlined" style={{ fontSize: '10px' }}>check_circle</span>
-                        <span>LIVE</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="relative flex h-1.5 w-1.5 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
-                        </span>
-                        <span>{activeStage?.name || 'Selesai'}</span>
-                      </>
-                    )}
-                  </div>
+                  <span className={`${styles.statusBadge} ${isCompleted ? styles.liveBadge : styles.activeBadge}`}>
+                    {isCompleted ? '✓ LIVE' : `Tahap: ${activeStage?.name || 'Selesai'}`}
+                  </span>
                 </div>
 
                 <p className={styles.projDesc}>
@@ -199,56 +182,53 @@ export default function ProjectsPage() {
 
                 {/* Step Indicator (Pipeline View) */}
                 <div className={styles.pipelineContainer}>
-                  <div className={styles.stagesTextRow}>
+                  <p className={styles.pipelineLabel}>Tahapan Proyek:</p>
+                  <div className={styles.stepIndicator}>
                     {proj.stages.map((stage, idx) => {
-                      const isStageActive = idx === proj.current_stage_index;
-                      return (
-                        <span 
-                          key={stage.id} 
-                          className={`${styles.stageTextSpan} ${isStageActive ? styles.stageTextActive : ''}`}
-                        >
-                          {stage.name}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className={styles.segmentedBar}>
-                    {proj.stages.map((stage, idx) => {
-                      const isStageDone = idx < proj.current_stage_index;
+                      const isStageDone = idx < proj.current_stage_index || stage.completed_at;
                       const isStageActive = idx === proj.current_stage_index;
                       
                       return (
-                        <div 
-                          key={stage.id}
-                          className={`${styles.barSegment} ${
-                            isStageDone ? styles.segmentDone : isStageActive ? styles.segmentActive : styles.segmentFuture
-                          }`}
-                          style={{ width: `${100 / proj.stages.length}%` }}
-                          title={stage.name}
-                        />
+                        <div key={stage.id} className={styles.stepNodeContainer}>
+                          {/* Connection line */}
+                          {idx > 0 && (
+                            <div 
+                              className={`${styles.stepLine} ${
+                                idx <= proj.current_stage_index ? styles.stepLineDone : ''
+                              }`} 
+                            />
+                          )}
+                          <div 
+                            className={`${styles.stepNode} ${
+                              isStageDone ? styles.nodeDone : isStageActive ? styles.nodeActive : styles.nodeFuture
+                            }`}
+                            title={stage.name}
+                          >
+                            {isStageDone ? '✓' : idx + 1}
+                            <span className={styles.nodeTooltip}>{stage.name}</span>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 </div>
 
                 {/* Card Meta */}
-                <div className={styles.cardMeta} style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '8px', padding: '10px', backgroundColor: 'var(--surface-container-low)', borderRadius: '6px', border: '1px solid var(--outline-variant)' }}>
+                <div className={styles.cardMeta}>
                   <div className={styles.metaItem}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--outline)', marginRight: '4px' }}>person</span>
+                    <span className={styles.metaLabel}>PIC:</span>
                     <span className={styles.metaVal}>{proj.pic || '-'}</span>
                   </div>
                   <div className={styles.metaItem}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--outline)', marginRight: '4px' }}>schedule</span>
+                    <span className={styles.metaLabel}>Deadline:</span>
                     <span className={styles.metaVal}>{formatDate(proj.deadline)}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className={styles.cardActions}>
-                  <Link href={`/projects/${proj.id}`} className={styles.detailBtn} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <span>Detail & Dashboard</span>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>bolt</span>
+                  <Link href={`/projects/${proj.id}`} className={styles.detailBtn}>
+                    Buka Detail & Dashboard ⚡
                   </Link>
                 </div>
               </div>
@@ -262,10 +242,7 @@ export default function ProjectsPage() {
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>folder</span>
-                <span>Tambah Proyek Baru</span>
-              </h3>
+              <h3>Tambah Proyek Baru 📁</h3>
               <button className={styles.closeBtn} onClick={() => setShowAddModal(false)}>×</button>
             </div>
             <form onSubmit={handleAddProject}>

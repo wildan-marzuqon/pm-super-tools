@@ -443,9 +443,9 @@ function NotesContent() {
               // We replace the text node with styled HTML that indicates it's converted
               // E.g. Checkbox + Text + Converted Badge
               const textSpan = document.createElement('span');
-              textSpan.style.color = 'var(--secondary)';
+              textSpan.style.color = '#B45309';
               textSpan.style.fontWeight = '500';
-              textSpan.innerHTML = ` ${popoverFields.title} <span class="${styles.convertedBadge}" style="font-size: 10px; background-color: var(--secondary-light); color: var(--secondary); padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px; display: inline-flex; align-items: center; gap: 2px;"><span class="material-symbols-outlined" style="font-size: 11px; font-weight: bold;">bolt</span>Action (PIC: ${popoverFields.pic})</span>`;
+              textSpan.innerHTML = ` ${popoverFields.title} <span class="${styles.convertedBadge}" style="font-size: 10px; background-color: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">⚡ Action (PIC: ${popoverFields.pic})</span>`;
               
               // Clear text inside LI except the checkbox input itself
               while (li.childNodes.length > 1) {
@@ -512,8 +512,7 @@ function NotesContent() {
               onClick={() => setSelectedFolder(folder)}
               className={`${styles.folderBtn} ${selectedFolder === folder ? styles.activeFolder : ''}`}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
-              <span style={{ verticalAlign: 'middle' }}>{folder}</span>
+              📁 {folder}
             </button>
           ))}
         </div>
@@ -602,8 +601,7 @@ function NotesContent() {
                   />
                 </div>
                 <button className={styles.deleteBtn} onClick={handleDeleteNote} disabled={isDeletingNote}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>delete</span>
-                  <span style={{ verticalAlign: 'middle' }}>{isDeletingNote ? 'Menghapus...' : 'Hapus Note'}</span>
+                  🗑️ {isDeletingNote ? 'Menghapus...' : 'Hapus Note'}
                 </button>
               </div>
             </div>
@@ -626,14 +624,13 @@ function NotesContent() {
                 <option value="3">Sedang</option>
                 <option value="4">Besar</option>
               </select>
-              <button title="Heading" onClick={() => executeCmd('formatBlock', '<h3>')}><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>title</span></button>
-              <button title="Paragraph" onClick={() => executeCmd('formatBlock', '<p>')}><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>notes</span></button>
-              <button title="Bold" onClick={() => executeCmd('bold')}><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>format_bold</span></button>
-              <button title="Italic" onClick={() => executeCmd('italic')}><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>format_italic</span></button>
-              <button title="Bullet List" onClick={() => executeCmd('insertUnorderedList')}><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>format_list_bulleted</span></button>
+              <button title="Heading" onClick={() => executeCmd('formatBlock', '<h3>')}><b>H1</b></button>
+              <button title="Paragraph" onClick={() => executeCmd('formatBlock', '<p>')}>P</button>
+              <button title="Bold" onClick={() => executeCmd('bold')}><b>B</b></button>
+              <button title="Italic" onClick={() => executeCmd('italic')}><i>I</i></button>
+              <button title="Bullet List" onClick={() => executeCmd('insertUnorderedList')}>• List</button>
               <button title="Checklist" onClick={insertChecklist} className={styles.checklistBtn}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>checklist</span>
-                <span style={{ verticalAlign: 'middle' }}>Checklist</span>
+                ✓ Checklist
               </button>
             </div>
 
@@ -658,7 +655,7 @@ function NotesContent() {
                   onClick={handleOpenPopover}
                   title="Convert checklist item ke Action Item"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span>
+                  ⚡
                 </button>
               )}
 
@@ -669,10 +666,7 @@ function NotesContent() {
                   style={{ top: popoverPos.top, left: popoverPos.left }}
                 >
                   <div className={styles.popoverHeader}>
-                    <h4>
-                      <span className="material-symbols-outlined" style={{ marginRight: '6px', verticalAlign: 'middle', color: 'var(--primary)' }}>bolt</span>
-                      <span style={{ verticalAlign: 'middle' }}>Buat Action Item</span>
-                    </h4>
+                    <h4>Buat Action Item ⚡</h4>
                     <button className={styles.popoverClose} onClick={() => setShowPopover(false)}>×</button>
                   </div>
                   <div className={styles.popoverBody}>
@@ -737,7 +731,7 @@ function NotesContent() {
           </div>
         ) : (
           <div className={styles.emptyEditor}>
-            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--muted-text)', marginBottom: '12px' }}>edit_note</span>
+            <span className={styles.emptyIcon}>📝</span>
             <p>Silakan buat catatan baru atau pilih catatan yang ada di sidebar kiri.</p>
             <button className={styles.newNoteBtnLarge} onClick={handleNewNote} disabled={isCreatingNote}>
               {isCreatingNote ? 'Membuat...' : '+ Buat Catatan Baru'}

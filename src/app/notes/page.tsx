@@ -17,6 +17,7 @@ interface Note {
 interface Project {
   id: string;
   name: string;
+  categories?: Array<{ id: string; name: string }>;
 }
 
 function NotesContent() {
@@ -56,6 +57,7 @@ function NotesContent() {
     pic: '',
     deadline: '',
     projectId: '',
+    categoryId: '',
     description: ''
   });
 
@@ -309,10 +311,18 @@ function NotesContent() {
   // Let's show an indicator next to any checklist item. To make it extremely reliable:
   // When a user hovers a checkbox or clicks a text in checklist, we can show a floating "⚡ Convert" button.
   // Let's implement dynamic detection of checkbox elements on editor focus / selection change.
+  const clearConvertingFlags = () => {
+    if (editorRef.current) {
+      const elements = editorRef.current.querySelectorAll('[data-converting]');
+      elements.forEach((el) => el.removeAttribute('data-converting'));
+    }
+  };
+
   const handleEditorKeyUpOrMouseUp = () => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       setFloatButtonPos((prev) => ({ ...prev, visible: false }));
+      clearConvertingFlags();
       return;
     }
 
@@ -322,7 +332,6 @@ function NotesContent() {
     if (!selection.isCollapsed) {
       const text = selection.toString().trim();
       if (text.length > 0) {
-        // Ensure selection is inside the editor body
         let anchor = selection.anchorNode;
         let isInsideEditor = false;
         while (anchor) {
@@ -337,6 +346,7 @@ function NotesContent() {
           const rect = range.getBoundingClientRect();
           const editorContainer = editorRef.current?.getBoundingClientRect();
           if (editorContainer) {
+            clearConvertingFlags();
             setFloatButtonPos({
               top: rect.top - editorContainer.top - 28 + (editorRef.current?.scrollTop || 0),
               left: rect.left - editorContainer.left + (rect.width / 2) - 10,
@@ -350,10 +360,42 @@ function NotesContent() {
       }
     }
 
-    // 2. Checklist Item Focus Mode (Collapsed selection, cursor inside checklist)
+    // 2. Bold Text Focus Mode (Cursor inside a bold element)
+    let boldNode: HTMLElement | null = null;
+    let tempNode = range.startContainer as HTMLElement;
+    while (tempNode && tempNode !== editorRef.current && tempNode.id !== 'editor-body') {
+      if (
+        tempNode.nodeName === 'STRONG' || 
+        tempNode.nodeName === 'B' || 
+        (tempNode.style && (tempNode.style.fontWeight === 'bold' || tempNode.style.fontWeight === '700'))
+      ) {
+        boldNode = tempNode;
+        break;
+      }
+      tempNode = tempNode.parentNode as HTMLElement;
+    }
+
+    if (boldNode) {
+      const rect = boldNode.getBoundingClientRect();
+      const editorContainer = editorRef.current?.getBoundingClientRect();
+      if (editorContainer) {
+        clearConvertingFlags();
+        boldNode.setAttribute('data-converting', 'true');
+        
+        // Put the button right next to the bold text
+        setFloatButtonPos({
+          top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
+          left: rect.right - editorContainer.left + 8,
+          visible: true,
+          nodeText: boldNode.textContent?.trim() || '',
+          nodeId: ''
+        });
+        return;
+      }
+    }
+
+    // 3. Checklist Item Focus Mode (Cursor inside checklist)
     let node = range.startContainer as HTMLElement;
-    
-    // Climb up to find LI
     while (node && node.nodeName !== 'LI' && node.id !== 'editor-body') {
       node = node.parentNode as HTMLElement;
     }
@@ -365,6 +407,7 @@ function NotesContent() {
         const editorContainer = editorRef.current?.getBoundingClientRect();
         
         if (editorContainer) {
+          clearConvertingFlags();
           const textContent = node.textContent?.trim() || '';
           setFloatButtonPos({
             top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
@@ -380,6 +423,7 @@ function NotesContent() {
 
     // Otherwise, hide float button
     setFloatButtonPos((prev) => ({ ...prev, visible: false }));
+    clearConvertingFlags();
   };
 
   const [floatButtonPos, setFloatButtonPos] = useState({
@@ -397,6 +441,7 @@ function NotesContent() {
       pic: 'Wildan',
       deadline: new Date().toISOString().split('T')[0],
       projectId: projects[0]?.id || '',
+      categoryId: '',
       description: ''
     });
     setSelectedCheckboxId(floatButtonPos.nodeId);
@@ -407,7 +452,7 @@ function NotesContent() {
     setShowPopover(true);
   };
 
-  // Convert checklist to Action Item
+  // Convert checklist or bold text to Action Item
   const handleConvertToActionItem = async () => {
     if (!popoverFields.title || isConverting) return;
 
@@ -421,8 +466,9 @@ function NotesContent() {
           description: popoverFields.description,
           deadline: popoverFields.deadline,
           pic: popoverFields.pic,
-          status: 'open',
-          project_id: popoverFields.projectId || undefined,
+          completed: false,
+          project_id: popoverFields.projectId || null,
+          category_id: popoverFields.categoryId || null,
           source_note_id: selectedNote?.id
         })
       });
@@ -430,41 +476,55 @@ function NotesContent() {
       if (res.ok) {
         const newAction = await res.json();
         
-        // Update the checkbox line in editor to indicate it has been converted
+        // 1. Update the checkbox line in editor to indicate it has been converted
         if (editorRef.current && selectedCheckboxId) {
           const checkboxEl = editorRef.current.querySelector(`#${selectedCheckboxId}`);
           if (checkboxEl) {
             const li = checkboxEl.closest('li');
             if (li) {
-              // Append a badge/status indicating it has been converted to action item
-              // Make sure to preserve checkbox state
-              const isChecked = (checkboxEl as HTMLInputElement).checked;
-              
-              // We replace the text node with styled HTML that indicates it's converted
-              // E.g. Checkbox + Text + Converted Badge
               const textSpan = document.createElement('span');
               textSpan.style.color = '#B45309';
               textSpan.style.fontWeight = '500';
               textSpan.innerHTML = ` ${popoverFields.title} <span class="${styles.convertedBadge}" style="font-size: 10px; background-color: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">⚡ Action (PIC: ${popoverFields.pic})</span>`;
               
-              // Clear text inside LI except the checkbox input itself
               while (li.childNodes.length > 1) {
                 li.removeChild(li.lastChild!);
               }
               li.appendChild(textSpan);
-              
-              // Trigger save of note content
               handleContentChange();
             }
           }
         }
 
+        // 2. Update the bold tag in editor to indicate it has been converted
+        if (editorRef.current && !selectedCheckboxId) {
+          const boldEl = editorRef.current.querySelector('[data-converting]');
+          if (boldEl) {
+            const badge = document.createElement('span');
+            badge.style.fontSize = '10px';
+            badge.style.backgroundColor = '#FEF3C7';
+            badge.style.color = '#D97706';
+            badge.style.padding = '2px 6px';
+            badge.style.borderRadius = '4px';
+            badge.style.fontWeight = 'bold';
+            badge.style.marginLeft = '6px';
+            badge.style.display = 'inline-block';
+            badge.style.verticalAlign = 'middle';
+            badge.innerHTML = `⚡ Action (PIC: ${popoverFields.pic})`;
+
+            boldEl.parentNode?.insertBefore(badge, boldEl.nextSibling);
+            boldEl.removeAttribute('data-converting');
+            handleContentChange();
+          }
+        }
+
         setShowPopover(false);
         setFloatButtonPos((prev) => ({ ...prev, visible: false }));
+        clearConvertingFlags();
         alert(`Berhasil membuat Action Item: "${newAction.title}"!`);
       }
     } catch (error) {
-      console.error('Error converting checklist to action item:', error);
+      console.error('Error converting to action item:', error);
     } finally {
       setIsConverting(false);
     }
@@ -702,7 +762,7 @@ function NotesContent() {
                       <label>Kaitkan ke Project</label>
                       <select
                         value={popoverFields.projectId}
-                        onChange={(e) => setPopoverFields({ ...popoverFields, projectId: e.target.value })}
+                        onChange={(e) => setPopoverFields({ ...popoverFields, projectId: e.target.value, categoryId: '' })}
                       >
                         <option value="">-- Tanpa Project (Standalone) --</option>
                         {projects.map((proj) => (
@@ -712,6 +772,22 @@ function NotesContent() {
                         ))}
                       </select>
                     </div>
+                    {popoverFields.projectId && (
+                      <div className={styles.popoverField}>
+                        <label>Kategori</label>
+                        <select
+                          value={popoverFields.categoryId}
+                          onChange={(e) => setPopoverFields({ ...popoverFields, categoryId: e.target.value })}
+                        >
+                          <option value="">Tanpa Kategori</option>
+                          {projects.find(p => p.id === popoverFields.projectId)?.categories?.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className={styles.popoverField}>
                       <label>Keterangan</label>
                       <textarea

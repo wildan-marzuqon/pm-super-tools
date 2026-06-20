@@ -26,30 +26,43 @@ model ActionItem {
   description  String   @default("") @db.Text
   deadline     String   @default("")
   pic          String   @default("")
-  status       String   @default("open")
+  completed    Boolean  @default(false)
   sourceNoteId String?  @map("source_note_id")
   projectId    String?  @map("project_id")
+  categoryId   String?  @map("category_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  note    Note?    @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  note     Note?            @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
+  project  Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category ProjectCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("action_items")
 }
 
 model Project {
-  id                String         @id @default(uuid())
+  id                String            @id @default(uuid())
   name              String
-  description       String         @default("") @db.Text
-  deadline          String         @default("")
-  pic               String         @default("")
-  currentStageIndex Int            @default(0) @map("current_stage_index")
-  createdAt         DateTime       @default(now()) @map("created_at")
+  description       String            @default("") @db.Text
+  deadline          String            @default("")
+  pic               String            @default("")
+  currentStageIndex Int               @default(0) @map("current_stage_index")
+  createdAt         DateTime          @default(now()) @map("created_at")
   stages            ProjectStage[]
   actions           ActionItem[]
   artifacts         Artifact[]
+  categories        ProjectCategory[]
 
   @@map("projects")
+}
+
+model ProjectCategory {
+  id        String       @id @default(uuid())
+  projectId String       @map("project_id")
+  name      String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actions   ActionItem[]
+
+  @@map("project_categories")
 }
 
 model ProjectStage {

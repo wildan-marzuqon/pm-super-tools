@@ -926,3 +926,101 @@
     justify-content: flex-end;
   }
 }
+
+.categoryTagBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+  background-color: #E6FFFA;
+  color: #0D9488;
+  border: 1px solid #99F6E4;
+}
+
+.completeTaskBtn {
+  padding: 8px 16px;
+  background-color: #10B981;
+  color: white;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.completeTaskBtn:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+/* Prompt Modal */
+.promptModal {
+  background-color: #ffffff;
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.promptModal h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.promptModal p {
+  font-size: 14px;
+  color: var(--muted-text);
+  line-height: 1.5;
+}
+
+.promptActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.promptYesBtn {
+  padding: 10px 20px;
+  background-color: var(--primary);
+  color: white;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  border: none;
+  cursor: pointer;
+}
+
+.promptYesBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.promptNoBtn {
+  padding: 10px 20px;
+  background-color: #F3F4F6;
+  color: var(--foreground);
+  border: 1px solid #D1D5DB;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promptNoBtn:hover {
+  background-color: #E5E7EB;
+}

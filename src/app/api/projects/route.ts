@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
       include: {
         stages: {
           orderBy: { order: 'asc' }
-        }
+        },
+        categories: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
       return {
         ...proj,
         current_stage_index: proj.currentStageIndex,
-        currentStage
+        currentStage,
+        categories: proj.categories
       };
     });
 

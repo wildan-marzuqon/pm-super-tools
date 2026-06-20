@@ -89,7 +89,7 @@ async function main() {
         description: 'Lakukan benchmarking awal untuk akurasi dan kecepatan inferensi.',
         deadline: '2026-06-22',
         pic: 'Rian',
-        status: 'done',
+        completed: true,
         sourceNoteId: 'note-1',
         projectId: 'proj-1',
         createdAt: new Date(Date.now() - 3600000 * 24)
@@ -100,7 +100,7 @@ async function main() {
         description: 'Deploy di Vercel/AWS Lambda untuk testing latensi dari client side.',
         deadline: '2026-06-25',
         pic: 'Adi',
-        status: 'open',
+        completed: false,
         sourceNoteId: 'note-1',
         projectId: 'proj-1',
         createdAt: new Date(Date.now() - 3600000 * 24)
@@ -111,7 +111,7 @@ async function main() {
         description: 'Hapus drag and drop, gantikan dengan tab indicator yang lebih clean.',
         deadline: '2026-06-24',
         pic: 'Ferry',
-        status: 'done',
+        completed: true,
         sourceNoteId: 'note-2',
         projectId: 'proj-2',
         createdAt: new Date(Date.now() - 3600000 * 12)
@@ -122,7 +122,7 @@ async function main() {
         description: 'Buat setting di project detail untuk manage stages list.',
         deadline: '2026-06-26',
         pic: 'Wildan',
-        status: 'in_progress',
+        completed: false,
         sourceNoteId: 'note-2',
         projectId: 'proj-2',
         createdAt: new Date(Date.now() - 3600000 * 12)

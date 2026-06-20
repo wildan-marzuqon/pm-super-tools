@@ -572,3 +572,224 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Modal Overlay & Modal Window */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--surface-container);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalHeader h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+}
+
+.closeBtn {
+  font-size: 24px;
+  color: var(--muted-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.modalBody {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalFooter {
+  padding: 12px 24px;
+  background-color: var(--surface-container-low);
+  border-top: 1px solid var(--surface-container);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancelBtn {
+  padding: 6px 14px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background-color: var(--surface-container-low);
+}
+
+.completeTaskBtn {
+  padding: 8px 16px;
+  background-color: #10B981;
+  color: white;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.completeTaskBtn:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-text);
+  text-transform: uppercase;
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+  padding: 8px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  color: var(--foreground);
+  background-color: var(--card-bg);
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-subtle);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.categoryTagBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+  background-color: var(--secondary-light);
+  color: var(--secondary);
+  border: 1px solid var(--outline-variant);
+}
+
+/* Prompt Modal */
+.promptModal {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.promptModal h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.promptModal p {
+  font-size: 14px;
+  color: var(--muted-text);
+  line-height: 1.5;
+}
+
+.promptActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.promptYesBtn {
+  padding: 10px 20px;
+  background-color: var(--primary);
+  color: white;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px var(--primary-subtle);
+  border: none;
+  cursor: pointer;
+}
+
+.promptYesBtn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.promptNoBtn {
+  padding: 10px 20px;
+  background-color: var(--surface-container-low);
+  color: var(--foreground);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promptNoBtn:hover {
+  background-color: var(--surface-container);
+}

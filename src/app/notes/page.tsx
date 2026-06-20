@@ -110,6 +110,11 @@ function NotesContent() {
   const [editorFolder, setEditorFolder] = useState('');
   const [editorTags, setEditorTags] = useState('');
   const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved Changes'>('Saved');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -139,6 +144,7 @@ function NotesContent() {
       FontSize,
     ],
     content: '',
+    immediatelyRender: false,
     onSelectionUpdate: ({ editor }) => {
       handleSelectionChange(editor);
     },
@@ -756,22 +762,62 @@ function NotesContent() {
                 <option value="3">Sedang</option>
                 <option value="4">Besar</option>
               </select>
-              <button title="Heading" onClick={() => executeCmd('formatBlock', '<h3>')}><b>H1</b></button>
-              <button title="Paragraph" onClick={() => executeCmd('formatBlock', '<p>')}>P</button>
-              <button title="Bold" onClick={() => executeCmd('bold')}><b>B</b></button>
-              <button title="Italic" onClick={() => executeCmd('italic')}><i>I</i></button>
-              <button title="Bullet List" onClick={() => executeCmd('insertUnorderedList')}>• List</button>
-              <button title="Checklist" onClick={insertChecklist} className={styles.checklistBtn}>
+              <button 
+                title="Heading" 
+                onClick={() => executeCmd('formatBlock', '<h3>')}
+                className={editor?.isActive('heading', { level: 3 }) ? styles.activeToolbarBtn : ''}
+              >
+                <b>H1</b>
+              </button>
+              <button 
+                title="Paragraph" 
+                onClick={() => executeCmd('formatBlock', '<p>')}
+                className={editor?.isActive('paragraph') ? styles.activeToolbarBtn : ''}
+              >
+                P
+              </button>
+              <button 
+                title="Bold" 
+                onClick={() => executeCmd('bold')}
+                className={editor?.isActive('bold') ? styles.activeToolbarBtn : ''}
+              >
+                <b>B</b>
+              </button>
+              <button 
+                title="Italic" 
+                onClick={() => executeCmd('italic')}
+                className={editor?.isActive('italic') ? styles.activeToolbarBtn : ''}
+              >
+                <i>I</i>
+              </button>
+              <button 
+                title="Bullet List" 
+                onClick={() => executeCmd('insertUnorderedList')}
+                className={editor?.isActive('bulletList') ? styles.activeToolbarBtn : ''}
+              >
+                • List
+              </button>
+              <button 
+                title="Checklist" 
+                onClick={insertChecklist} 
+                className={`${styles.checklistBtn} ${editor?.isActive('taskList') ? styles.activeChecklistBtn : ''}`}
+              >
                 ✓ Checklist
               </button>
             </div>
 
             {/* Tiptap Editor Body */}
             <div className={styles.editorBodyContainer} ref={editorRef}>
-              <EditorContent
-                editor={editor}
-                className={`${styles.editorBody} rich-editor`}
-              />
+              {mounted && editor ? (
+                <EditorContent
+                  editor={editor}
+                  className={`${styles.editorBody} rich-editor`}
+                />
+              ) : (
+                <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>
+                  Loading Editor...
+                </div>
+              )}
 
               {/* Floating Convert Button Trigger */}
               {floatButtonPos.visible && (

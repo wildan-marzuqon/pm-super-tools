@@ -566,3 +566,15 @@
   }
 }
 
+.activeToolbarBtn {
+  background-color: var(--primary-light) !important;
+  color: #B45309 !important;
+  border-color: #FEF08A !important;
+  font-weight: bold;
+}
+
+.activeChecklistBtn {
+  background-color: #FEF08A !important;
+  border-color: var(--primary) !important;
+}
+

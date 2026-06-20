@@ -363,15 +363,51 @@
 .editorBody {
   min-height: 100%;
   outline: none;
+}
+
+.editorBody :global(.ProseMirror) {
+  min-height: 100%;
+  outline: none;
   font-size: 15px;
   line-height: 1.6;
   color: var(--foreground);
 }
 
-.editorBody:empty::before {
+.editorBody :global(.ProseMirror) > p:first-child:last-child:empty::before {
   content: "Tulis detail meeting, feedback, atau ide Anda di sini...";
   color: var(--muted-text);
-  cursor: text;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* Custom Checklist (Task List) styling for Tiptap */
+.editorBody :global(.ProseMirror ul[data-type="taskList"]) {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+}
+
+.editorBody :global(.ProseMirror li[data-type="taskItem"]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.editorBody :global(.ProseMirror li[data-type="taskItem"] > label) {
+  display: flex;
+  align-items: center;
+  user-select: none;
+  margin-top: 3px;
+}
+
+.editorBody :global(.ProseMirror li[data-type="taskItem"] > div) {
+  flex: 1;
+}
+
+.editorBody :global(.ProseMirror li[data-type="taskItem"][data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: var(--muted-text);
 }
 
 /* Float Convert Trigger */

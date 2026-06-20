@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Extension } from '@tiptap/core';
 import styles from './page.module.css';
 
 interface Note {
@@ -18,6 +24,66 @@ interface Project {
   id: string;
   name: string;
   categories?: Array<{ id: string; name: string }>;
+}
+
+// Custom Font Size Extension
+export const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() {
+    return {
+      types: ['textStyle'],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize || element.getAttribute('size'),
+            renderHTML: attributes => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              let sizeStr = attributes.fontSize;
+              if (sizeStr === '2') sizeStr = '12px';
+              else if (sizeStr === '3') sizeStr = '15px';
+              else if (sizeStr === '4') sizeStr = '20px';
+              
+              return {
+                style: `font-size: ${sizeStr}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ chain }) => {
+        return chain()
+          .setMark('textStyle', { fontSize })
+          .run();
+      },
+      unsetFontSize: () => ({ chain }) => {
+        return chain()
+          .setMark('textStyle', { fontSize: null })
+          .removeEmptyTextStyle()
+          .run();
+      },
+    };
+  },
+});
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    fontSize: {
+      setFontSize: (size: string) => ReturnType;
+      unsetFontSize: () => ReturnType;
+    };
+  }
 }
 
 function NotesContent() {
@@ -48,7 +114,7 @@ function NotesContent() {
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Popover State (Convert checklist to action item)
+  // Popover State (Convert checklist/bold text to action item)
   const [showPopover, setShowPopover] = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
   const [selectedCheckboxId, setSelectedCheckboxId] = useState<string>('');
@@ -59,6 +125,27 @@ function NotesContent() {
     projectId: '',
     categoryId: '',
     description: ''
+  });
+
+  // Tiptap Editor Initialization
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      TextStyle,
+      FontSize,
+    ],
+    content: '',
+    onSelectionUpdate: ({ editor }) => {
+      handleSelectionChange(editor);
+    },
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      handleContentChange(html);
+    },
   });
 
   // 1. Fetch initial notes and projects on mount
@@ -97,7 +184,7 @@ function NotesContent() {
     fetchData();
   }, []);
 
-  // 2. Select note when selectedNoteId in query changes (external navigations like back/forward or click from dashboard)
+  // 2. Select note when selectedNoteId in query changes
   useEffect(() => {
     if (!loading && selectedNoteId && notes.length > 0) {
       if (selectedNote?.id !== selectedNoteId) {
@@ -114,15 +201,15 @@ function NotesContent() {
     }
   }, [selectedNoteId, notes, loading]);
 
-  // 3. Keep editor innerHTML synchronized with selectedNote.id changes (fixing blank editor on first mount)
+  // 3. Keep Tiptap editor content synchronized with selectedNote.id changes
   useEffect(() => {
-    if (editorRef.current && selectedNote) {
-      if (editorRef.current.getAttribute('data-note-id') !== selectedNote.id) {
-        editorRef.current.setAttribute('data-note-id', selectedNote.id);
-        editorRef.current.innerHTML = selectedNote.content || '<p><br></p>';
+    if (editor && selectedNote) {
+      if (editorRef.current?.getAttribute('data-note-id') !== selectedNote.id) {
+        editorRef.current?.setAttribute('data-note-id', selectedNote.id);
+        editor.commands.setContent(selectedNote.content || '<p></p>');
       }
     }
-  }, [selectedNote]);
+  }, [selectedNote, editor]);
 
   // Handle note selection
   const selectNote = (note: Note) => {
@@ -132,9 +219,9 @@ function NotesContent() {
     setEditorTags(note.tags.join(', '));
     setShowPopover(false);
     
-    if (editorRef.current) {
-      editorRef.current.setAttribute('data-note-id', note.id);
-      editorRef.current.innerHTML = note.content || '<p><br></p>';
+    if (editor) {
+      editorRef.current?.setAttribute('data-note-id', note.id);
+      editor.commands.setContent(note.content || '<p></p>');
     }
     setSaveStatus('Saved');
     router.push(`/notes?id=${note.id}`, { scroll: false });
@@ -166,7 +253,6 @@ function NotesContent() {
 
         if (res.ok) {
           const savedNote = await res.json();
-          // Update notes list
           setNotes((prevNotes) =>
             prevNotes.map((n) => (n.id === savedNote.id ? savedNote : n))
           );
@@ -179,7 +265,7 @@ function NotesContent() {
         console.error('Error auto-saving note:', error);
         setSaveStatus('Unsaved Changes');
       }
-    }, 1000); // 1s debounce
+    }, 1000);
   };
 
   // Handle Input Changes
@@ -202,9 +288,18 @@ function NotesContent() {
     triggerSave({ tags: tagsArr });
   };
 
-  const handleContentChange = () => {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
+  const handleContentChange = (htmlContent?: string) => {
+    let html = '';
+    if (htmlContent !== undefined) {
+      html = htmlContent;
+    } else if (editor) {
+      html = editor.getHTML();
+    } else if (editorRef.current) {
+      const prosemirrorEl = editorRef.current.querySelector('.ProseMirror');
+      html = prosemirrorEl ? prosemirrorEl.innerHTML : editorRef.current.innerHTML;
+    } else {
+      return;
+    }
     triggerSave({ content: html });
   };
 
@@ -266,51 +361,37 @@ function NotesContent() {
     }
   };
 
-  // Rich Text Editor Command execution
+  // Tiptap Command executions
   const executeCmd = (command: string, value: string = '') => {
-    document.execCommand(command, false, value);
-    handleContentChange();
-    if (editorRef.current) {
-      editorRef.current.focus();
+    if (!editor) return;
+    if (command === 'bold') {
+      editor.chain().focus().toggleBold().run();
+    } else if (command === 'italic') {
+      editor.chain().focus().toggleItalic().run();
+    } else if (command === 'insertUnorderedList') {
+      editor.chain().focus().toggleBulletList().run();
+    } else if (command === 'formatBlock') {
+      if (value === '<h3>') {
+        editor.chain().focus().toggleHeading({ level: 3 }).run();
+      } else if (value === '<p>') {
+        editor.chain().focus().setParagraph().run();
+      }
+    } else if (command === 'fontSize') {
+      let size = value;
+      if (size === '2') size = '12px';
+      else if (size === '3') size = '15px';
+      else if (size === '4') size = '20px';
+      editor.chain().focus().setFontSize(size).run();
     }
   };
 
   // Insert checklist checkbox in editor
   const insertChecklist = () => {
-    // Generate a unique checkbox ID
-    const chkId = `chk-${Date.now()}`;
-    const checklistHtml = `<ul><li><input type="checkbox" id="${chkId}">&nbsp;</li></ul>`;
-    executeCmd('insertHTML', checklistHtml);
+    if (!editor) return;
+    editor.chain().focus().toggleTaskList().run();
   };
 
-  // Handle editor clicks to manage checkboxes and popover triggers
-  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-
-    // 1. If checkbox clicked, toggle check state inside contentEditable and save
-    if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
-      const isChecked = (target as HTMLInputElement).checked;
-      target.setAttribute(isChecked ? 'checked' : '', isChecked ? 'true' : '');
-      if (!isChecked) {
-        target.removeAttribute('checked');
-      }
-      handleContentChange();
-      return;
-    }
-
-    // 2. We can show a small floating action trigger next to a checkbox to trigger popover
-    // Alternatively, clicking the checkbox or hovering could display a button.
-    // Let's implement an elegant approach: Clicking a checklist item's text or hover 
-    // triggers popover. To be very explicit, let's look for a checkbox.
-    // If the click is near a checkbox (e.g. inside a LI that has a checkbox),
-    // let's show a small "⚡" indicator next to the editor page or right above it.
-    // Let's make it so that if a checklist text is clicked or focused, we can offer to convert.
-  };
-
-  // We can attach mousemove/hover or context menu or click handlers.
-  // Let's show an indicator next to any checklist item. To make it extremely reliable:
-  // When a user hovers a checkbox or clicks a text in checklist, we can show a floating "⚡ Convert" button.
-  // Let's implement dynamic detection of checkbox elements on editor focus / selection change.
+  // Clear data-converting attributes
   const clearConvertingFlags = () => {
     if (editorRef.current) {
       const elements = editorRef.current.querySelectorAll('[data-converting]');
@@ -318,106 +399,92 @@ function NotesContent() {
     }
   };
 
-  const handleEditorKeyUpOrMouseUp = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
+  // Monitor selection change in Tiptap
+  const handleSelectionChange = (editorInstance: any) => {
+    const { state, view } = editorInstance;
+    const { selection } = state;
+    
+    if (!selection) {
       setFloatButtonPos((prev) => ({ ...prev, visible: false }));
       clearConvertingFlags();
       return;
     }
 
-    const range = selection.getRangeAt(0);
-
-    // 1. Text Selection Highlight Mode (Non-collapsed)
-    if (!selection.isCollapsed) {
-      const text = selection.toString().trim();
+    // 1. Text Selection Highlight Mode (Non-collapsed selection)
+    if (!selection.empty) {
+      const text = state.doc.textBetween(selection.from, selection.to, ' ').trim();
       if (text.length > 0) {
-        let anchor = selection.anchorNode;
-        let isInsideEditor = false;
-        while (anchor) {
-          if (anchor === editorRef.current) {
-            isInsideEditor = true;
-            break;
-          }
-          anchor = anchor.parentNode;
-        }
-
-        if (isInsideEditor) {
-          const rect = range.getBoundingClientRect();
-          const editorContainer = editorRef.current?.getBoundingClientRect();
-          if (editorContainer) {
-            clearConvertingFlags();
-            setFloatButtonPos({
-              top: rect.top - editorContainer.top - 28 + (editorRef.current?.scrollTop || 0),
-              left: rect.left - editorContainer.left + (rect.width / 2) - 10,
-              visible: true,
-              nodeText: text,
-              nodeId: ''
-            });
-            return;
-          }
+        const rect = view.coordsAtPos(selection.to);
+        const editorContainer = editorRef.current?.getBoundingClientRect();
+        if (editorContainer) {
+          clearConvertingFlags();
+          setFloatButtonPos({
+            top: rect.top - editorContainer.top - 28 + (editorRef.current?.scrollTop || 0),
+            left: rect.left - editorContainer.left,
+            visible: true,
+            nodeText: text,
+            nodeId: ''
+          });
+          return;
         }
       }
     }
 
     // 2. Bold Text Focus Mode (Cursor inside a bold element)
-    let boldNode: HTMLElement | null = null;
-    let tempNode = range.startContainer as HTMLElement;
-    while (tempNode && tempNode !== editorRef.current && tempNode.id !== 'editor-body') {
-      if (
-        tempNode.nodeName === 'STRONG' || 
-        tempNode.nodeName === 'B' || 
-        (tempNode.style && (tempNode.style.fontWeight === 'bold' || tempNode.style.fontWeight === '700'))
-      ) {
-        boldNode = tempNode;
-        break;
+    if (editorInstance.isActive('bold')) {
+      const { $from } = selection;
+      const dom = view.domAtPos($from.pos);
+      let boldNode = dom.node as HTMLElement;
+      
+      while (boldNode && boldNode !== view.dom && boldNode.nodeName !== 'STRONG' && boldNode.nodeName !== 'B') {
+        boldNode = boldNode.parentNode as HTMLElement;
       }
-      tempNode = tempNode.parentNode as HTMLElement;
-    }
-
-    if (boldNode) {
-      const rect = boldNode.getBoundingClientRect();
-      const editorContainer = editorRef.current?.getBoundingClientRect();
-      if (editorContainer) {
-        clearConvertingFlags();
-        boldNode.setAttribute('data-converting', 'true');
-        
-        // Put the button right next to the bold text
-        setFloatButtonPos({
-          top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
-          left: rect.right - editorContainer.left + 8,
-          visible: true,
-          nodeText: boldNode.textContent?.trim() || '',
-          nodeId: ''
-        });
-        return;
+      
+      if (boldNode && boldNode !== view.dom) {
+        const rect = boldNode.getBoundingClientRect();
+        const editorContainer = editorRef.current?.getBoundingClientRect();
+        if (editorContainer) {
+          clearConvertingFlags();
+          boldNode.setAttribute('data-converting', 'true');
+          setFloatButtonPos({
+            top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
+            left: rect.right - editorContainer.left + 8,
+            visible: true,
+            nodeText: boldNode.textContent?.trim() || '',
+            nodeId: ''
+          });
+          return;
+        }
       }
     }
 
     // 3. Checklist Item Focus Mode (Cursor inside checklist)
-    let node = range.startContainer as HTMLElement;
-    while (node && node.nodeName !== 'LI' && node.id !== 'editor-body') {
+    let node = view.nodeDOM(selection.$from.before(selection.$from.depth)) as HTMLElement;
+    while (node && node.nodeName !== 'LI' && node !== view.dom) {
       node = node.parentNode as HTMLElement;
     }
 
-    if (node && node.nodeName === 'LI') {
+    if (node && node.nodeName === 'LI' && node.getAttribute('data-type') === 'taskItem') {
       const checkbox = node.querySelector('input[type="checkbox"]') as HTMLInputElement;
-      if (checkbox) {
-        const rect = node.getBoundingClientRect();
-        const editorContainer = editorRef.current?.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      const editorContainer = editorRef.current?.getBoundingClientRect();
+      
+      if (editorContainer) {
+        clearConvertingFlags();
+        const textContent = node.textContent?.trim() || '';
         
-        if (editorContainer) {
-          clearConvertingFlags();
-          const textContent = node.textContent?.trim() || '';
-          setFloatButtonPos({
-            top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
-            left: Math.max(0, rect.left - editorContainer.left - 24),
-            visible: true,
-            nodeText: textContent,
-            nodeId: checkbox.id || ''
-          });
-          return;
+        if (checkbox && !checkbox.id) {
+          checkbox.id = `chk-${Date.now()}`;
         }
+        
+        setFloatButtonPos({
+          top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
+          left: Math.max(0, rect.left - editorContainer.left - 24),
+          visible: true,
+          nodeText: textContent,
+          nodeId: checkbox ? checkbox.id : ''
+        });
+        return;
       }
     }
 
@@ -452,7 +519,7 @@ function NotesContent() {
     setShowPopover(true);
   };
 
-  // Convert checklist or bold text to Action Item
+  // Convert checklist/bold text to Action Item
   const handleConvertToActionItem = async () => {
     if (!popoverFields.title || isConverting) return;
 
@@ -476,8 +543,8 @@ function NotesContent() {
       if (res.ok) {
         const newAction = await res.json();
         
-        // 1. Update the checkbox line in editor to indicate it has been converted
-        if (editorRef.current && selectedCheckboxId) {
+        // 1. Update the checkbox line in editor
+        if (editor && editorRef.current && selectedCheckboxId) {
           const checkboxEl = editorRef.current.querySelector(`#${selectedCheckboxId}`);
           if (checkboxEl) {
             const li = checkboxEl.closest('li');
@@ -487,17 +554,26 @@ function NotesContent() {
               textSpan.style.fontWeight = '500';
               textSpan.innerHTML = ` ${popoverFields.title} <span class="${styles.convertedBadge}" style="font-size: 10px; background-color: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px;">⚡ Action (PIC: ${popoverFields.pic})</span>`;
               
-              while (li.childNodes.length > 1) {
-                li.removeChild(li.lastChild!);
+              const label = li.querySelector('label');
+              if (label) {
+                while (li.childNodes.length > 0) {
+                  li.removeChild(li.firstChild!);
+                }
+                li.appendChild(label);
+                li.appendChild(textSpan);
+              } else {
+                while (li.childNodes.length > 1) {
+                  li.removeChild(li.lastChild!);
+                }
+                li.appendChild(textSpan);
               }
-              li.appendChild(textSpan);
-              handleContentChange();
+              editor.commands.setContent(editorRef.current.innerHTML);
             }
           }
         }
 
-        // 2. Update the bold tag in editor to indicate it has been converted
-        if (editorRef.current && !selectedCheckboxId) {
+        // 2. Update the bold tag in editor
+        if (editor && editorRef.current && !selectedCheckboxId) {
           const boldEl = editorRef.current.querySelector('[data-converting]');
           if (boldEl) {
             const badge = document.createElement('span');
@@ -514,7 +590,7 @@ function NotesContent() {
 
             boldEl.parentNode?.insertBefore(badge, boldEl.nextSibling);
             boldEl.removeAttribute('data-converting');
-            handleContentChange();
+            editor.commands.setContent(editorRef.current.innerHTML);
           }
         }
 
@@ -530,30 +606,38 @@ function NotesContent() {
     }
   };
 
-  // Get distinct folders from notes
-  const folders = ['All', ...Array.from(new Set(notes.map((note) => note.folder))).filter(Boolean)];
+  // Helper formatting date
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
-  // Filter notes by search query and active folder
-  const filteredNotes = notes.filter((note) => {
+  // Folder helper list
+  const folders = ['All', ...Array.from(new Set(notes.map((n) => n.folder).filter(Boolean)))];
+
+  // Filtering notes
+  const filteredNotes = notes.filter((n) => {
     const matchesSearch =
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFolder = selectedFolder === 'All' || note.folder === selectedFolder;
+      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (n.content && n.content.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesFolder = selectedFolder === 'All' || n.folder === selectedFolder;
+    
     return matchesSearch && matchesFolder;
   });
 
   return (
-    <div className={`${styles.container} ${selectedNote ? styles.showEditorMobile : ''}`}>
-      {/* Sidebar for Notes navigation */}
+    <div className={styles.container}>
+      {/* Sidebar List */}
       <div className={styles.notesSidebar}>
         <div className={styles.sidebarHeader}>
-          <h2>Catatan saya</h2>
+          <h2>Catatan 📝</h2>
           <button className={styles.newNoteBtn} onClick={handleNewNote} disabled={isCreatingNote}>
-            {isCreatingNote ? 'Membuat...' : '+ Note Baru'}
+            + Note Baru
           </button>
         </div>
 
-        {/* Search */}
         <div className={styles.searchContainer}>
           <input
             type="text"
@@ -564,78 +648,66 @@ function NotesContent() {
           />
         </div>
 
-        {/* Folders tabs */}
+        {/* Folders row list */}
         <div className={styles.foldersList}>
-          {folders.map((folder) => (
+          {folders.map((folderName) => (
             <button
-              key={folder}
-              onClick={() => setSelectedFolder(folder)}
-              className={`${styles.folderBtn} ${selectedFolder === folder ? styles.activeFolder : ''}`}
+              key={folderName}
+              onClick={() => setSelectedFolder(folderName)}
+              className={`${styles.folderBtn} ${selectedFolder === folderName ? styles.activeFolder : ''}`}
             >
-              📁 {folder}
+              {folderName}
             </button>
           ))}
         </div>
 
-        {/* Notes List */}
         <div className={styles.notesList}>
-          {loading ? (
-            [1, 2, 3].map((i) => (
-              <div key={i} className={styles.noteListItem} style={{ pointerEvents: 'none' }}>
-                <span className="skeleton" style={{ height: '12px', width: '40px', marginBottom: '6px', borderRadius: '4px' }}></span>
-                <div className="skeleton" style={{ height: '16px', width: '70%', marginBottom: '6px', borderRadius: '4px', display: 'block' }}></div>
-                <div className="skeleton" style={{ height: '12px', width: '100%', borderRadius: '4px' }}></div>
-              </div>
-            ))
-          ) : filteredNotes.length === 0 ? (
-            <p className={styles.noNotes}>Tidak ada note ditemukan.</p>
+          {filteredNotes.length === 0 ? (
+            <p className={styles.noNotes}>Tidak ada catatan.</p>
           ) : (
-            filteredNotes.map((note) => (
-              <div
-                key={note.id}
-                onClick={() => selectNote(note)}
-                className={`${styles.noteListItem} ${selectedNote?.id === note.id ? styles.activeNoteItem : ''}`}
-              >
-                <span className={styles.noteListFolder}>{note.folder}</span>
-                <h4 className={styles.noteListTitle}>{note.title || 'Untitled Note'}</h4>
-                <p 
-                  className={styles.noteListSnippet}
-                  dangerouslySetInnerHTML={{ 
-                    __html: note.content 
-                      ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 60) + '...'
-                      : 'No content...'
-                  }}
-                />
-              </div>
-            ))
+            filteredNotes.map((n) => {
+              const isSelected = selectedNote?.id === n.id;
+              const textSnippet = n.content
+                ? n.content.replace(/<[^>]*>/g, ' ').substring(0, 70)
+                : 'Mulai menulis catatan...';
+
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => selectNote(n)}
+                  className={`${styles.noteListItem} ${isSelected ? styles.activeNoteItem : ''}`}
+                >
+                  <span className={styles.noteListFolder}>{n.folder || 'Work'}</span>
+                  <h4 className={styles.noteListTitle}>{n.title || 'Note Tanpa Judul'}</h4>
+                  <p className={styles.noteListSnippet}>{textSnippet}</p>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Main Editor View */}
+      {/* Editor Area */}
       <div className={styles.editorArea}>
         {selectedNote ? (
           <div className={styles.editorContainer}>
-            {/* Editor Header metadata */}
+            {/* Header info */}
             <div className={styles.editorHeader}>
               <div className={styles.titleRow}>
-                <button 
-                  className={styles.backToSidebarBtn} 
-                  onClick={() => { setSelectedNote(null); router.push('/notes'); }}
-                  title="Kembali ke Daftar Catatan"
-                >
-                  ←
-                </button>
                 <input
                   type="text"
                   value={editorTitle}
                   onChange={handleTitleChange}
-                  placeholder="Judul Catatan..."
                   className={styles.titleInput}
+                  placeholder="Judul Catatan..."
                 />
                 <div className={styles.saveStatus}>
-                  <span className={`${styles.statusDot} ${saveStatus === 'Saved' ? styles.statusSaved : styles.statusSaving}`}></span>
-                  {saveStatus}
+                  <div
+                    className={`${styles.statusDot} ${
+                      saveStatus === 'Saved' ? styles.statusSaved : styles.statusSaving
+                    }`}
+                  />
+                  <span>{saveStatus}</span>
                 </div>
               </div>
 
@@ -646,17 +718,17 @@ function NotesContent() {
                     type="text"
                     value={editorFolder}
                     onChange={handleFolderChange}
-                    placeholder="Work / Personal / Design..."
                     className={styles.metaInput}
+                    placeholder="Work, Personal..."
                   />
                 </div>
                 <div className={styles.metaField}>
-                  <span className={styles.metaLabel}>Tags (koma):</span>
+                  <span className={styles.metaLabel}>Tags:</span>
                   <input
                     type="text"
                     value={editorTags}
                     onChange={handleTagsChange}
-                    placeholder="AI, Product, UX..."
+                    placeholder="AI, Product, UX (koma)..."
                     className={styles.metaInput}
                   />
                 </div>
@@ -673,7 +745,7 @@ function NotesContent() {
                 onChange={(e) => {
                   if (e.target.value) {
                     executeCmd('fontSize', e.target.value);
-                    e.target.value = ''; // Reset select after action
+                    e.target.value = '';
                   }
                 }}
                 className={styles.fontSizeSelect}
@@ -694,17 +766,11 @@ function NotesContent() {
               </button>
             </div>
 
-            {/* ContentEditable Editor Body */}
-            <div className={styles.editorBodyContainer}>
-              <div
-                id="editor-body"
+            {/* Tiptap Editor Body */}
+            <div className={styles.editorBodyContainer} ref={editorRef}>
+              <EditorContent
+                editor={editor}
                 className={`${styles.editorBody} rich-editor`}
-                contentEditable
-                ref={editorRef}
-                onInput={handleContentChange}
-                onClick={handleEditorClick}
-                onKeyUp={handleEditorKeyUpOrMouseUp}
-                onMouseUp={handleEditorKeyUpOrMouseUp}
               />
 
               {/* Floating Convert Button Trigger */}
@@ -713,7 +779,7 @@ function NotesContent() {
                   className={styles.floatConvertBtn}
                   style={{ top: floatButtonPos.top, left: floatButtonPos.left }}
                   onClick={handleOpenPopover}
-                  title="Convert checklist item ke Action Item"
+                  title="Convert checklist / bold ke Action Item"
                 >
                   ⚡
                 </button>
@@ -727,7 +793,7 @@ function NotesContent() {
                 >
                   <div className={styles.popoverHeader}>
                     <h4>Buat Action Item ⚡</h4>
-                    <button className={styles.popoverClose} onClick={() => setShowPopover(false)}>×</button>
+                    <button className={styles.popoverClose} onClick={() => { setShowPopover(false); clearConvertingFlags(); }}>×</button>
                   </div>
                   <div className={styles.popoverBody}>
                     <div className={styles.popoverField}>

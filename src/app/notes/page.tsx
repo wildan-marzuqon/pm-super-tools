@@ -27,6 +27,7 @@ function NotesContent() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [loading, setLoading] = useState(true);
   
   // Filtering & Folders
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,6 +80,8 @@ function NotesContent() {
         }
       } catch (error) {
         console.error('Error fetching notes page data:', error);
+      } finally {
+        setLoading(false);
       }
     }
     fetchData();
@@ -263,11 +266,47 @@ function NotesContent() {
   // When a user hovers a checkbox or clicks a text in checklist, we can show a floating "⚡ Convert" button.
   // Let's implement dynamic detection of checkbox elements on editor focus / selection change.
   const handleEditorKeyUpOrMouseUp = () => {
-    // Check if current selection is inside a list item with a checkbox
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
+    if (!selection || selection.rangeCount === 0) {
+      setFloatButtonPos((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+
     const range = selection.getRangeAt(0);
+
+    // 1. Text Selection Highlight Mode (Non-collapsed)
+    if (!selection.isCollapsed) {
+      const text = selection.toString().trim();
+      if (text.length > 0) {
+        // Ensure selection is inside the editor body
+        let anchor = selection.anchorNode;
+        let isInsideEditor = false;
+        while (anchor) {
+          if (anchor === editorRef.current) {
+            isInsideEditor = true;
+            break;
+          }
+          anchor = anchor.parentNode;
+        }
+
+        if (isInsideEditor) {
+          const rect = range.getBoundingClientRect();
+          const editorContainer = editorRef.current?.getBoundingClientRect();
+          if (editorContainer) {
+            setFloatButtonPos({
+              top: rect.top - editorContainer.top - 28 + (editorRef.current?.scrollTop || 0),
+              left: rect.left - editorContainer.left + (rect.width / 2) - 10,
+              visible: true,
+              nodeText: text,
+              nodeId: ''
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Checklist Item Focus Mode (Collapsed selection, cursor inside checklist)
     let node = range.startContainer as HTMLElement;
     
     // Climb up to find LI
@@ -278,47 +317,25 @@ function NotesContent() {
     if (node && node.nodeName === 'LI') {
       const checkbox = node.querySelector('input[type="checkbox"]') as HTMLInputElement;
       if (checkbox) {
-        // We found a checklist item!
-        // Show a converter popover positioned relative to this list item
         const rect = node.getBoundingClientRect();
         const editorContainer = editorRef.current?.getBoundingClientRect();
         
         if (editorContainer) {
-          // Set popover position next to the LI
-          setPopoverPos({
-            top: rect.top - editorContainer.top + 32, // offset
-            left: Math.max(10, rect.left - editorContainer.left)
-          });
-          
-          setSelectedCheckboxId(checkbox.id || '');
-          
-          // Get text of list item (excluding checkbox)
           const textContent = node.textContent?.trim() || '';
-          setPopoverFields((prev) => ({
-            ...prev,
-            title: textContent,
-            pic: prev.pic || 'Wildan', // Default PIC
-            deadline: prev.deadline || new Date().toISOString().split('T')[0] // Default today
-          }));
-          
-          // Wait, let's not auto-show it immediately on click, but rather show a small "⚡" button.
-          // Let's show the "⚡" floating trigger button at this position!
-          // Then if they click the ⚡ button, we open the full popover.
-          // This prevents popover from popping up constantly while typing.
           setFloatButtonPos({
-            top: rect.top - editorContainer.top + 2,
+            top: rect.top - editorContainer.top + 2 + (editorRef.current?.scrollTop || 0),
             left: Math.max(0, rect.left - editorContainer.left - 24),
             visible: true,
             nodeText: textContent,
             nodeId: checkbox.id || ''
           });
+          return;
         }
-      } else {
-        setFloatButtonPos((prev) => ({ ...prev, visible: false }));
       }
-    } else {
-      setFloatButtonPos((prev) => ({ ...prev, visible: false }));
     }
+
+    // Otherwise, hide float button
+    setFloatButtonPos((prev) => ({ ...prev, visible: false }));
   };
 
   const [floatButtonPos, setFloatButtonPos] = useState({
@@ -419,7 +436,7 @@ function NotesContent() {
   });
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${selectedNote ? styles.showEditorMobile : ''}`}>
       {/* Sidebar for Notes navigation */}
       <div className={styles.notesSidebar}>
         <div className={styles.sidebarHeader}>
@@ -455,7 +472,15 @@ function NotesContent() {
 
         {/* Notes List */}
         <div className={styles.notesList}>
-          {filteredNotes.length === 0 ? (
+          {loading ? (
+            [1, 2, 3].map((i) => (
+              <div key={i} className={styles.noteListItem} style={{ pointerEvents: 'none' }}>
+                <span className="skeleton" style={{ height: '12px', width: '40px', marginBottom: '6px', borderRadius: '4px' }}></span>
+                <div className="skeleton" style={{ height: '16px', width: '70%', marginBottom: '6px', borderRadius: '4px', display: 'block' }}></div>
+                <div className="skeleton" style={{ height: '12px', width: '100%', borderRadius: '4px' }}></div>
+              </div>
+            ))
+          ) : filteredNotes.length === 0 ? (
             <p className={styles.noNotes}>Tidak ada note ditemukan.</p>
           ) : (
             filteredNotes.map((note) => (
@@ -487,6 +512,13 @@ function NotesContent() {
             {/* Editor Header metadata */}
             <div className={styles.editorHeader}>
               <div className={styles.titleRow}>
+                <button 
+                  className={styles.backToSidebarBtn} 
+                  onClick={() => { setSelectedNote(null); router.push('/notes'); }}
+                  title="Kembali ke Daftar Catatan"
+                >
+                  ←
+                </button>
                 <input
                   type="text"
                   value={editorTitle}

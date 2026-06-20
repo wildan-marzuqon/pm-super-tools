@@ -793,3 +793,65 @@
 .saveStagesBtn:hover {
   background-color: var(--primary-light);
 }
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .headerMeta {
+    width: 100%;
+  }
+
+  .headerMetaBox {
+    flex: 1;
+  }
+
+  .visualizerHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .advanceBtn {
+    width: 100%;
+  }
+
+  .stepNodeItem {
+    min-width: 110px;
+  }
+
+  .tabsMenu {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabBtn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .overviewGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .inlineForm .formRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .inlineForm .submitBtn {
+    width: 100%;
+  }
+
+  .settingsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+

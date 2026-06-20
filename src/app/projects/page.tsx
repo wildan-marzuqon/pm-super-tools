@@ -107,9 +107,31 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <p>Memuat daftar proyek...</p>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <div>
+            <div className="skeleton" style={{ height: '32px', width: '220px', marginBottom: '8px' }}></div>
+            <div className="skeleton" style={{ height: '16px', width: '380px' }}></div>
+          </div>
+        </header>
+
+        <div className={styles.projectsGrid}>
+          {[1, 2].map((i) => (
+            <div key={i} className={styles.projCard}>
+              <div className={styles.cardHeader} style={{ justifyContent: 'space-between', display: 'flex', width: '100%' }}>
+                <div className="skeleton" style={{ height: '22px', width: '180px' }}></div>
+                <div className="skeleton" style={{ height: '18px', width: '70px', borderRadius: '9999px' }}></div>
+              </div>
+              <div className="skeleton" style={{ height: '14px', width: '100%', marginTop: '12px' }}></div>
+              <div className="skeleton" style={{ height: '14px', width: '80%' }}></div>
+              <div className={styles.pipelineContainer} style={{ marginTop: '16px' }}>
+                <div className="skeleton" style={{ height: '10px', width: '60px', marginBottom: '6px' }}></div>
+                <div className="skeleton" style={{ height: '24px', width: '100%' }}></div>
+              </div>
+              <div className="skeleton" style={{ height: '40px', width: '100%', borderRadius: '8px', marginTop: '12px' }}></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

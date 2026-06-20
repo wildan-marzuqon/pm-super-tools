@@ -290,9 +290,56 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <p>Memuat detail proyek...</p>
+      <div className={styles.container}>
+        <div className={styles.topNav}>
+          <div className="skeleton" style={{ height: '28px', width: '120px', borderRadius: '4px' }}></div>
+        </div>
+
+        <header className={styles.header}>
+          <div>
+            <div className="skeleton" style={{ height: '36px', width: '300px', marginBottom: '8px' }}></div>
+            <div className="skeleton" style={{ height: '16px', width: '450px' }}></div>
+          </div>
+          <div className={styles.headerMeta}>
+            <div className={styles.headerMetaBox}>
+              <div className="skeleton" style={{ height: '10px', width: '50px', marginBottom: '4px' }}></div>
+              <div className="skeleton" style={{ height: '14px', width: '80px' }}></div>
+            </div>
+            <div className={styles.headerMetaBox}>
+              <div className="skeleton" style={{ height: '10px', width: '50px', marginBottom: '4px' }}></div>
+              <div className="skeleton" style={{ height: '14px', width: '80px' }}></div>
+            </div>
+          </div>
+        </header>
+
+        <section className={styles.visualizerCard}>
+          <div className={styles.visualizerHeader} style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="skeleton" style={{ height: '18px', width: '180px' }}></div>
+            <div className="skeleton" style={{ height: '32px', width: '140px', borderRadius: '6px' }}></div>
+          </div>
+          <div className={styles.stepPipeline} style={{ marginTop: '16px' }}>
+            <div className="skeleton" style={{ height: '40px', width: '100%' }}></div>
+          </div>
+        </section>
+
+        <div className={styles.tabsMenu}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton" style={{ height: '36px', width: '100px', marginRight: '8px', borderRadius: '6px' }}></div>
+          ))}
+        </div>
+
+        <div className={styles.tabContentArea}>
+          <div className={styles.overviewGrid}>
+            <div className={styles.contentCard}>
+              <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
+              <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+            </div>
+            <div className={styles.contentCard}>
+              <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
+              <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

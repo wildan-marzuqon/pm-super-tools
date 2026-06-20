@@ -462,3 +462,52 @@
   display: inline-flex;
   align-items: center;
 }
+
+.backToSidebarBtn {
+  display: none;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--muted-text);
+  padding: 4px 12px;
+  background-color: #F3F4F6;
+  border-radius: var(--border-radius-sm);
+  margin-right: 4px;
+}
+
+.backToSidebarBtn:hover {
+  background-color: #E5E7EB;
+  color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .notesSidebar {
+    width: 100% !important;
+    display: flex;
+  }
+  
+  .editorArea {
+    width: 100% !important;
+    display: none;
+  }
+  
+  .container.showEditorMobile .notesSidebar {
+    display: none;
+  }
+
+  .container.showEditorMobile .editorArea {
+    display: flex;
+  }
+
+  .backToSidebarBtn {
+    display: inline-block;
+  }
+
+  .editorHeader {
+    padding: 16px;
+  }
+
+  .titleInput {
+    font-size: 20px;
+  }
+}
+

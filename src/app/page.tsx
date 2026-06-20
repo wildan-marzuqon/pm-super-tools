@@ -72,9 +72,54 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <p>Loading Workspace...</p>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <div>
+            <div className="skeleton" style={{ height: '32px', width: '200px', marginBottom: '8px' }}></div>
+            <div className="skeleton" style={{ height: '16px', width: '380px' }}></div>
+          </div>
+        </header>
+
+        <section className={styles.metricsGrid}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={styles.metricCard}>
+              <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '12px' }}></div>
+              <div className="skeleton" style={{ height: '36px', width: '50px', marginBottom: '8px' }}></div>
+              <div className="skeleton" style={{ height: '12px', width: '120px' }}></div>
+            </div>
+          ))}
+        </section>
+
+        <div className={styles.mainGrid}>
+          <section className={styles.cardSection}>
+            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
+            <div className={styles.sectionCard} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F3F4F6' }}>
+                  <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="skeleton" style={{ height: '14px', width: '60%' }}></div>
+                    <div className="skeleton" style={{ height: '10px', width: '100px' }}></div>
+                  </div>
+                  <div className="skeleton" style={{ height: '14px', width: '60px' }}></div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.cardSection}>
+            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
+            <div className={styles.notesGrid}>
+              {[1, 2].map((i) => (
+                <div key={i} className={styles.noteCard}>
+                  <div className="skeleton" style={{ height: '16px', width: '40px', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ height: '18px', width: '80%', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ height: '12px', width: '100%', marginBottom: '4px' }}></div>
+                  <div className="skeleton" style={{ height: '12px', width: '90%' }}></div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     );
   }

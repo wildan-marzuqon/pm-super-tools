@@ -25,9 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body style={{ display: "flex", flexDirection: "row", height: "100vh", width: "100vw" }}>
+      <body className="layout-body">
         <Sidebar />
-        <main style={{ flexGrow: 1, height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <main className="layout-main">
           {children}
         </main>
       </body>

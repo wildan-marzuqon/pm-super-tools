@@ -365,3 +365,30 @@
   font-size: 11px;
   color: var(--muted-text);
 }
+
+@media (max-width: 768px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .mainGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .actions {
+    width: 100%;
+  }
+  
+  .primaryBtn, .secondaryBtn {
+    flex: 1;
+  }
+}
+

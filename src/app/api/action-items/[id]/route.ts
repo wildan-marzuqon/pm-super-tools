@@ -22,7 +22,17 @@ export async function PUT(
       }
     });
 
-    return Response.json(updatedItem);
+    return Response.json({
+      id: updatedItem.id,
+      title: updatedItem.title,
+      description: updatedItem.description,
+      deadline: updatedItem.deadline,
+      pic: updatedItem.pic,
+      status: updatedItem.status,
+      project_id: updatedItem.projectId || null,
+      source_note_id: updatedItem.sourceNoteId || null,
+      created_at: updatedItem.createdAt
+    });
   } catch (error) {
     console.error('Error updating action item:', error);
     return Response.json({ error: 'Failed to update action item' }, { status: 500 });

@@ -32,7 +32,17 @@ export async function GET(
       pic: project.pic,
       current_stage_index: project.currentStageIndex,
       stages: project.stages,
-      actionItems: project.actions,
+      actionItems: project.actions.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        deadline: item.deadline,
+        pic: item.pic,
+        status: item.status,
+        project_id: item.projectId || null,
+        source_note_id: item.sourceNoteId || null,
+        created_at: item.createdAt
+      })),
       artifacts: project.artifacts,
       created_at: project.createdAt
     });

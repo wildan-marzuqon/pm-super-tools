@@ -31,7 +31,19 @@ export async function GET(request: NextRequest) {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    return Response.json(items);
+    const mappedItems = items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      deadline: item.deadline,
+      pic: item.pic,
+      status: item.status,
+      project_id: item.projectId || null,
+      source_note_id: item.sourceNoteId || null,
+      created_at: item.createdAt
+    }));
+
+    return Response.json(mappedItems);
   } catch (error) {
     console.error('Error fetching action items:', error);
     return Response.json({ error: 'Failed to fetch action items' }, { status: 500 });
@@ -58,7 +70,17 @@ export async function POST(request: Request) {
       }
     });
 
-    return Response.json(newItem, { status: 201 });
+    return Response.json({
+      id: newItem.id,
+      title: newItem.title,
+      description: newItem.description,
+      deadline: newItem.deadline,
+      pic: newItem.pic,
+      status: newItem.status,
+      project_id: newItem.projectId || null,
+      source_note_id: newItem.sourceNoteId || null,
+      created_at: newItem.createdAt
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating action item:', error);
     return Response.json({ error: 'Failed to create action item' }, { status: 500 });

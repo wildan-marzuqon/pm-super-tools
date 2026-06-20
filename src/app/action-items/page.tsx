@@ -362,11 +362,6 @@ export default function ActionItemsPage() {
                     <h3 className={styles.itemTitle}>{item.title}</h3>
                     {item.description && <p className={styles.itemDesc}>{item.description}</p>}
                     <div className={styles.itemMeta}>
-                      {assocProject && (
-                        <Link href={`/projects/${assocProject.id}`} className={styles.projectLink}>
-                          📁 {assocProject.name}
-                        </Link>
-                      )}
                       <span className={styles.picBadge}>PIC: {item.pic}</span>
                       <span className={`${styles.statusBadge} ${
                         item.status === 'done' ? styles.statusDone : 
@@ -377,6 +372,11 @@ export default function ActionItemsPage() {
                          item.status === 'in_progress' ? 'In Progress' : 
                          'Open'}
                       </span>
+                      {assocProject && (
+                        <Link href={`/projects/${assocProject.id}`} className={styles.projectTagLink} title={assocProject.name}>
+                          📁 {assocProject.name}
+                        </Link>
+                      )}
                       {item.source_note_id && (
                         <Link href={`/notes?id=${item.source_note_id}`} className={styles.noteLink}>
                           📝 Lihat Note Asal

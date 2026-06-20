@@ -727,6 +727,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                              item.status === 'in_progress' ? 'In Progress' : 
                              'Open'}
                           </span>
+                          {project && (
+                            <span className={styles.projectTagBadge} title={project.name}>
+                              📁 {project.name}
+                            </span>
+                          )}
                           {item.deadline && (
                             <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
                           )}
@@ -753,7 +758,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 className={styles.addTabBtn}
                 onClick={() => setShowAddArtForm(!showAddArtForm)}
               >
-                {showAddArtForm ? 'Batal' : '+ Tambah Link GDrive / Notion'}
+                {showAddArtForm ? 'Batal' : 'Tambah Baru'}
               </button>
             </div>
 

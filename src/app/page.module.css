@@ -442,6 +442,22 @@
   border: 1px solid #A7F3D0;
 }
 
+.projectTagBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+  background-color: #F3E8FF;
+  color: #6B21A8;
+  border: 1px solid #E9D5FF;
+}
+
 @media (max-width: 1024px) {
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);

@@ -319,9 +319,6 @@ export default function Dashboard() {
                       <div className={styles.actionMain}>
                         <p className={styles.actionTitle}>{item.title}</p>
                         <div className={styles.actionMeta}>
-                          {associatedProject && (
-                            <span className={styles.projectTag}>{associatedProject.name}</span>
-                          )}
                           <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
                           <span className={`${styles.statusBadge} ${
                             item.status === 'done' ? styles.statusDone : 
@@ -332,6 +329,11 @@ export default function Dashboard() {
                              item.status === 'in_progress' ? 'In Progress' : 
                              'Open'}
                           </span>
+                          {associatedProject && (
+                            <span className={styles.projectTagBadge} title={associatedProject.name}>
+                              📁 {associatedProject.name}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className={styles.actionDateContainer}>

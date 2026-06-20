@@ -242,6 +242,62 @@ export default function Dashboard() {
     return deadline < today;
   };
 
+  const formatRelativeTime = (dateStr: string) => {
+    if (!dateStr) return 'Baru saja';
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins} menit yang lalu`;
+    if (diffHours < 24) return `${diffHours} jam yang lalu`;
+    
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  };
+
+  const getRecentActivities = () => {
+    const activities = [];
+    
+    const sortedNotes = [...notes]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 2);
+      
+    sortedNotes.forEach((n, idx) => {
+      activities.push({
+        id: `note-${n.id}-${idx}`,
+        time: formatRelativeTime(n.updated_at),
+        text: `Anda memperbarui catatan <strong>${n.title || 'Untitled Note'}</strong>`,
+        dotClass: styles.dotSecondary,
+      });
+    });
+
+    const sortedActions = [...actionItems]
+      .sort((a, b) => new Date(b.created_at || b.deadline || '').getTime() - new Date(a.created_at || a.deadline || '').getTime())
+      .slice(0, 2);
+      
+    sortedActions.forEach((ai, idx) => {
+      activities.push({
+        id: `action-${ai.id}-${idx}`,
+        time: formatRelativeTime(ai.created_at),
+        text: `${ai.pic || 'Wildan'} membuat/mengubah action item <strong>${ai.title}</strong> menjadi ${ai.status === 'done' ? 'Selesai' : ai.status === 'in_progress' ? 'In Progress' : 'Open'}`,
+        dotClass: styles.dotPrimary,
+      });
+    });
+
+    if (activities.length === 0) {
+      activities.push({
+        id: 'fallback',
+        time: 'Baru saja',
+        text: 'Selamat datang di workspace PM Super Tools Anda!',
+        dotClass: styles.dotPrimary,
+      });
+    }
+
+    return activities.slice(0, 4);
+  };
+
   return (
     <div className={`${styles.container} animate-fade-in`}>
       {/* Top Banner */}
@@ -249,13 +305,8 @@ export default function Dashboard() {
         <div className={styles.greetingText}>
           <h2>Selamat {mounted && time ? (time.getHours() < 11 ? 'Pagi' : time.getHours() < 15 ? 'Siang' : time.getHours() < 18 ? 'Sore' : 'Malam') : '...'}, Wildan 👋</h2>
           <p>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            <span style={{ marginLeft: '4px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px', display: 'inline-block', verticalAlign: 'middle' }}>calendar_today</span>
+            <span style={{ marginLeft: '6px', verticalAlign: 'middle' }}>
               {mounted && time ? formatDateTime(time).dateString : '...'}
             </span>
           </p>
@@ -270,7 +321,9 @@ export default function Dashboard() {
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
             <p className={styles.metricLabel}>Total Proyek Aktif</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconPrimary}`}>📁</div>
+            <div className={`${styles.metricIconContainer} ${styles.iconPrimary}`}>
+              <span className="material-symbols-outlined">folder_copy</span>
+            </div>
           </div>
           <h3 className={styles.metricVal}>{activeProjectsCount}</h3>
           <p className={styles.metricSub}>Dari total {projects.length} proyek</p>
@@ -279,7 +332,9 @@ export default function Dashboard() {
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
             <p className={styles.metricLabel}>Action Item Pending</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconWarning}`}>⏳</div>
+            <div className={`${styles.metricIconContainer} ${styles.iconWarning}`}>
+              <span className="material-symbols-outlined">hourglass_empty</span>
+            </div>
           </div>
           <h3 className={styles.metricVal}>{pendingActionsCount}</h3>
           <p className={`${styles.metricSub} ${styles.metricSubWarning}`}>Segera selesaikan task secepatnya</p>
@@ -288,7 +343,9 @@ export default function Dashboard() {
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
             <p className={styles.metricLabel}>Due This Week</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconError}`}>📅</div>
+            <div className={`${styles.metricIconContainer} ${styles.iconError}`}>
+              <span className="material-symbols-outlined">event_busy</span>
+            </div>
           </div>
           <h3 className={styles.metricVal}>{dueThisWeekCount}</h3>
           <p className={styles.metricSub}>Rentang: {weekRangeStr}</p>
@@ -297,7 +354,9 @@ export default function Dashboard() {
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
             <p className={styles.metricLabel}>Total Notes</p>
-            <div className={`${styles.metricIconContainer} ${styles.iconSecondary}`}>📝</div>
+            <div className={`${styles.metricIconContainer} ${styles.iconSecondary}`}>
+              <span className="material-symbols-outlined">edit_note</span>
+            </div>
           </div>
           <h3 className={styles.metricVal}>{notes.length}</h3>
           <p className={styles.metricSub}>Di dalam {Array.from(new Set(notes.map(n => n.folder))).length} folder</p>
@@ -309,13 +368,16 @@ export default function Dashboard() {
         {/* Urgent Action Items */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>⚠️ Action Items Mendesk</h2>
+            <h2>
+              <span className="material-symbols-outlined" style={{ color: 'var(--error)', marginRight: '8px', verticalAlign: 'middle' }}>warning_amber</span>
+              <span style={{ verticalAlign: 'middle' }}>Action Items Mendesak</span>
+            </h2>
             <Link href="/action-items" className={styles.viewAll}>Lihat Semua</Link>
           </div>
           
           {urgentActions.length === 0 ? (
             <div className={styles.emptyState}>
-              <span className={styles.emptyIcon}>🎉</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--outline-variant)', marginBottom: '8px' }}>check_circle</span>
               <p>Tidak ada action item mendesak.</p>
             </div>
           ) : (
@@ -339,7 +401,8 @@ export default function Dashboard() {
                         <h4 className={styles.actionTitle}>{item.title}</h4>
                         <div className={styles.actionDateContainer}>
                           <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
-                            {formatDate(item.deadline)}
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>schedule</span>
+                            <span style={{ verticalAlign: 'middle' }}>{formatDate(item.deadline)}</span>
                           </span>
                           {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
                         </div>
@@ -348,7 +411,10 @@ export default function Dashboard() {
                       {item.description && <p className={styles.actionDesc}>{item.description}</p>}
                       
                       <div className={styles.actionMeta}>
-                        <span className={styles.picTag}>👤 {item.pic || 'Unassigned'}</span>
+                        <span className={styles.picTag}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>person</span>
+                          <span style={{ verticalAlign: 'middle' }}>{item.pic || 'Unassigned'}</span>
+                        </span>
                         <span className={`${styles.statusBadge} ${
                           item.status === 'done' ? styles.statusDone : 
                           item.status === 'in_progress' ? styles.statusInProgress : 
@@ -360,7 +426,8 @@ export default function Dashboard() {
                         </span>
                         {assocProject && (
                           <Link href={`/projects/${assocProject.id}`} className={styles.projectTagBadge} title={assocProject.name}>
-                            📁 {assocProject.name}
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
+                            <span style={{ verticalAlign: 'middle' }}>{assocProject.name}</span>
                           </Link>
                         )}
                       </div>
@@ -372,48 +439,72 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Recent Notes */}
-        <section className={styles.cardSection}>
-          <div className={styles.sectionHeader}>
-            <h2>📝 Catatan Terbaru</h2>
-            <Link href="/notes" className={styles.viewAll}>Lihat Semua</Link>
+        {/* Recent Activity Timeline */}
+        <section className={styles.cardSection} style={{ padding: '16px' }}>
+          <div className={styles.sectionHeader} style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '600' }}>
+              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', marginRight: '8px', verticalAlign: 'middle' }}>history</span>
+              <span style={{ verticalAlign: 'middle' }}>Aktivitas Terbaru</span>
+            </h2>
           </div>
-          
-          <div className={styles.notesGrid}>
-            {recentNotes.length === 0 ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>📝</span>
-                <p>Belum ada catatan.</p>
+          <div className={styles.timelineContainer}>
+            {getRecentActivities().map((act) => (
+              <div key={act.id} className={styles.timelineItem}>
+                <div className={`${styles.timelineDot} ${act.dotClass}`} />
+                <span className={styles.activityTime}>{act.time}</span>
+                <p 
+                  className={styles.activityText}
+                  dangerouslySetInnerHTML={{ __html: act.text }}
+                />
               </div>
-            ) : (
-              recentNotes.map((note) => (
-                <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
-                  <div className={styles.noteHeader}>
-                    <span className={styles.noteFolder}>{note.folder || 'Work'}</span>
-                  </div>
-                  <h4 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h4>
-                  <p 
-                    className={styles.noteSnippet}
-                    dangerouslySetInnerHTML={{ 
-                      __html: note.content 
-                        ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + (note.content.length > 100 ? '...' : '')
-                        : 'Mulai menulis catatan...'
-                    }}
-                  />
-                  <div className={styles.noteFooter}>
-                    <span className={styles.noteDate}>{formatDate(note.updated_at)}</span>
-                  </div>
-                </Link>
-              ))
-            )}
-            
-            <Link href="/notes" className={styles.addNoteCard}>
-              <span className={styles.addNoteIcon}>➕</span>
-              <span className={styles.addNoteText}>Buat Catatan Baru</span>
-            </Link>
+            ))}
           </div>
         </section>
       </div>
+
+      {/* Catatan Terbaru (Full Width Scrollable Row) */}
+      <section className={styles.notesSection} style={{ marginTop: '24px' }}>
+        <div className={styles.notesSectionHeader}>
+          <h3>
+            <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', verticalAlign: 'middle' }}>sticky_note_2</span>
+            <span style={{ verticalAlign: 'middle' }}>Catatan Terbaru</span>
+          </h3>
+          <Link href="/notes" className={styles.viewAll}>Lihat Semua</Link>
+        </div>
+        
+        <div className={styles.notesScrollRow}>
+          {recentNotes.length === 0 ? (
+            <div className={styles.emptyState} style={{ minWidth: '100%' }}>
+              <p>Belum ada catatan.</p>
+            </div>
+          ) : (
+            recentNotes.map((note) => (
+              <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
+                <div className={styles.noteCardHeader}>
+                  <span className={styles.noteCardFolder}>{note.folder || 'Work'}</span>
+                </div>
+                <h4 className={styles.noteCardTitle}>{note.title || 'Untitled Note'}</h4>
+                <p 
+                  className={styles.noteCardSnippet}
+                  dangerouslySetInnerHTML={{ 
+                    __html: note.content 
+                      ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + (note.content.length > 100 ? '...' : '')
+                      : 'Mulai menulis catatan...'
+                  }}
+                />
+                <div className={styles.noteCardFooter}>
+                  <span className={styles.noteCardDate}>{formatDate(note.updated_at)}</span>
+                </div>
+              </Link>
+            ))
+          )}
+          
+          <Link href="/notes" className={styles.addNoteCard}>
+            <span className="material-symbols-outlined" style={{ fontSize: '32px', marginBottom: '8px' }}>add_circle</span>
+            <span className={styles.addNoteText}>Buat Catatan Baru</span>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

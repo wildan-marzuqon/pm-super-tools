@@ -510,13 +510,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Step Visualizer Bar (Horizontal Pipeline) */}
       <section className={styles.visualizerCard}>
         <div className={styles.visualizerHeader}>
-          <h3>Progress Pipeline Project</h3>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>history</span>
+            <span>Progress Pipeline Project</span>
+          </h3>
           {!isCompleted && currentStage ? (
-            <button className={styles.advanceBtn} onClick={handleAdvanceStage}>
-              ⚡ Selesaikan Tahap: <b>{currentStage.name}</b> →
+            <button className={styles.advanceBtn} onClick={handleAdvanceStage} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span>
+              <span>Selesaikan Tahap: <b>{currentStage.name}</b></span>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>chevron_right</span>
             </button>
           ) : (
-            <span className={styles.completeBanner}>🎉 PROYEK TELAH LIVE / SELESAI!</span>
+            <span className={styles.completeBanner} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--success)' }}>check_circle</span>
+              <span>PROYEK TELAH LIVE / SELESAI!</span>
+            </span>
           )}
         </div>
 
@@ -563,25 +571,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           onClick={() => setActiveTab('overview')}
           className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.activeTab : ''}`}
         >
-          📄 Overview
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>description</span>
+          <span style={{ verticalAlign: 'middle' }}>Ringkasan</span>
         </button>
         <button
           onClick={() => setActiveTab('actions')}
           className={`${styles.tabBtn} ${activeTab === 'actions' ? styles.activeTab : ''}`}
         >
-          📋 Action Items ({project.actionItems.length})
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>checklist</span>
+          <span style={{ verticalAlign: 'middle' }}>Action Items ({project.actionItems.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('artifacts')}
           className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.activeTab : ''}`}
         >
-          🔗 Artifacts ({project.artifacts.length})
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>link</span>
+          <span style={{ verticalAlign: 'middle' }}>Dokumen & File ({project.artifacts.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('settings')}
           className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.activeTab : ''}`}
         >
-          ⚙️ Settings & Stages
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '6px', verticalAlign: 'middle' }}>settings</span>
+          <span style={{ verticalAlign: 'middle' }}>Pengaturan & Tahapan</span>
         </button>
       </div>
 
@@ -656,7 +668,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className={styles.modalOverlay}>
                 <div className={`${styles.modal} animate-popover`}>
                   <div className={styles.modalHeader}>
-                    <h3>Tambah Action Item 📋</h3>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>playlist_add</span>
+                      <span>Tambah Action Item</span>
+                    </h3>
                     <button className={styles.closeBtn} onClick={() => setShowAddActionForm(false)}>×</button>
                   </div>
                   <form onSubmit={handleAddAction}>
@@ -731,7 +746,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <h4 className={styles.actionTitle}>{item.title}</h4>
                         {item.description && <p className={styles.actionDesc}>{item.description}</p>}
                         <div className={styles.actionMetaTags}>
-                          <span className={styles.actionPic}>PIC: {item.pic}</span>
+                          <span className={styles.actionPic}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>person</span>
+                            <span style={{ verticalAlign: 'middle' }}>{item.pic}</span>
+                          </span>
                           <span className={`${styles.statusBadge} ${
                             item.status === 'done' ? styles.statusDone : 
                             item.status === 'in_progress' ? styles.statusInProgress : 
@@ -743,18 +761,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           </span>
                           {project && (
                             <span className={styles.projectTagBadge} title={project.name}>
-                              📁 {project.name}
+                              <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
+                              <span style={{ verticalAlign: 'middle' }}>{project.name}</span>
                             </span>
                           )}
                           {item.deadline && (
-                            <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
+                            <span className={styles.actionDeadline}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>schedule</span>
+                              <span style={{ verticalAlign: 'middle' }}>{formatDate(item.deadline)}</span>
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
                     <div className={styles.actionItemRight}>
-                      <button className={styles.editActionBtn} onClick={() => handleStartEditAction(item)}>✏️ Edit</button>
-                      <button className={styles.deleteActionBtn} onClick={() => handleDeleteActionItem(item.id)}>🗑️ Hapus</button>
+                      <button className={styles.editActionBtn} onClick={() => handleStartEditAction(item)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit</span>
+                        <span>Edit</span>
+                      </button>
+                      <button className={styles.deleteActionBtn} onClick={() => handleDeleteActionItem(item.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>delete</span>
+                        <span>Hapus</span>
+                      </button>
                     </div>
                   </div>
                 ))
@@ -848,7 +876,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {project.artifacts.map((art) => (
                         <tr key={art.id}>
                           <td className={styles.artLabelCell}>
-                            <span className={styles.artIconCell}>🔗</span>
+                            <span className={`material-symbols-outlined ${styles.artIconCell}`} style={{ fontSize: '18px' }}>link</span>
                             <a href={art.url} target="_blank" rel="noopener noreferrer" className={styles.artTableLink}>
                               {art.label}
                             </a>
@@ -860,10 +888,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           <td>
                             <div className={styles.artTableActions}>
                               <button className={styles.artEditBtn} onClick={() => handleStartEditArtifact(art)}>
-                                ✏️ Edit
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>edit</span>
+                                <span style={{ verticalAlign: 'middle' }}>Edit</span>
                               </button>
                               <button className={styles.artDeleteBtn} onClick={() => handleDeleteArtifact(art.id)}>
-                                🗑️ Hapus
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>delete</span>
+                                <span style={{ verticalAlign: 'middle' }}>Hapus</span>
                               </button>
                             </div>
                           </td>
@@ -922,7 +952,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </button>
               </form>
               <div className={styles.dangerZone}>
-                <h4>Danger Zone 🚨</h4>
+                <h4>Danger Zone <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', fontSize: '18px', color: 'var(--error)' }}>warning</span></h4>
                 <p>Hapus proyek ini secara permanen dari Workspace.</p>
                 <button className={styles.deleteProjBtn} onClick={handleDeleteProject} disabled={isDeletingProject}>
                   {isDeletingProject ? 'Menghapus...' : 'Hapus Proyek Ini'}
@@ -940,6 +970,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className={styles.stagesManager}>
                 {stagesList.map((stage, idx) => (
                   <div key={stage.id || idx} className={styles.stageManagerRow}>
+                    <span className="material-symbols-outlined" style={{ color: 'var(--muted-text)', cursor: 'grab', fontSize: '18px' }}>drag_indicator</span>
                     <span className={styles.stageOrderNumber}>{idx + 1}</span>
                     <input
                       type="text"
@@ -948,8 +979,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       placeholder="Nama Tahapan..."
                       className={styles.stageManagerInput}
                     />
-                    <button className={styles.removeStageRowBtn} onClick={() => handleRemoveStage(idx)}>
-                      ×
+                    <button className={styles.removeStageRowBtn} onClick={() => handleRemoveStage(idx)} title="Hapus Tahapan">
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
                     </button>
                   </div>
                 ))}
@@ -964,7 +995,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     className={styles.addStageInput}
                   />
                   <button className={styles.addStageRowBtn} onClick={handleAddStage}>
-                    + Tambah
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>add</span>
+                    <span style={{ verticalAlign: 'middle' }}>Tambah</span>
                   </button>
                 </div>
 
@@ -982,7 +1014,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3>Ubah Action Item 📋</h3>
+              <h3>
+                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>checklist</span>
+                <span style={{ verticalAlign: 'middle' }}>Ubah Action Item</span>
+              </h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
             <form onSubmit={handleSaveActionEdit}>
@@ -1052,7 +1087,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3>Ubah Dokumen / Artifact 🔗</h3>
+              <h3>
+                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>link</span>
+                <span style={{ verticalAlign: 'middle' }}>Ubah Dokumen / Artifact</span>
+              </h3>
               <button className={styles.closeBtn} onClick={() => setEditingArtifact(null)}>×</button>
             </div>
             <form onSubmit={handleSaveArtifactEdit}>

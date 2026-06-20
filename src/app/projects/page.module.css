@@ -448,3 +448,57 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Segmented bar stepper */
+.stagesTextRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  color: var(--muted-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.stageTextSpan {
+  transition: all var(--transition-fast);
+}
+
+.stageTextActive {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.segmentedBar {
+  display: flex;
+  gap: 4px;
+  height: 8px;
+  width: 100%;
+  background-color: var(--surface-container);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+}
+
+.barSegment {
+  height: 100%;
+  transition: all var(--transition-fast);
+}
+
+.segmentDone {
+  background-color: var(--primary);
+}
+
+.segmentActive {
+  background-color: var(--primary);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.segmentFuture {
+  background-color: transparent;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

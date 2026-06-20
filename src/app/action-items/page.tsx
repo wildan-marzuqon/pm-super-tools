@@ -218,7 +218,10 @@ export default function ActionItemsPage() {
     <div className={`${styles.container} animate-fade-in`}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>📋 Action Items Tracker</h1>
+          <h1 className={styles.title}>
+            <span className="material-symbols-outlined" style={{ fontSize: '28px', marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>checklist</span>
+            <span style={{ verticalAlign: 'middle' }}>Action Items Tracker</span>
+          </h1>
           <p className={styles.subtitle}>Daftar semua tugas dan to-do list yang perlu diselesaikan.</p>
         </div>
         <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
@@ -231,7 +234,10 @@ export default function ActionItemsPage() {
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3>Buat Action Item Baru 📋</h3>
+              <h3>
+                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>playlist_add</span>
+                <span style={{ verticalAlign: 'middle' }}>Buat Action Item Baru</span>
+              </h3>
               <button className={styles.closeBtn} onClick={() => setShowAddForm(false)}>×</button>
             </div>
             <form onSubmit={handleCreateAction}>
@@ -311,13 +317,15 @@ export default function ActionItemsPage() {
               onClick={() => setStatusFilter('pending')}
               className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
             >
-              ⏳ Pending
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>hourglass_empty</span>
+              <span style={{ verticalAlign: 'middle' }}>Pending</span>
             </button>
             <button
               onClick={() => setStatusFilter('done')}
               className={`${styles.filterBtn} ${statusFilter === 'done' ? styles.activeFilter : ''}`}
             >
-              ✓ Selesai
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px', verticalAlign: 'middle' }}>task_alt</span>
+              <span style={{ verticalAlign: 'middle' }}>Selesai</span>
             </button>
             <button
               onClick={() => setStatusFilter('all')}
@@ -349,7 +357,7 @@ export default function ActionItemsPage() {
       <div className={styles.itemsCard}>
         {filteredItems.length === 0 ? (
           <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>🎉</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--muted-text)' }}>task_alt</span>
             <p>Tidak ada action item yang sesuai filter.</p>
           </div>
         ) : (
@@ -386,12 +394,14 @@ export default function ActionItemsPage() {
                       </span>
                       {assocProject && (
                         <Link href={`/projects/${assocProject.id}`} className={styles.projectTagLink} title={assocProject.name}>
-                          📁 {assocProject.name}
+                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>folder</span>
+                          <span style={{ verticalAlign: 'middle' }}>{assocProject.name}</span>
                         </Link>
                       )}
                       {item.source_note_id && (
                         <Link href={`/notes?id=${item.source_note_id}`} className={styles.noteLink}>
-                          📝 Lihat Note Asal
+                          <span className="material-symbols-outlined" style={{ fontSize: '12px', marginRight: '4px', verticalAlign: 'middle' }}>description</span>
+                          <span style={{ verticalAlign: 'middle' }}>Lihat Note Asal</span>
                         </Link>
                       )}
                     </div>
@@ -406,10 +416,12 @@ export default function ActionItemsPage() {
 
                   <div className={styles.itemActions}>
                     <button className={styles.editBtn} onClick={() => handleStartEdit(item)}>
-                      ✏️ Edit
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>edit</span>
+                      <span style={{ verticalAlign: 'middle' }}>Edit</span>
                     </button>
                     <button className={styles.deleteBtn} onClick={() => handleDeleteAction(item.id)}>
-                      🗑️ Hapus
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>delete</span>
+                      <span style={{ verticalAlign: 'middle' }}>Hapus</span>
                     </button>
                   </div>
                 </div>
@@ -424,7 +436,10 @@ export default function ActionItemsPage() {
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} animate-popover`}>
             <div className={styles.modalHeader}>
-              <h3>Ubah Action Item 📋</h3>
+              <h3>
+                <span className="material-symbols-outlined" style={{ marginRight: '8px', verticalAlign: 'middle', color: 'var(--primary)' }}>edit</span>
+                <span style={{ verticalAlign: 'middle' }}>Ubah Action Item</span>
+              </h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
             <form onSubmit={handleSaveEdit}>

@@ -383,29 +383,27 @@
   line-height: 1.6;
 }
 
-/* Float Convert button */
 .floatConvertBtn {
   position: absolute;
-  background-color: var(--warning-light);
-  color: var(--warning-text);
-  border: 1px solid var(--warning);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
+  background-color: var(--primary);
+  color: white;
+  border: 1px solid var(--primary);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 4px;
-  box-shadow: var(--shadow-sm);
+  justify-content: center;
+  box-shadow: var(--shadow-md);
   z-index: 10;
-  transition: transform var(--transition-fast);
+  transition: transform var(--transition-fast), background-color var(--transition-fast);
   cursor: pointer;
 }
 
 .floatConvertBtn:hover {
-  background-color: var(--warning);
-  color: white;
-  transform: scale(1.05);
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: scale(1.15);
 }
 
 /* Popover Modal (Convert to Action Item) */

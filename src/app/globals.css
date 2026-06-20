@@ -1,18 +1,18 @@
 :root {
-  /* Stitch Color Theme (Light High-Density Workspace) */
-  --background: #f7f9fb;
-  --foreground: #1b1b23;
+  /* PM Workspace Color Theme (Light High-Density Warm Workspace) */
+  --background: #FAF9F6; /* Warm off-white background */
+  --foreground: #1F2937; /* Deep gray text */
   --card-bg: #ffffff;
-  --card-border: #e4e1ed;
+  --card-border: #F3EFE0; /* Soft warm border */
   
-  --primary: #494bd6;       /* Vibrant Indigo */
-  --primary-hover: #3739b8;
-  --primary-light: #e1e0ff;
-  --primary-subtle: #f2f2ff;
+  --primary: #F59E0B;       /* Warm yellow/amber */
+  --primary-hover: #D97706; /* Darker amber */
+  --primary-light: #FEF3C7; /* Soft yellow highlight */
+  --primary-subtle: #FFFBEB; /* Very light yellow highlight */
   
-  --secondary: #7b4db3;     /* Royal Purple */
-  --secondary-light: #f0dbff;
-  --secondary-subtle: #faf4ff;
+  --secondary: #B45309;     /* Warm amber-brown */
+  --secondary-light: #FEF3C7; /* Soft yellow secondary highlight */
+  --secondary-subtle: #FFFBEB;
 
   --success: #22c55e;
   --success-light: #dcfce7;
@@ -26,16 +26,16 @@
   --error-light: #ffdad6;
   --error-text: #410002;
   
-  --muted-text: #64748b;
-  --on-surface-variant: #464554;
-  --outline-variant: #c7c4d7;
-  --outline: #767680;
+  --muted-text: #6B7280;
+  --on-surface-variant: #4B5563;
+  --outline-variant: #E5E7EB;
+  --outline: #9CA3AF;
   
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f2f4f6;
-  --surface-container: #eceef1;
-  --surface-container-high: #e7e8ee;
-  --surface-container-highest: #e1e2e8;
+  --surface-container-low: #F9FAFB;
+  --surface-container: #F3F4F6;
+  --surface-container-high: #E5E7EB;
+  --surface-container-highest: #D1D5DB;
 
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
@@ -43,8 +43,8 @@
   --border-radius-full: 9999px;
   
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(73, 75, 214, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 10px 25px rgba(73, 75, 214, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(245, 158, 11, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 10px 25px rgba(245, 158, 11, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
   
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);

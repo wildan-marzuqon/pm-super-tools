@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 interface Project {
@@ -12,6 +13,7 @@ interface Project {
   pic: string;
   current_stage_index: number;
   stages: Array<{ id: string; name: string; completed_at?: string }>;
+  categories?: Array<{ id: string; name: string }>;
   currentStage: { name: string } | null;
 }
 
@@ -21,7 +23,9 @@ interface ActionItem {
   description: string;
   deadline: string;
   pic: string;
-  status: 'open' | 'in_progress' | 'done';
+  completed: boolean;
+  category_id?: string;
+  category_name?: string;
   project_id?: string;
   source_note_id?: string;
   created_at: string;
@@ -37,6 +41,7 @@ interface Note {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -45,6 +50,22 @@ export default function Dashboard() {
   // Time & Date State
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState<Date | null>(null);
+
+  // Edit/Detail Action Modal State
+  const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
+  const [editActionFields, setEditActionFields] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    pic: 'Wildan',
+    projectId: '',
+    categoryId: '',
+    completed: false
+  });
+
+  // Completion prompt dialog states
+  const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
+  const [completedItemProject, setCompletedItemProject] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -82,6 +103,105 @@ export default function Dashboard() {
 
     fetchData();
   }, []);
+
+  const handleStartEdit = (item: ActionItem) => {
+    setEditingAction(item);
+    setEditActionFields({
+      title: item.title,
+      description: item.description || '',
+      deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      pic: item.pic || '',
+      projectId: item.project_id || '',
+      categoryId: item.category_id || '',
+      completed: item.completed
+    });
+  };
+
+  const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
+    if (!editingAction) return;
+
+    setEditActionFields(prev => ({
+      ...prev,
+      ...fieldsToUpdate
+    }));
+
+    try {
+      const mergedFields = {
+        title: editActionFields.title,
+        description: editActionFields.description,
+        deadline: editActionFields.deadline,
+        pic: editActionFields.pic,
+        projectId: editActionFields.projectId,
+        categoryId: editActionFields.categoryId,
+        completed: editActionFields.completed,
+        ...fieldsToUpdate
+      };
+
+      await fetch(`/api/action-items/${editingAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: mergedFields.title,
+          description: mergedFields.description,
+          deadline: mergedFields.deadline,
+          pic: mergedFields.pic,
+          project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
+          category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
+          completed: mergedFields.completed
+        })
+      });
+
+      // Refresh dashboard data
+      const [projRes, actionRes, notesRes] = await Promise.all([
+        fetch('/api/projects'),
+        fetch('/api/action-items'),
+        fetch('/api/notes'),
+      ]);
+
+      if (projRes.ok && actionRes.ok && notesRes.ok) {
+        setProjects(await projRes.json());
+        setActionItems(await actionRes.json());
+        setNotes(await notesRes.json());
+      }
+    } catch (error) {
+      console.error('Error auto-saving action item:', error);
+    }
+  };
+
+  const handleCompleteAction = async () => {
+    if (!editingAction) return;
+    try {
+      const res = await fetch(`/api/action-items/${editingAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          completed: true
+        })
+      });
+      if (res.ok) {
+        const assocProj = projects.find(p => p.id === editingAction.project_id);
+        setCompletedItemProject(assocProj ? { id: assocProj.id, name: assocProj.name } : null);
+        setEditingAction(null);
+        
+        // Refresh dashboard data
+        const [projRes, actionRes, notesRes] = await Promise.all([
+          fetch('/api/projects'),
+          fetch('/api/action-items'),
+          fetch('/api/notes'),
+        ]);
+
+        if (projRes.ok && actionRes.ok && notesRes.ok) {
+          setProjects(await projRes.json());
+          setActionItems(await actionRes.json());
+          setNotes(await notesRes.json());
+        }
+        
+        setShowNewActionPrompt(true);
+      }
+    } catch (error) {
+      console.error('Error completing action item:', error);
+    }
+  };
 
   const formatDateTime = (date: Date) => {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -162,7 +282,7 @@ export default function Dashboard() {
     (p) => p.current_stage_index < p.stages.length
   ).length;
 
-  const pendingActions = actionItems.filter((item) => item.status !== 'done');
+  const pendingActions = actionItems.filter((item) => !item.completed);
   const pendingActionsCount = pendingActions.length;
   
   // Calculate action items due this week (Monday to Sunday)
@@ -184,7 +304,7 @@ export default function Dashboard() {
   const { monday, sunday } = getWeekRange();
 
   const dueThisWeekActions = actionItems.filter((item) => {
-    if (!item.deadline || item.status === 'done') return false;
+    if (!item.deadline || item.completed) return false;
     const d = new Date(item.deadline);
     return d >= monday && d <= sunday;
   });
@@ -315,20 +435,21 @@ export default function Dashboard() {
                   const associatedProject = projects.find((p) => p.id === item.project_id);
                   const overdue = isOverdue(item.deadline);
                   return (
-                    <div key={item.id} className={styles.actionItemRow}>
+                    <div 
+                      key={item.id} 
+                      className={`${styles.actionItemRow} ${item.completed ? styles.actionItemRowDone : ''}`}
+                      onClick={() => handleStartEdit(item)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className={styles.actionMain}>
                         <p className={styles.actionTitle}>{item.title}</p>
                         <div className={styles.actionMeta}>
                           <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
-                          <span className={`${styles.statusBadge} ${
-                            item.status === 'done' ? styles.statusDone : 
-                            item.status === 'in_progress' ? styles.statusInProgress : 
-                            styles.statusOpen
-                          }`}>
-                            {item.status === 'done' ? 'Selesai' : 
-                             item.status === 'in_progress' ? 'In Progress' : 
-                             'Open'}
-                          </span>
+                          {item.category_name && (
+                            <span className={styles.categoryTagBadge} title={item.category_name}>
+                              🏷️ {item.category_name}
+                            </span>
+                          )}
                           {associatedProject && (
                             <span className={styles.projectTagBadge} title={associatedProject.name}>
                               📁 {associatedProject.name}
@@ -385,6 +506,152 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+
+      {/* Edit Action Item Modal */}
+      {editingAction && (
+        <div className={styles.modalOverlay} onClick={() => setEditingAction(null)}>
+          <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Detail Action Item 📋</h3>
+              <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
+            </div>
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Judul Tugas *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editActionFields.title}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, title: e.target.value })}
+                    onBlur={() => handleAutoSaveAction({ title: editActionFields.title })}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Deskripsi / Keterangan</label>
+                  <textarea
+                    value={editActionFields.description}
+                    onChange={(e) => setEditActionFields({ ...editActionFields, description: e.target.value })}
+                    onBlur={() => handleAutoSaveAction({ description: editActionFields.description })}
+                    rows={3}
+                  />
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>PIC (freetext)</label>
+                    <input
+                      type="text"
+                      value={editActionFields.pic}
+                      onChange={(e) => setEditActionFields({ ...editActionFields, pic: e.target.value })}
+                      onBlur={() => handleAutoSaveAction({ pic: editActionFields.pic })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Deadline</label>
+                    <input
+                      type="date"
+                      value={editActionFields.deadline}
+                      onChange={(e) => {
+                        const nextD = e.target.value;
+                        setEditActionFields({ ...editActionFields, deadline: nextD });
+                        handleAutoSaveAction({ deadline: nextD });
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Kaitkan ke Project</label>
+                    <select
+                      value={editActionFields.projectId}
+                      onChange={(e) => {
+                        const nextProj = e.target.value;
+                        setEditActionFields({ ...editActionFields, projectId: nextProj, categoryId: '' });
+                        handleAutoSaveAction({ projectId: nextProj, categoryId: '' });
+                      }}
+                    >
+                      <option value="">-- Tanpa Project (Standalone) --</option>
+                      {projects.map((proj) => (
+                        <option key={proj.id} value={proj.id}>
+                          {proj.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {editActionFields.projectId && (
+                    <div className={styles.formGroup}>
+                      <label>Kategori</label>
+                      <select
+                        value={editActionFields.categoryId}
+                        onChange={(e) => {
+                          const nextCat = e.target.value;
+                          setEditActionFields({ ...editActionFields, categoryId: nextCat });
+                          handleAutoSaveAction({ categoryId: nextCat });
+                        }}
+                      >
+                        <option value="">Tanpa Kategori</option>
+                        {projects.find(p => p.id === editActionFields.projectId)?.categories?.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditingAction(null)}>
+                  Tutup
+                </button>
+                {!editActionFields.completed && (
+                  <button 
+                    type="button" 
+                    className={styles.completeTaskBtn} 
+                    onClick={handleCompleteAction}
+                  >
+                    Selesaikan Task
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Prompt to create a new action item after completion */}
+      {showNewActionPrompt && (
+        <div className={styles.modalOverlay} onClick={() => setShowNewActionPrompt(false)}>
+          <div className={`${styles.promptModal} animate-popover`} onClick={(e) => e.stopPropagation()}>
+            <h3>Task Selesai! 🎉</h3>
+            <p>
+              Apakah Anda ingin membuat action item baru
+              {completedItemProject ? ` untuk proyek "${completedItemProject.name}"` : ''}?
+            </p>
+            <div className={styles.promptActions}>
+              <button
+                className={styles.promptYesBtn}
+                onClick={() => {
+                  setShowNewActionPrompt(false);
+                  if (completedItemProject) {
+                    router.push(`/projects/${completedItemProject.id}?add_action=true`);
+                  } else {
+                    router.push('/action-items');
+                  }
+                }}
+              >
+                Ya, Tambah Baru
+              </button>
+              <button
+                className={styles.promptNoBtn}
+                onClick={() => setShowNewActionPrompt(false)}
+              >
+                Tidak
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

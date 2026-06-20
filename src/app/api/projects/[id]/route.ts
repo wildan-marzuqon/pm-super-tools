@@ -14,8 +14,13 @@ export async function GET(
         stages: {
           orderBy: { order: 'asc' }
         },
-        actions: true,
-        artifacts: true
+        actions: {
+          include: {
+            category: true
+          }
+        },
+        artifacts: true,
+        categories: true
       }
     });
 
@@ -38,12 +43,15 @@ export async function GET(
         description: item.description,
         deadline: item.deadline,
         pic: item.pic,
-        status: item.status,
+        completed: item.completed,
         project_id: item.projectId || null,
         source_note_id: item.sourceNoteId || null,
+        category_id: item.categoryId || null,
+        category_name: item.category?.name || null,
         created_at: item.createdAt
       })),
       artifacts: project.artifacts,
+      categories: project.categories,
       created_at: project.createdAt
     });
   } catch (error) {

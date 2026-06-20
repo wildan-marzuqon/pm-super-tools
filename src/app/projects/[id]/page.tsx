@@ -18,7 +18,9 @@ interface ActionItem {
   description: string;
   deadline: string;
   pic: string;
-  status: 'open' | 'in_progress' | 'done';
+  completed: boolean;
+  category_id?: string;
+  category_name?: string;
 }
 
 interface Artifact {
@@ -38,6 +40,7 @@ interface ProjectDetail {
   stages: ProjectStage[];
   actionItems: ActionItem[];
   artifacts: Artifact[];
+  categories: Array<{ id: string; name: string }>;
   created_at: string;
 }
 
@@ -64,8 +67,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     description: '',
     deadline: '',
     pic: 'Wildan',
-    status: 'open' as 'open' | 'in_progress' | 'done'
+    categoryId: '',
+    completed: false
   });
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
 
   const [editingArtifact, setEditingArtifact] = useState<Artifact | null>(null);
   const [editArtifactFields, setEditArtifactFields] = useState({
@@ -79,7 +87,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     title: '',
     description: '',
     deadline: '',
-    pic: 'Wildan'
+    pic: 'Wildan',
+    categoryId: ''
   });
   const [showAddActionForm, setShowAddActionForm] = useState(false);
 
@@ -160,12 +169,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           description: newAction.description,
           deadline: newAction.deadline,
           pic: newAction.pic,
-          project_id: project.id
+          project_id: project.id,
+          category_id: newAction.categoryId || null
         })
       });
 
       if (res.ok) {
-        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan' });
+        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', categoryId: '' });
         setShowAddActionForm(false);
         fetchProjectDetail();
       }
@@ -173,23 +183,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       console.error('Error adding action item:', error);
     } finally {
       setIsAddingAction(false);
-    }
-  };
-
-  // Toggle Action Item status
-  const handleToggleActionStatus = async (item: ActionItem) => {
-    const nextStatus = item.status === 'done' ? 'open' : 'done';
-    try {
-      const res = await fetch(`/api/action-items/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
-      });
-      if (res.ok) {
-        fetchProjectDetail();
-      }
-    } catch (error) {
-      console.error('Error toggling action item status:', error);
     }
   };
 
@@ -201,32 +194,110 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       description: item.description || '',
       deadline: item.deadline ? item.deadline.substring(0, 10) : '',
       pic: item.pic || '',
-      status: item.status
+      categoryId: item.category_id || '',
+      completed: item.completed
     });
   };
 
-  // Save Action Item Edit
-  const handleSaveActionEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-Save Action Item Details (Auto-saves on blur or select changes)
+  const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
+    if (!editingAction) return;
+
+    // Update local state instantly so the UI feels responsive
+    setEditActionFields(prev => ({
+      ...prev,
+      ...fieldsToUpdate
+    }));
+
+    try {
+      const mergedFields = {
+        title: editActionFields.title,
+        description: editActionFields.description,
+        deadline: editActionFields.deadline,
+        pic: editActionFields.pic,
+        category_id: editActionFields.categoryId || null,
+        completed: editActionFields.completed,
+        ...fieldsToUpdate
+      };
+
+      await fetch(`/api/action-items/${editingAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: mergedFields.title,
+          description: mergedFields.description,
+          deadline: mergedFields.deadline,
+          pic: mergedFields.pic,
+          category_id: mergedFields.category_id === '' ? null : mergedFields.category_id,
+          completed: mergedFields.completed
+        })
+      });
+
+      // Refresh project to update the title or labels on the card immediately
+      fetchProjectDetail();
+    } catch (error) {
+      console.error('Error auto-saving action item:', error);
+    }
+  };
+
+  // Complete Action Item inside the modal
+  const handleCompleteAction = async () => {
     if (!editingAction) return;
     try {
       const res = await fetch(`/api/action-items/${editingAction.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: editActionFields.title,
-          description: editActionFields.description,
-          deadline: editActionFields.deadline,
-          pic: editActionFields.pic,
-          status: editActionFields.status
+          completed: true
         })
       });
       if (res.ok) {
         setEditingAction(null);
         fetchProjectDetail();
+        // Prompt user to create a new action item
+        setShowNewActionPrompt(true);
       }
     } catch (error) {
-      console.error('Error saving action item edit:', error);
+      console.error('Error completing action item:', error);
+    }
+  };
+
+  // Category Add/Remove handlers
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim() || !project || isAddingCategory) return;
+    setIsAddingCategory(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName.trim() })
+      });
+      if (res.ok) {
+        setNewCategoryName('');
+        fetchProjectDetail();
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
+
+  const handleRemoveCategory = async (catId: string) => {
+    if (!project) return;
+    if (!confirm('Hapus kategori ini? Tugas yang terkait akan dikosongkan kategorinya.')) return;
+    try {
+      const res = await fetch(`/api/projects/${project.id}/categories`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: catId })
+      });
+      if (res.ok) {
+        fetchProjectDetail();
+      }
+    } catch (error) {
+      console.error('Error removing category:', error);
     }
   };
 
@@ -625,7 +696,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <div className={styles.statsRow}>
                 <div className={styles.statBox}>
                   <p className={styles.statVal}>
-                    {project.actionItems.filter((a) => a.status === 'done').length} / {project.actionItems.length}
+                    {project.actionItems.filter((a) => a.completed).length} / {project.actionItems.length}
                   </p>
                   <p className={styles.statLabel}>Action Items Selesai</p>
                 </div>
@@ -653,7 +724,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Inline Add Action Item Form */}
             {showAddActionForm && (
-              <form onSubmit={handleAddAction} className={styles.inlineForm}>
+              <form id="addActionFormSection" onSubmit={handleAddAction} className={styles.inlineForm}>
                 <h4>Tambah Action Item</h4>
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
@@ -674,6 +745,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       onChange={(e) => setNewAction({ ...newAction, pic: e.target.value })}
                       placeholder="Nama PIC..."
                     />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Kategori</label>
+                    <select
+                      value={newAction.categoryId}
+                      onChange={(e) => setNewAction({ ...newAction, categoryId: e.target.value })}
+                    >
+                      <option value="">Tanpa Kategori</option>
+                      {project.categories && project.categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className={styles.formGroup}>
                     <label>Deadline</label>
@@ -705,31 +790,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <p className={styles.emptyTabMsg}>Belum ada Action Item untuk proyek ini.</p>
               ) : (
                 project.actionItems.map((item) => (
-                  <div key={item.id} className={`${styles.actionCard} ${item.status === 'done' ? styles.actionDoneCard : ''}`}>
+                  <div 
+                    key={item.id} 
+                    className={`${styles.actionCard} ${item.completed ? styles.actionDoneCard : ''}`}
+                    onClick={() => handleStartEditAction(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1 }}>
-                      <input
-                        type="checkbox"
-                        checked={item.status === 'done'}
-                        onChange={() => handleToggleActionStatus(item)}
-                        className={styles.actionCheckbox}
-                      />
                       <div className={styles.actionDetails}>
                         <h4 className={styles.actionTitle}>{item.title}</h4>
                         {item.description && <p className={styles.actionDesc}>{item.description}</p>}
                         <div className={styles.actionMetaTags}>
                           <span className={styles.actionPic}>PIC: {item.pic}</span>
-                          <span className={`${styles.statusBadge} ${
-                            item.status === 'done' ? styles.statusDone : 
-                            item.status === 'in_progress' ? styles.statusInProgress : 
-                            styles.statusOpen
-                          }`}>
-                            {item.status === 'done' ? 'Selesai' : 
-                             item.status === 'in_progress' ? 'In Progress' : 
-                             'Open'}
-                          </span>
-                          {project && (
-                            <span className={styles.projectTagBadge} title={project.name}>
-                              📁 {project.name}
+                          {item.category_name && (
+                            <span className={styles.categoryTagBadge} title={item.category_name}>
+                              🏷️ {item.category_name}
                             </span>
                           )}
                           {item.deadline && (
@@ -739,8 +814,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </div>
                     </div>
                     <div className={styles.actionItemRight}>
-                      <button className={styles.editActionBtn} onClick={() => handleStartEditAction(item)}>✏️ Edit</button>
-                      <button className={styles.deleteActionBtn} onClick={() => handleDeleteActionItem(item.id)}>🗑️ Hapus</button>
+                      <button 
+                        className={styles.deleteActionBtn} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteActionItem(item.id);
+                        }}
+                      >
+                        🗑️ Hapus
+                      </button>
                     </div>
                   </div>
                 ))
@@ -947,19 +1029,55 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </button>
               </div>
             </div>
+
+            {/* Project Categories Manager */}
+            <div className={styles.contentCard}>
+              <h3>Kategori Project</h3>
+              <p className={styles.settingsDescText}>
+                Tambahkan kategori kustom untuk mengelompokkan Action Items pada proyek ini.
+              </p>
+
+              <div className={styles.stagesManager}>
+                {project.categories && project.categories.map((cat) => (
+                  <div key={cat.id} className={styles.stageManagerRow}>
+                    <span className={styles.stageOrderNumber}>🏷️</span>
+                    <span className={styles.stageManagerInput} style={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}>
+                      {cat.name}
+                    </span>
+                    <button className={styles.removeStageRowBtn} onClick={() => handleRemoveCategory(cat.id)}>
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add new category form */}
+                <form onSubmit={handleAddCategory} className={styles.addStageRow}>
+                  <input
+                    type="text"
+                    placeholder="Tambah kategori baru (contoh: Design)..."
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className={styles.addStageInput}
+                  />
+                  <button type="submit" className={styles.addStageRowBtn} disabled={isAddingCategory}>
+                    + Tambah
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Edit Action Item Modal */}
       {editingAction && (
-        <div className={styles.modalOverlay}>
-          <div className={`${styles.modal} animate-popover`}>
+        <div className={styles.modalOverlay} onClick={() => setEditingAction(null)}>
+          <div className={`${styles.modal} animate-popover`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>Ubah Action Item 📋</h3>
+              <h3>Detail Action Item 📋</h3>
               <button className={styles.closeBtn} onClick={() => setEditingAction(null)}>×</button>
             </div>
-            <form onSubmit={handleSaveActionEdit}>
+            <form onSubmit={(e) => e.preventDefault()}>
               <div className={styles.modalBody}>
                 <div className={styles.formGroup}>
                   <label>Judul Tugas *</label>
@@ -968,6 +1086,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     required
                     value={editActionFields.title}
                     onChange={(e) => setEditActionFields({ ...editActionFields, title: e.target.value })}
+                    onBlur={() => handleAutoSaveAction({ title: editActionFields.title })}
                   />
                 </div>
                 <div className={styles.formGroup}>
@@ -975,6 +1094,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <textarea
                     value={editActionFields.description}
                     onChange={(e) => setEditActionFields({ ...editActionFields, description: e.target.value })}
+                    onBlur={() => handleAutoSaveAction({ description: editActionFields.description })}
                     rows={3}
                   />
                 </div>
@@ -985,6 +1105,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       type="text"
                       value={editActionFields.pic}
                       onChange={(e) => setEditActionFields({ ...editActionFields, pic: e.target.value })}
+                      onBlur={() => handleAutoSaveAction({ pic: editActionFields.pic })}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -992,31 +1113,79 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <input
                       type="date"
                       value={editActionFields.deadline}
-                      onChange={(e) => setEditActionFields({ ...editActionFields, deadline: e.target.value })}
+                      onChange={(e) => {
+                        const nextD = e.target.value;
+                        setEditActionFields({ ...editActionFields, deadline: nextD });
+                        handleAutoSaveAction({ deadline: nextD });
+                      }}
                     />
                   </div>
                 </div>
                 <div className={styles.formGroup}>
-                  <label>Status</label>
+                  <label>Kategori</label>
                   <select
-                    value={editActionFields.status}
-                    onChange={(e) => setEditActionFields({ ...editActionFields, status: e.target.value as 'open' | 'in_progress' | 'done' })}
+                    value={editActionFields.categoryId}
+                    onChange={(e) => {
+                      const catId = e.target.value;
+                      setEditActionFields({ ...editActionFields, categoryId: catId });
+                      handleAutoSaveAction({ categoryId: catId });
+                    }}
                   >
-                    <option value="open">Open / Belum Mulai</option>
-                    <option value="in_progress">In Progress / Sedang Dikerjakan</option>
-                    <option value="done">Done / Selesai</option>
+                    <option value="">Tanpa Kategori</option>
+                    {project.categories && project.categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className={styles.modalFooter}>
                 <button type="button" className={styles.cancelBtn} onClick={() => setEditingAction(null)}>
-                  Batal
+                  Tutup
                 </button>
-                <button type="submit" className={styles.submitBtn}>
-                  Simpan Perubahan
-                </button>
+                {!editActionFields.completed && (
+                  <button 
+                    type="button" 
+                    className={styles.completeTaskBtn} 
+                    onClick={handleCompleteAction}
+                  >
+                    Selesaikan Task
+                  </button>
+                )}
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Prompt to create a new action item after completion */}
+      {showNewActionPrompt && (
+        <div className={styles.modalOverlay} onClick={() => setShowNewActionPrompt(false)}>
+          <div className={`${styles.promptModal} animate-popover`} onClick={(e) => e.stopPropagation()}>
+            <h3>Task Selesai! 🎉</h3>
+            <p>Apakah Anda ingin membuat action item baru untuk proyek ini?</p>
+            <div className={styles.promptActions}>
+              <button
+                className={styles.promptYesBtn}
+                onClick={() => {
+                  setShowNewActionPrompt(false);
+                  setShowAddActionForm(true);
+                  const el = document.getElementById('addActionFormSection');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+              >
+                Ya, Tambah Baru
+              </button>
+              <button
+                className={styles.promptNoBtn}
+                onClick={() => setShowNewActionPrompt(false)}
+              >
+                Tidak
+              </button>
+            </div>
           </div>
         </div>
       )}

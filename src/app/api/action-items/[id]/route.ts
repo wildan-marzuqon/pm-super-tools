@@ -16,9 +16,13 @@ export async function PUT(
         description: body.description !== undefined ? body.description : undefined,
         deadline: body.deadline !== undefined ? body.deadline : undefined,
         pic: body.pic !== undefined ? body.pic : undefined,
-        status: body.status !== undefined ? body.status : undefined,
+        completed: body.completed !== undefined ? body.completed : undefined,
         projectId: body.project_id !== undefined ? body.project_id : undefined,
+        categoryId: body.category_id !== undefined ? body.category_id : undefined,
         sourceNoteId: body.source_note_id !== undefined ? body.source_note_id : undefined,
+      },
+      include: {
+        category: true
       }
     });
 
@@ -28,9 +32,11 @@ export async function PUT(
       description: updatedItem.description,
       deadline: updatedItem.deadline,
       pic: updatedItem.pic,
-      status: updatedItem.status,
+      completed: updatedItem.completed,
       project_id: updatedItem.projectId || null,
       source_note_id: updatedItem.sourceNoteId || null,
+      category_id: updatedItem.categoryId || null,
+      category_name: updatedItem.category?.name || null,
       created_at: updatedItem.createdAt
     });
   } catch (error) {

@@ -24,12 +24,25 @@ export async function GET(request: NextRequest) {
 
     const notes = await prisma.note.findMany({
       where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        folder: true,
+        tags: true,
+        updatedAt: true,
+        // Only include content snippet for search results, otherwise omit for speed
+        content: q ? true : true,
+      },
       orderBy: {
         updatedAt: 'desc'
       }
     });
 
-    return Response.json(notes);
+    return Response.json(notes, {
+      headers: {
+        'Cache-Control': 's-maxage=10, stale-while-revalidate=30',
+      },
+    });
   } catch (error) {
     console.error('Error fetching notes:', error);
     return Response.json({ error: 'Failed to fetch notes' }, { status: 500 });

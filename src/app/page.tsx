@@ -130,23 +130,36 @@ export default function Dashboard() {
   const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
     if (!editingAction) return;
 
-    setEditActionFields(prev => ({
-      ...prev,
+    const mergedFields = {
+      title: editActionFields.title,
+      description: editActionFields.description,
+      deadline: editActionFields.deadline,
+      pic: editActionFields.pic,
+      projectId: editActionFields.projectId,
+      categoryId: editActionFields.categoryId,
+      completed: editActionFields.completed,
       ...fieldsToUpdate
-    }));
+    };
+
+    // Optimistic: update local state immediately
+    setEditActionFields(mergedFields);
+    setActionItems(prev =>
+      prev.map(item =>
+        item.id === editingAction.id
+          ? {
+              ...item,
+              title: mergedFields.title,
+              description: mergedFields.description,
+              deadline: mergedFields.deadline,
+              pic: mergedFields.pic,
+              project_id: mergedFields.projectId || item.project_id,
+              category_id: mergedFields.categoryId || item.category_id,
+            }
+          : item
+      )
+    );
 
     try {
-      const mergedFields = {
-        title: editActionFields.title,
-        description: editActionFields.description,
-        deadline: editActionFields.deadline,
-        pic: editActionFields.pic,
-        projectId: editActionFields.projectId,
-        categoryId: editActionFields.categoryId,
-        completed: editActionFields.completed,
-        ...fieldsToUpdate
-      };
-
       await fetch(`/api/action-items/${editingAction.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -160,19 +173,6 @@ export default function Dashboard() {
           completed: mergedFields.completed
         })
       });
-
-      // Refresh dashboard data
-      const [projRes, actionRes, notesRes] = await Promise.all([
-        fetch('/api/projects'),
-        fetch('/api/action-items'),
-        fetch('/api/notes'),
-      ]);
-
-      if (projRes.ok && actionRes.ok && notesRes.ok) {
-        setProjects(await projRes.json());
-        setActionItems(await actionRes.json());
-        setNotes(await notesRes.json());
-      }
     } catch (error) {
       console.error('Error auto-saving action item:', error);
     }
@@ -180,86 +180,80 @@ export default function Dashboard() {
 
   const handleCompleteAction = async (createNew: boolean = false) => {
     if (!editingAction) return;
+
+    const assocProj = projects.find(p => p.id === editingAction.project_id);
+    const completedId = editingAction.id;
+
+    // Optimistic: close modal and remove from pending list immediately
+    setEditingAction(null);
+    setShowCompleteDropdown(false);
+    setActionItems(prev =>
+      prev.map(item =>
+        item.id === completedId ? { ...item, completed: true } : item
+      )
+    );
+
+    if (createNew) {
+      setNewAction(prev => ({
+        ...prev,
+        projectId: assocProj ? assocProj.id : '',
+        categoryId: ''
+      }));
+      setShowAddForm(true);
+    }
+
     try {
-      const res = await fetch(`/api/action-items/${editingAction.id}`, {
+      await fetch(`/api/action-items/${completedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          completed: true
-        })
+        body: JSON.stringify({ completed: true })
       });
-      if (res.ok) {
-        const assocProj = projects.find(p => p.id === editingAction.project_id);
-        setEditingAction(null);
-        setShowCompleteDropdown(false);
-        
-        // Refresh dashboard data
-        const [projRes, actionRes, notesRes] = await Promise.all([
-          fetch('/api/projects'),
-          fetch('/api/action-items'),
-          fetch('/api/notes'),
-        ]);
-
-        if (projRes.ok && actionRes.ok && notesRes.ok) {
-          setProjects(await projRes.json());
-          setActionItems(await actionRes.json());
-          setNotes(await notesRes.json());
-        }
-        
-        if (createNew) {
-          setNewAction(prev => ({
-            ...prev,
-            projectId: assocProj ? assocProj.id : '',
-            categoryId: ''
-          }));
-          setShowAddForm(true);
-        }
-      }
     } catch (error) {
       console.error('Error completing action item:', error);
+      // Rollback on failure
+      setActionItems(prev =>
+        prev.map(item =>
+          item.id === completedId ? { ...item, completed: false } : item
+        )
+      );
     }
   };
 
   const handleCreateAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAction.title) return;
+
+    const formData = { ...newAction };
+    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '' });
+    setShowAddForm(false);
+
     try {
       const res = await fetch('/api/action-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newAction.title,
-          description: newAction.description,
-          deadline: newAction.deadline,
-          pic: newAction.pic,
+          title: formData.title,
+          description: formData.description,
+          deadline: formData.deadline,
+          pic: formData.pic,
           completed: false,
-          project_id: newAction.projectId || null,
-          category_id: newAction.categoryId || null
+          project_id: formData.projectId || null,
+          category_id: formData.categoryId || null
         })
       });
       if (res.ok) {
-        setNewAction({
-          title: '',
-          description: '',
-          deadline: '',
-          pic: 'Wildan',
-          projectId: '',
-          categoryId: ''
+        const created = await res.json();
+        // Optimistic: insert the newly created item into state directly
+        setActionItems(prev => {
+          const updated = [created, ...prev];
+          // Re-sort: items with deadline come first (nearest first), then no-deadline
+          return updated.sort((a, b) => {
+            if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+            if (a.deadline) return -1;
+            if (b.deadline) return 1;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
         });
-        setShowAddForm(false);
-        
-        // Refresh dashboard data
-        const [projRes, actionRes, notesRes] = await Promise.all([
-          fetch('/api/projects'),
-          fetch('/api/action-items'),
-          fetch('/api/notes'),
-        ]);
-
-        if (projRes.ok && actionRes.ok && notesRes.ok) {
-          setProjects(await projRes.json());
-          setActionItems(await actionRes.json());
-          setNotes(await notesRes.json());
-        }
       }
     } catch (error) {
       console.error('Error creating action item:', error);

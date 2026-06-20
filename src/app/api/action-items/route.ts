@@ -23,17 +23,11 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       include: {
         category: true
-      }
-    });
-
-    // Sort items: empty deadlines last, otherwise nearest deadline first
-    items.sort((a, b) => {
-      if (a.deadline && b.deadline) {
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-      }
-      if (a.deadline) return -1;
-      if (b.deadline) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      },
+      orderBy: [
+        { deadline: 'asc' },
+        { createdAt: 'desc' }
+      ]
     });
 
     const mappedItems = items.map((item) => ({
@@ -50,7 +44,11 @@ export async function GET(request: NextRequest) {
       created_at: item.createdAt
     }));
 
-    return Response.json(mappedItems);
+    return Response.json(mappedItems, {
+      headers: {
+        'Cache-Control': 's-maxage=10, stale-while-revalidate=30',
+      },
+    });
   } catch (error) {
     console.error('Error fetching action items:', error);
     return Response.json({ error: 'Failed to fetch action items' }, { status: 500 });

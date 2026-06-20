@@ -111,6 +111,8 @@ function NotesContent() {
   const [editorTags, setEditorTags] = useState('');
   const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved Changes'>('Saved');
   const [mounted, setMounted] = useState(false);
+  const isDirtyRef = useRef(false);
+  const lastSavedContentRef = useRef<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -237,13 +239,21 @@ function NotesContent() {
   const triggerSave = (updatedFields: Partial<Note>) => {
     if (!selectedNote) return;
     
-    setSaveStatus('Saving...');
+    // Skip if content hasn't changed
+    if (updatedFields.content !== undefined && updatedFields.content === lastSavedContentRef.current) {
+      return;
+    }
+
+    isDirtyRef.current = true;
+    setSaveStatus('Unsaved Changes');
     
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
+      if (!isDirtyRef.current) return;
+      setSaveStatus('Saving...');
       try {
         const updatedNote = {
           ...selectedNote,
@@ -263,6 +273,10 @@ function NotesContent() {
             prevNotes.map((n) => (n.id === savedNote.id ? savedNote : n))
           );
           setSelectedNote(savedNote);
+          if (updatedFields.content !== undefined) {
+            lastSavedContentRef.current = updatedFields.content;
+          }
+          isDirtyRef.current = false;
           setSaveStatus('Saved');
         } else {
           setSaveStatus('Unsaved Changes');
@@ -271,7 +285,7 @@ function NotesContent() {
         console.error('Error auto-saving note:', error);
         setSaveStatus('Unsaved Changes');
       }
-    }, 1000);
+    }, 1500);
   };
 
   // Handle Input Changes

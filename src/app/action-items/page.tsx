@@ -101,25 +101,37 @@ export default function ActionItemsPage() {
     e.preventDefault();
     if (!newAction.title.trim() || isCreatingAction) return;
 
+    const formData = { ...newAction };
+    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '' });
+    setShowAddForm(false);
     setIsCreatingAction(true);
+
     try {
       const res = await fetch('/api/action-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: newAction.title,
-          description: newAction.description,
-          deadline: newAction.deadline,
-          pic: newAction.pic,
-          project_id: newAction.projectId || undefined,
-          category_id: newAction.categoryId || undefined
+          title: formData.title,
+          description: formData.description,
+          deadline: formData.deadline,
+          pic: formData.pic,
+          project_id: formData.projectId || undefined,
+          category_id: formData.categoryId || undefined
         })
       });
 
       if (res.ok) {
-        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '' });
-        setShowAddForm(false);
-        fetchData();
+        const created = await res.json();
+        // Optimistic: insert into state directly, re-sort
+        setActionItems(prev => {
+          const updated = [created, ...prev];
+          return updated.sort((a, b) => {
+            if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+            if (a.deadline) return -1;
+            if (b.deadline) return 1;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+        });
       }
     } catch (error) {
       console.error('Error creating action item:', error);
@@ -145,23 +157,36 @@ export default function ActionItemsPage() {
   const handleAutoSaveAction = async (fieldsToUpdate: Partial<typeof editActionFields>) => {
     if (!editingAction) return;
 
-    setEditActionFields(prev => ({
-      ...prev,
+    const mergedFields = {
+      title: editActionFields.title,
+      description: editActionFields.description,
+      deadline: editActionFields.deadline,
+      pic: editActionFields.pic,
+      projectId: editActionFields.projectId,
+      categoryId: editActionFields.categoryId,
+      completed: editActionFields.completed,
       ...fieldsToUpdate
-    }));
+    };
+
+    // Optimistic: update local state immediately
+    setEditActionFields(mergedFields);
+    setActionItems(prev =>
+      prev.map(item =>
+        item.id === editingAction.id
+          ? {
+              ...item,
+              title: mergedFields.title,
+              description: mergedFields.description,
+              deadline: mergedFields.deadline,
+              pic: mergedFields.pic,
+              project_id: mergedFields.projectId || item.project_id,
+              category_id: mergedFields.categoryId || item.category_id,
+            }
+          : item
+      )
+    );
 
     try {
-      const mergedFields = {
-        title: editActionFields.title,
-        description: editActionFields.description,
-        deadline: editActionFields.deadline,
-        pic: editActionFields.pic,
-        projectId: editActionFields.projectId,
-        categoryId: editActionFields.categoryId,
-        completed: editActionFields.completed,
-        ...fieldsToUpdate
-      };
-
       await fetch(`/api/action-items/${editingAction.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -175,8 +200,6 @@ export default function ActionItemsPage() {
           completed: mergedFields.completed
         })
       });
-
-      fetchData();
     } catch (error) {
       console.error('Error auto-saving action item:', error);
     }
@@ -185,36 +208,45 @@ export default function ActionItemsPage() {
   // Complete action item inside modal
   const handleCompleteAction = async (createNew: boolean = false) => {
     if (!editingAction) return;
+
+    const assocProj = projects.find(p => p.id === editingAction.project_id);
+    const completedId = editingAction.id;
+
+    // Optimistic: close modal and mark complete immediately
+    setEditingAction(null);
+    setShowCompleteDropdown(false);
+    setActionItems(prev =>
+      prev.map(item =>
+        item.id === completedId ? { ...item, completed: true } : item
+      )
+    );
+
+    if (createNew) {
+      setNewAction(prev => ({
+        ...prev,
+        projectId: assocProj ? assocProj.id : ''
+      }));
+      setShowAddForm(true);
+      setTimeout(() => {
+        const el = document.getElementById('addActionTrackerForm');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+
     try {
-      const res = await fetch(`/api/action-items/${editingAction.id}`, {
+      await fetch(`/api/action-items/${completedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          completed: true
-        })
+        body: JSON.stringify({ completed: true })
       });
-      if (res.ok) {
-        const assocProj = projects.find(p => p.id === editingAction.project_id);
-        setEditingAction(null);
-        setShowCompleteDropdown(false);
-        fetchData();
-        
-        if (createNew) {
-          setNewAction(prev => ({
-            ...prev,
-            projectId: assocProj ? assocProj.id : ''
-          }));
-          setShowAddForm(true);
-          setTimeout(() => {
-            const el = document.getElementById('addActionTrackerForm');
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 100);
-        }
-      }
     } catch (error) {
       console.error('Error completing action item:', error);
+      // Rollback on failure
+      setActionItems(prev =>
+        prev.map(item =>
+          item.id === completedId ? { ...item, completed: false } : item
+        )
+      );
     }
   };
 
@@ -249,9 +281,25 @@ export default function ActionItemsPage() {
 
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner}></div>
-        <p>Memuat Action Items...</p>
+      <div className={`${styles.container} animate-fade-in`}>
+        <header className={styles.header}>
+          <div>
+            <div className="skeleton" style={{ height: '28px', width: '250px', marginBottom: '8px' }} />
+            <div className="skeleton" style={{ height: '14px', width: '340px' }} />
+          </div>
+          <div className="skeleton" style={{ height: '40px', width: '160px', borderRadius: '8px' }} />
+        </header>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 0 24px 0' }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="skeleton" style={{ height: '16px', width: '60%' }} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="skeleton" style={{ height: '12px', width: '80px' }} />
+                <div className="skeleton" style={{ height: '12px', width: '100px' }} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

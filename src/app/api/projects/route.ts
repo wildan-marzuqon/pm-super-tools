@@ -26,7 +26,11 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return Response.json(enrichedProjects);
+    return Response.json(enrichedProjects, {
+      headers: {
+        'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
+      },
+    });
   } catch (error) {
     console.error('Error fetching projects:', error);
     return Response.json({ error: 'Failed to fetch projects' }, { status: 500 });

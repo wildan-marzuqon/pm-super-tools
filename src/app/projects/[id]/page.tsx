@@ -73,7 +73,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [showNewActionPrompt, setShowNewActionPrompt] = useState(false);
+  // Dropdown state for task completion
+  const [showCompleteDropdown, setShowCompleteDropdown] = useState(false);
 
   const [editingArtifact, setEditingArtifact] = useState<Artifact | null>(null);
   const [editArtifactFields, setEditArtifactFields] = useState({
@@ -241,7 +242,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   };
 
   // Complete Action Item inside the modal
-  const handleCompleteAction = async () => {
+  const handleCompleteAction = async (createNew: boolean = false) => {
     if (!editingAction) return;
     try {
       const res = await fetch(`/api/action-items/${editingAction.id}`, {
@@ -253,9 +254,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       });
       if (res.ok) {
         setEditingAction(null);
+        setShowCompleteDropdown(false);
         fetchProjectDetail();
-        // Prompt user to create a new action item
-        setShowNewActionPrompt(true);
+        
+        if (createNew) {
+          setShowAddActionForm(true);
+          setTimeout(() => {
+            const el = document.getElementById('addActionFormSection');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error completing action item:', error);
@@ -1141,51 +1151,48 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setEditingAction(null)}>
+                <button type="button" className={styles.cancelBtn} onClick={() => { setEditingAction(null); setShowCompleteDropdown(false); }}>
                   Tutup
                 </button>
                 {!editActionFields.completed && (
-                  <button 
-                    type="button" 
-                    className={styles.completeTaskBtn} 
-                    onClick={handleCompleteAction}
-                  >
-                    Selesaikan Task
-                  </button>
+                  <div className={styles.splitBtnContainer}>
+                    <button 
+                      type="button" 
+                      className={styles.splitMainBtn} 
+                      onClick={() => handleCompleteAction(false)}
+                    >
+                      Selesaikan Task
+                    </button>
+                    <button 
+                      type="button" 
+                      className={styles.splitArrowBtn} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCompleteDropdown(!showCompleteDropdown);
+                      }}
+                    >
+                      ▼
+                    </button>
+                    {showCompleteDropdown && (
+                      <>
+                        <div 
+                          className={styles.dropdownOverlay} 
+                          onClick={() => setShowCompleteDropdown(false)} 
+                        />
+                        <div className={styles.splitDropdownMenu}>
+                          <button 
+                            type="button" 
+                            onClick={() => handleCompleteAction(true)}
+                          >
+                            ⚡ Selesaikan & Buat Baru
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Prompt to create a new action item after completion */}
-      {showNewActionPrompt && (
-        <div className={styles.modalOverlay} onClick={() => setShowNewActionPrompt(false)}>
-          <div className={`${styles.promptModal} animate-popover`} onClick={(e) => e.stopPropagation()}>
-            <h3>Task Selesai! 🎉</h3>
-            <p>Apakah Anda ingin membuat action item baru untuk proyek ini?</p>
-            <div className={styles.promptActions}>
-              <button
-                className={styles.promptYesBtn}
-                onClick={() => {
-                  setShowNewActionPrompt(false);
-                  setShowAddActionForm(true);
-                  const el = document.getElementById('addActionFormSection');
-                  if (el) {
-                    el.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-              >
-                Ya, Tambah Baru
-              </button>
-              <button
-                className={styles.promptNoBtn}
-                onClick={() => setShowNewActionPrompt(false)}
-              >
-                Tidak
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -501,79 +501,89 @@
   border: 1px solid #99F6E4;
 }
 
-.completeTaskBtn {
+/* Split button for task completion */
+.splitBtnContainer {
+  position: relative;
+  display: inline-flex;
+  border-radius: var(--border-radius-sm);
+  overflow: visible;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.splitMainBtn {
+  background-color: #10B981; /* Green */
+  color: white;
   padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-top-left-radius: var(--border-radius-sm);
+  border-bottom-left-radius: var(--border-radius-sm);
+  border: none;
+  transition: background-color var(--transition-fast);
+}
+
+.splitMainBtn:hover {
+  background-color: #059669;
+}
+
+.splitArrowBtn {
   background-color: #10B981;
   color: white;
-  border-radius: var(--border-radius-md);
-  font-size: 13px;
-  font-weight: 700;
-  transition: all var(--transition-fast);
+  padding: 8px 10px;
+  font-size: 10px;
+  border-top-right-radius: var(--border-radius-sm);
+  border-bottom-right-radius: var(--border-radius-sm);
+  border-left: 1px solid #059669;
+  border-top: none;
+  border-bottom: none;
+  border-right: none;
+  transition: background-color var(--transition-fast);
 }
 
-.completeTaskBtn:hover {
+.splitArrowBtn:hover {
   background-color: #059669;
-  transform: translateY(-1px);
 }
 
-/* Prompt Modal */
-.promptModal {
-  background-color: #ffffff;
-  border-radius: var(--border-radius-lg);
-  padding: 24px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: var(--shadow-lg);
+.splitDropdownMenu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  background-color: white;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  width: 190px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  text-align: center;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease forwards;
 }
 
-.promptModal h3 {
-  font-size: 20px;
-  font-weight: 800;
+.splitDropdownMenu button {
+  padding: 10px 12px;
+  font-size: 12px;
+  text-align: left;
   color: var(--foreground);
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  transition: background-color var(--transition-fast);
 }
 
-.promptModal p {
-  font-size: 14px;
-  color: var(--muted-text);
-  line-height: 1.5;
+.splitDropdownMenu button:hover {
+  background-color: var(--primary-subtle);
+  color: #B45309;
 }
 
-.promptActions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-.promptYesBtn {
-  padding: 10px 20px;
-  background-color: var(--primary);
-  color: white;
-  border-radius: var(--border-radius-md);
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-}
-
-.promptYesBtn:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-.promptNoBtn {
-  padding: 10px 20px;
-  background-color: #F3F4F6;
-  color: var(--foreground);
-  border: 1px solid #D1D5DB;
-  border-radius: var(--border-radius-md);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.promptNoBtn:hover {
-  background-color: #E5E7EB;
+.dropdownOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: transparent;
 }

@@ -48,6 +48,15 @@ export default function ActionItemsPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'done'>('pending');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, projectFilter, searchQuery, startDate, endDate]);
 
   // Form State for creating action item
   const [showAddForm, setShowAddForm] = useState(false);
@@ -276,8 +285,39 @@ export default function ActionItemsPage() {
     const matchesProject =
       projectFilter === 'all' || item.project_id === projectFilter;
 
-    return matchesStatus && matchesProject;
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.pic && item.pic.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesDateRange = (() => {
+      if (!item.deadline) {
+        return startDate === '' && endDate === '';
+      }
+      const itemDate = new Date(item.deadline.substring(0, 10));
+      if (startDate !== '') {
+        const start = new Date(startDate);
+        if (itemDate < start) return false;
+      }
+      if (endDate !== '') {
+        const end = new Date(endDate);
+        if (itemDate > end) return false;
+      }
+      return true;
+    })();
+
+    return matchesStatus && matchesProject && matchesSearch && matchesDateRange;
   });
+
+  // Pagination logic
+  const pageSize = 10;
+  const totalItems = filteredItems.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const displayedItems = filteredItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   if (loading) {
     return (
@@ -410,121 +450,189 @@ export default function ActionItemsPage() {
 
       {/* Filters Toolbar */}
       <section className={styles.filterToolbar}>
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Status:</span>
-          <div className={styles.btnGroup}>
-            <button
-              onClick={() => setStatusFilter('pending')}
-              className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
+        <div className={styles.filterRow}>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Status:</span>
+            <div className={styles.btnGroup}>
+              <button
+                onClick={() => setStatusFilter('pending')}
+                className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
+              >
+                ⏳ Pending
+              </button>
+              <button
+                onClick={() => setStatusFilter('done')}
+                className={`${styles.filterBtn} ${statusFilter === 'done' ? styles.activeFilter : ''}`}
+              >
+                ✓ Selesai
+              </button>
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.activeFilter : ''}`}
+              >
+                Semua
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Project:</span>
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className={styles.filterSelect}
             >
-              ⏳ Pending
-            </button>
-            <button
-              onClick={() => setStatusFilter('done')}
-              className={`${styles.filterBtn} ${statusFilter === 'done' ? styles.activeFilter : ''}`}
-            >
-              ✓ Selesai
-            </button>
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.activeFilter : ''}`}
-            >
-              Semua
-            </button>
+              <option value="all">Semua Proyek</option>
+              {projects.map((proj) => (
+                <option key={proj.id} value={proj.id}>
+                  {proj.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Project:</span>
-          <select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className={styles.filterSelect}
-          >
-            <option value="all">Semua Proyek</option>
-            {projects.map((proj) => (
-              <option key={proj.id} value={proj.id}>
-                {proj.name}
-              </option>
-            ))}
-          </select>
+        <div className={styles.filterRow}>
+          <div className={styles.filterGroup} style={{ flexGrow: 1 }}>
+            <span className={styles.filterLabel}>Cari:</span>
+            <input
+              type="text"
+              placeholder="Cari tugas atau PIC..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={styles.filterSearchInput}
+            />
+          </div>
+
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>Rentang Tanggal:</span>
+            <div className={styles.dateRangeGroup}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={styles.filterDateInput}
+              />
+              <span className={styles.dateSeparator}>s/d</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={styles.filterDateInput}
+              />
+              {(startDate || endDate) && (
+                <button 
+                  className={styles.clearDateBtn} 
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                  title="Reset Filter Tanggal"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Action Items List */}
       <div className={styles.itemsCard}>
-        {filteredItems.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div className={styles.emptyState}>
             <span className={styles.emptyIcon}>🎉</span>
             <p>Tidak ada action item yang sesuai filter.</p>
           </div>
         ) : (
-          <div className={styles.itemsList}>
-            {filteredItems.map((item) => {
-              const assocProject = projects.find((p) => p.id === item.project_id);
-              const overdue = isOverdue(item.deadline, item.completed);
-              
-              return (
-                <div
-                  key={item.id}
-                  className={`${styles.itemRow} ${item.completed ? styles.itemRowDone : ''}`}
-                  onClick={() => handleStartEdit(item)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className={styles.itemContent}>
-                    <h3 className={styles.itemTitle}>{item.title}</h3>
-                    {item.description && <p className={styles.itemDesc}>{item.description}</p>}
-                    <div className={styles.itemMeta}>
-                      <span className={styles.picBadge}>PIC: {item.pic}</span>
-                      {item.category_name && (
-                        <span className={styles.categoryTagBadge} title={item.category_name}>
-                          🏷️ {item.category_name}
-                        </span>
-                      )}
-                      {assocProject && (
-                        <Link 
-                          href={`/projects/${assocProject.id}`} 
-                          className={styles.projectTagLink} 
-                          title={assocProject.name}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          📁 {assocProject.name}
-                        </Link>
-                      )}
-                      {item.source_note_id && (
-                        <Link 
-                          href={`/notes?id=${item.source_note_id}`} 
-                          className={styles.noteLink}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          📝 Lihat Note Asal
-                        </Link>
-                      )}
+          <>
+            <div className={styles.itemsList}>
+              {displayedItems.map((item) => {
+                const assocProject = projects.find((p) => p.id === item.project_id);
+                const overdue = isOverdue(item.deadline, item.completed);
+                
+                return (
+                  <div
+                    key={item.id}
+                    className={`${styles.itemRow} ${item.completed ? styles.itemRowDone : ''}`}
+                    onClick={() => handleStartEdit(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className={styles.itemContent}>
+                      <h3 className={styles.itemTitle}>{item.title}</h3>
+                      {item.description && <p className={styles.itemDesc}>{item.description}</p>}
+                      <div className={styles.itemMeta}>
+                        <span className={styles.picBadge}>PIC: {item.pic}</span>
+                        {item.category_name && (
+                          <span className={styles.categoryTagBadge} title={item.category_name}>
+                            🏷️ {item.category_name}
+                          </span>
+                        )}
+                        {assocProject && (
+                          <Link 
+                            href={`/projects/${assocProject.id}`} 
+                            className={styles.projectTagLink} 
+                            title={assocProject.name}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            📁 {assocProject.name}
+                          </Link>
+                        )}
+                        {item.source_note_id && (
+                          <Link 
+                            href={`/notes?id=${item.source_note_id}`} 
+                            className={styles.noteLink}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            📝 Lihat Note Asal
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={styles.itemDateCol}>
+                      <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
+                        {formatDate(item.deadline)}
+                      </span>
+                      {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                    </div>
+
+                    <div className={styles.itemActions}>
+                      <button 
+                        className={styles.deleteBtn} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAction(item.id);
+                        }}
+                      >
+                        🗑️ Hapus
+                      </button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className={styles.itemDateCol}>
-                    <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
-                      {formatDate(item.deadline)}
-                    </span>
-                    {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
-                  </div>
-
-                  <div className={styles.itemActions}>
-                    <button 
-                      className={styles.deleteBtn} 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAction(item.id);
-                      }}
-                    >
-                      🗑️ Hapus
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={styles.pageBtn}
+                >
+                  ◀ Prev
+                </button>
+                <span className={styles.pageIndicator}>
+                  Halaman <strong className="font-mono">{currentPage}</strong> dari <strong className="font-mono">{totalPages}</strong> ({totalItems} items)
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={styles.pageBtn}
+                >
+                  Next ▶
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

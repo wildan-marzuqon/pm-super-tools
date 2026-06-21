@@ -578,3 +578,74 @@
   border-color: var(--primary) !important;
 }
 
+/* Tags Filter List in Notes Sidebar */
+.tagsFilterList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tagLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-text);
+  text-transform: uppercase;
+}
+
+.tagsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.tagFilterBtn {
+  background-color: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tagFilterBtn:hover {
+  background-color: var(--primary-subtle);
+  color: #B45309;
+}
+
+.activeTagFilter {
+  background-color: var(--primary-light) !important;
+  color: #B45309 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.1);
+}
+
+/* Hover effects for note cards */
+.noteListItem {
+  transition: all var(--transition-normal);
+  border: 1px solid transparent;
+}
+
+.noteListItem:hover:not(.activeNoteItem) {
+  transform: translateX(4px);
+  background-color: rgba(254, 243, 199, 0.15);
+  border-color: rgba(245, 158, 11, 0.1);
+}
+
+.activeNoteItem {
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+.noteListFolder {
+  font-family: var(--font-fira-code), monospace;
+}
+

@@ -587,3 +587,133 @@
   z-index: 40;
   background: transparent;
 }
+
+/* Filters Toolbar Grid Revamp */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+
+.filterRow:not(:last-child) {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--card-border);
+}
+
+.filterSearchInput {
+  flex-grow: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  outline: none;
+  background-color: var(--card-bg);
+  transition: all var(--transition-fast);
+}
+
+.filterSearchInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.dateRangeGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.filterDateInput {
+  padding: 8px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  outline: none;
+  background-color: var(--card-bg);
+  max-width: 140px;
+  cursor: pointer;
+}
+
+.dateSeparator {
+  font-size: 12px;
+  color: var(--muted-text);
+  font-weight: 500;
+}
+
+.clearDateBtn {
+  font-size: 18px;
+  color: var(--muted-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color var(--transition-fast);
+}
+
+.clearDateBtn:hover {
+  color: #EF4444;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--card-border);
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.pageBtn {
+  background-color: white;
+  color: var(--foreground);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.pageBtn:hover:not(:disabled) {
+  background-color: var(--primary-subtle);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #B45309;
+  transform: translateY(-1px);
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pageIndicator {
+  font-size: 13px;
+  color: var(--muted-text);
+}
+
+.pageIndicator strong {
+  color: var(--foreground);
+}
+
+/* Row Hover micro-interaction */
+.itemRow {
+  transition: all var(--transition-normal);
+  border: 1px solid transparent;
+}
+
+.itemRow:hover {
+  transform: translateX(4px);
+  background-color: rgba(254, 243, 199, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+.itemRowDone {
+  opacity: 0.75;
+}

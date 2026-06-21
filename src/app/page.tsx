@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Time & Date State
   const [mounted, setMounted] = useState(false);
@@ -380,6 +381,29 @@ export default function Dashboard() {
 
   const recentNotes = notes.slice(0, 3);
 
+  // Filter search results dynamically
+  const filteredProjects = searchQuery.trim() === '' ? [] : projects.filter(
+    p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+         p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         p.pic.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUrgentActions = searchQuery.trim() === '' 
+    ? urgentActions 
+    : actionItems.filter(
+        item => item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.pic.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+  const filteredRecentNotes = searchQuery.trim() === ''
+    ? recentNotes
+    : notes.filter(
+        note => note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (note.folder && note.folder.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
   // Helper to format date
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
@@ -415,7 +439,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
       {/* Header */}
       <header className={styles.header}>
         <div>
@@ -434,6 +457,25 @@ export default function Dashboard() {
           </Link>
         </div>
       </header>
+
+      {/* Global Search Bar */}
+      <div className={styles.searchBarContainer}>
+        <div className={styles.searchBarWrapper}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            type="text"
+            className={styles.globalSearchInput}
+            placeholder="Cari proyek, action items, atau catatan di workspace..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className={styles.clearSearchBtn} onClick={() => setSearchQuery('')}>
+              ×
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Metrics Row */}
       <section className={styles.metricsGrid}>
@@ -474,24 +516,42 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Matching Projects Row (only when searching and projects match) */}
+      {searchQuery.trim() !== '' && filteredProjects.length > 0 && (
+        <section className={styles.searchResultsSection}>
+          <h2 className={styles.sectionTitle}>📁 Proyek yang Cocok ({filteredProjects.length})</h2>
+          <div className={styles.projectsRow}>
+            {filteredProjects.map((proj) => (
+              <Link href={`/projects/${proj.id}`} key={proj.id} className={styles.projectCard}>
+                <div className={styles.projectCardHeader}>
+                  <h3>{proj.name}</h3>
+                  <span className={styles.projectPic}>PIC: {proj.pic}</span>
+                </div>
+                <p>{proj.description || 'Tidak ada deskripsi.'}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Content Grid */}
       <div className={styles.mainGrid}>
         {/* Left Column: Urgent Action Items */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>Urgent Action Items ⚡</h2>
+            <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Action Items ⚡' : 'Urgent Action Items ⚡'}</h2>
             <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
           </div>
           <div className={styles.sectionCard}>
-            {urgentActions.length === 0 ? (
+            {filteredUrgentActions.length === 0 ? (
               <div className={styles.emptyState}>
                 <span className={styles.emptyIcon}>🎉</span>
-                <p>Tidak ada action item mendesak.</p>
+                <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Tidak ada action item mendesak.'}</p>
                 <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
               </div>
             ) : (
               <div className={styles.actionList}>
-                {urgentActions.map((item) => {
+                {filteredUrgentActions.map((item) => {
                   const associatedProject = projects.find((p) => p.id === item.project_id);
                   const overdue = isOverdue(item.deadline);
                   return (
@@ -534,18 +594,18 @@ export default function Dashboard() {
         {/* Right Column: Recent Notes */}
         <section className={styles.cardSection}>
           <div className={styles.sectionHeader}>
-            <h2>Notes Terakhir Diedit 📝</h2>
+            <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Catatan 📝' : 'Notes Terakhir Diedit 📝'}</h2>
             <Link href="/notes" className={styles.viewAll}>Buka Notes</Link>
           </div>
           <div className={styles.notesGrid}>
-            {recentNotes.length === 0 ? (
+            {filteredRecentNotes.length === 0 ? (
               <div className={styles.emptyNotesState}>
                 <span className={styles.emptyIcon}>✍️</span>
-                <p>Belum ada notes dibuat.</p>
+                <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Belum ada notes dibuat.'}</p>
                 <Link href="/notes" className={styles.createLink}>Buat note pertama</Link>
               </div>
             ) : (
-              recentNotes.map((note) => (
+              filteredRecentNotes.map((note) => (
                 <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
                   <div className={styles.noteFolderTag}>{note.folder}</div>
                   <h3 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h3>

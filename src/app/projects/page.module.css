@@ -448,3 +448,130 @@
   }
 }
 
+/* Filter Toolbar and Search styles for projects */
+.filterToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 0 12px;
+  flex-grow: 1;
+  max-width: 480px;
+  transition: all var(--transition-fast);
+}
+
+.searchWrapper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  background-color: #ffffff;
+}
+
+.searchIcon {
+  color: var(--muted-text);
+  margin-right: 8px;
+}
+
+.searchInput {
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 0 !important;
+  font-size: 13px !important;
+  width: 100% !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.statusFilters {
+  display: flex;
+  gap: 8px;
+}
+
+.statusFilterBtn {
+  background-color: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.statusFilterBtn:hover {
+  background-color: var(--primary-subtle);
+  color: #B45309;
+}
+
+.activeStatusFilter {
+  background-color: var(--primary-light) !important;
+  color: #B45309 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+}
+
+/* Card hover scaling revamp */
+.projCard {
+  transition: all var(--transition-normal);
+}
+
+.projCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg), 0 4px 20px rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.projName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.statusBadge {
+  font-family: var(--font-fira-code), monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.metaVal {
+  font-family: var(--font-fira-code), monospace;
+  font-weight: 600;
+}
+
+.detailBtn {
+  width: 100%;
+  text-align: center;
+  display: inline-block;
+  background-color: white;
+  color: #B45309;
+  border: 1px solid #FEF3C7;
+  padding: 10px;
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.detailBtn:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+

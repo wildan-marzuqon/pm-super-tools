@@ -104,6 +104,7 @@ function NotesContent() {
   // Filtering & Folders
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('All');
+  const [selectedTag, setSelectedTag] = useState('All');
   
   // Editor State
   const [editorTitle, setEditorTitle] = useState('');
@@ -636,6 +637,9 @@ function NotesContent() {
   // Folder helper list
   const folders = ['All', ...Array.from(new Set(notes.map((n) => n.folder).filter(Boolean)))];
 
+  // Tag helper list
+  const allTags = ['All', ...Array.from(new Set(notes.flatMap((n) => n.tags || []).filter(Boolean)))];
+
   // Filtering notes
   const filteredNotes = notes.filter((n) => {
     const matchesSearch =
@@ -643,8 +647,10 @@ function NotesContent() {
       (n.content && n.content.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesFolder = selectedFolder === 'All' || n.folder === selectedFolder;
+
+    const matchesTag = selectedTag === 'All' || (n.tags && n.tags.includes(selectedTag));
     
-    return matchesSearch && matchesFolder;
+    return matchesSearch && matchesFolder && matchesTag;
   });
 
   return (
@@ -680,6 +686,24 @@ function NotesContent() {
             </button>
           ))}
         </div>
+
+        {/* Tags Row List */}
+        {allTags.length > 1 && (
+          <div className={styles.tagsFilterList}>
+            <span className={styles.tagLabel}>Tag:</span>
+            <div className={styles.tagsContainer}>
+              {allTags.map((tagName) => (
+                <button
+                  key={tagName}
+                  onClick={() => setSelectedTag(tagName)}
+                  className={`${styles.tagFilterBtn} ${selectedTag === tagName ? styles.activeTagFilter : ''}`}
+                >
+                  {tagName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className={styles.notesList}>
           {filteredNotes.length === 0 ? (

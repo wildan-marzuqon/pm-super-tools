@@ -26,6 +26,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'live'>('all');
   
   // Modal / Form state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -109,6 +111,22 @@ export default function ProjectsPage() {
     return proj.current_stage_index >= proj.stages.length;
   };
 
+  // Filter projects dynamically
+  const filteredProjects = projects.filter((proj) => {
+    const matchesSearch =
+      proj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (proj.description && proj.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (proj.pic && proj.pic.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const isCompleted = isProjectLive(proj);
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && !isCompleted) ||
+      (statusFilter === 'live' && isCompleted);
+
+    return matchesSearch && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -152,18 +170,52 @@ export default function ProjectsPage() {
         </button>
       </header>
 
+      {/* Search & Status Filters */}
+      <section className={styles.filterToolbar}>
+        <div className={styles.searchWrapper}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Cari nama proyek, deskripsi, atau PIC..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className={styles.statusFilters}>
+          <button
+            className={`${styles.statusFilterBtn} ${statusFilter === 'all' ? styles.activeStatusFilter : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            Semua
+          </button>
+          <button
+            className={`${styles.statusFilterBtn} ${statusFilter === 'active' ? styles.activeStatusFilter : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
+            🚀 Aktif
+          </button>
+          <button
+            className={`${styles.statusFilterBtn} ${statusFilter === 'live' ? styles.activeStatusFilter : ''}`}
+            onClick={() => setStatusFilter('live')}
+          >
+            ✓ Live / Selesai
+          </button>
+        </div>
+      </section>
+
       {/* Projects Grid */}
-      {projects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <div className={styles.emptyState}>
           <span className={styles.emptyIcon}>📁</span>
-          <p>Belum ada proyek yang dilacak.</p>
+          <p>{searchQuery || statusFilter !== 'all' ? 'Tidak ada proyek yang sesuai pencarian.' : 'Belum ada proyek yang dilacak.'}</p>
           <button className={styles.addBtnLarge} onClick={() => setShowAddModal(true)}>
             Mulai Tambah Proyek
           </button>
         </div>
       ) : (
         <div className={styles.projectsGrid}>
-          {projects.map((proj) => {
+          {filteredProjects.map((proj) => {
             const isCompleted = isProjectLive(proj);
             const activeStage = proj.stages[proj.current_stage_index] || null;
             

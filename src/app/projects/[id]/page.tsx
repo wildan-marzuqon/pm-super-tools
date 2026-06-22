@@ -21,6 +21,9 @@ interface ActionItem {
   completed: boolean;
   category_id?: string;
   category_name?: string;
+  project_id?: string;
+  source_note_id?: string;
+  created_at?: string;
 }
 
 interface Artifact {
@@ -504,6 +507,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  // Check if date is overdue
+  const isOverdue = (dateStr: string, completed: boolean) => {
+    if (!dateStr || completed) return false;
+    const deadline = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return deadline < today;
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -842,7 +854,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Actions List */}
-            <div className={styles.actionsList}>
+            <div className={styles.itemsCard}>
               {(() => {
                 const filteredAndSorted = (project.actionItems || [])
                   .filter((item) => {
@@ -883,49 +895,69 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                 if (filteredAndSorted.length === 0) {
                   return (
-                    <p className={styles.emptyTabMsg}>
-                      {searchQuery ? 'Tidak ada action item yang sesuai pencarian.' : 'Belum ada Action Item untuk proyek ini.'}
-                    </p>
+                    <div className={styles.emptyState}>
+                      <span className={styles.emptyIcon}>🎉</span>
+                      <p>{searchQuery ? 'Tidak ada action item yang sesuai pencarian.' : 'Belum ada Action Item untuk proyek ini.'}</p>
+                    </div>
                   );
                 }
 
-                return filteredAndSorted.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className={`${styles.actionCard} ${item.completed ? styles.actionDoneCard : ''}`}
-                    onClick={() => handleStartEditAction(item)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexGrow: 1 }}>
-                      <div className={styles.actionDetails}>
-                        <h4 className={styles.actionTitle}>{item.title}</h4>
-                        {item.description && <p className={styles.actionDesc}>{item.description}</p>}
-                        <div className={styles.actionMetaTags}>
-                          <span className={styles.actionPic}>PIC: {item.pic}</span>
-                          {item.category_name && (
-                            <span className={styles.categoryTagBadge} title={item.category_name}>
-                              🏷️ {item.category_name}
+                return (
+                  <div className={styles.itemsList}>
+                    {filteredAndSorted.map((item) => {
+                      const overdue = isOverdue(item.deadline, item.completed);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`${styles.itemRow} ${item.completed ? styles.itemRowDone : ''}`}
+                          onClick={() => handleStartEditAction(item)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className={styles.itemContent}>
+                            <h3 className={styles.itemTitle}>{item.title}</h3>
+                            {item.description && <p className={styles.itemDesc}>{item.description}</p>}
+                            <div className={styles.itemMeta}>
+                              <span className={styles.picBadge}>PIC: {item.pic}</span>
+                              {item.category_name && (
+                                <span className={styles.categoryTagBadge} title={item.category_name}>
+                                  🏷️ {item.category_name}
+                                </span>
+                              )}
+                              {item.source_note_id && (
+                                <Link 
+                                  href={`/notes?id=${item.source_note_id}`} 
+                                  className={styles.noteLink}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  📝 Lihat Note Asal
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={styles.itemDateCol}>
+                            <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
+                              {formatDate(item.deadline)}
                             </span>
-                          )}
-                          {item.deadline && (
-                            <span className={styles.actionDeadline}>Deadline: {formatDate(item.deadline)}</span>
-                          )}
+                            {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                          </div>
+
+                          <div className={styles.itemActions}>
+                            <button
+                              className={styles.deleteBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteActionItem(item.id);
+                              }}
+                            >
+                              🗑️ Hapus
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className={styles.actionItemRight}>
-                      <button 
-                        className={styles.deleteActionBtn} 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteActionItem(item.id);
-                        }}
-                      >
-                        🗑️ Hapus
-                      </button>
-                    </div>
+                      );
+                    })}
                   </div>
-                ));
+                );
               })()}
             </div>
           </div>

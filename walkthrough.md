@@ -23,6 +23,7 @@ Fitur ini membantu Project Manager untuk melihat proyeksi alokasi beban kerja ha
 4. **Task Range Overlap Filtering**: Tabel kini disaring secara cerdas sehingga hanya menampilkan tugas-tugas yang rentang kerjanya bersinggungan langsung dengan range tanggal terpilih, sehingga menghindari baris kosong/tidak relevan.
 5. **Continuous Pill Highlights**: Sel-sel aktif pengerjaan tugas yang berlangsung lebih dari 1 hari digabungkan secara visual menjadi satu pill bar horizontal berkelanjutan (tanpa border kiri-kanan pada sel tengah, dan dilengkapi *rounded corners* di ujung kiri/kanan pengerjaan) lengkap dengan kalkulasi jam/hari kerja yang proporsional.
 6. **Dynamic Team Capacity Scaling**: Jika memfilter "Semua Anggota Tim" (All), kapasitas dasar harian otomatis dikalikan dengan jumlah anggota yang ada di database agar perbandingan total alokasi dan kapasitas tetap akurat.
+7. **Jira Issue Clickable Links**: Kode kunci isu (Issue Key) di kolom tabel utama sekarang berupa tautan aktif yang jika di-klik akan membuka tiket Jira asli secara otomatis pada tab browser baru (`https://cakra.atlassian.net/browse/[KEY]`). Kami juga menambahkan efek transisi hover premium berwarna amber pada tombol tag kunci isu tersebut.
 
 ---
 

@@ -56,7 +56,21 @@ Notifikasi default browser seperti `alert(...)` dan `confirm(...)` menghentikan 
 
 ---
 
-## 4. Hasil Verifikasi
+## 4. Perbaikan Bug: Sinkronisasi Tanggal Stages (completed_at)
+
+### Masalah:
+Format tanggal pengerjaan tahapan proyek mengalami ketidakcocokan penamaan (naming mismatch) antara skema Prisma di database (`completedAt` dalam format camelCase) dengan state yang diharapkan di sisi klien/halaman React (`completed_at` dalam format snake_case). Akibatnya:
+- Tanggal input di tab *Settings & Stages* selalu kosong saat halaman di-refresh.
+- Tanggal penyelesaian tidak muncul di bawah nama stages pada visual pipeline.
+- Pengeditan/pembaruan tanggal langsung di-reset kembali menjadi kosong sesaat setelah disimpan.
+
+### Solusi:
+- **API Mapping (GET & PUT)**: Menambahkan mapper objek pada handler API GET di [/api/projects/[id]/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/route.ts) dan handler PUT/POST di [/api/projects/[id]/stages/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/stages/route.ts) untuk mengonversi properti `completedAt` dari database menjadi `completed_at` sebelum dikirimkan ke klien.
+- Dengan pemetaan ini, tanggal stages kini tersimpan secara permanen di database, dapat diedit kembali dengan benar (baik untuk tahapan eksisiting maupun baru), serta terender secara dinamis tepat di bawah nama tahapan pada diagram *Progress Pipeline Project*!
+
+---
+
+## 5. Hasil Verifikasi
 
 - Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
 - **Status Git**: Semua perubahan telah di-push ke branch `main`.

@@ -608,7 +608,14 @@ export default function TeamsLoadPage() {
                 {taskDailyLoads.map(({ issue, totalHours, dailyHours, isActiveOnDate }) => (
                   <tr key={issue.id}>
                     <td className={styles.fixedCol}>
-                      <span className={styles.issueKey}>{issue.key}</span>
+                      <a 
+                        href={`https://cakra.atlassian.net/browse/${issue.key}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={styles.issueKeyLink}
+                      >
+                        <span className={styles.issueKey}>{issue.key}</span>
+                      </a>
                     </td>
                     <td className={styles.taskCol}>
                       <div className={styles.taskTitle} title={issue.summary}>

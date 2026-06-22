@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { useModalDialog } from '@/components/ModalProvider';
 
 interface Project {
   id: string;
@@ -25,6 +26,7 @@ interface ActionItem {
 }
 
 export default function ActionItemsPage() {
+  const { confirm } = useModalDialog();
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,7 @@ export default function ActionItemsPage() {
   }, []);
 
   const handleDeleteAction = async (id: string) => {
-    if (!confirm('Hapus action item ini?')) return;
+    if (!(await confirm('Apakah Anda yakin ingin menghapus action item ini?'))) return;
     try {
       const res = await fetch(`/api/action-items/${id}`, {
         method: 'DELETE'

@@ -9,6 +9,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Extension } from '@tiptap/core';
 import styles from './page.module.css';
+import { useModalDialog } from '@/components/ModalProvider';
 
 interface Note {
   id: string;
@@ -87,6 +88,7 @@ declare module '@tiptap/core' {
 }
 
 function NotesContent() {
+  const { confirm, alert } = useModalDialog();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedNoteId = searchParams.get('id');
@@ -413,7 +415,7 @@ function NotesContent() {
   // Delete note
   const handleDeleteNote = async () => {
     if (!selectedNote || isDeletingNote) return;
-    if (!confirm('Apakah Anda yakin ingin menghapus note ini?')) return;
+    if (!(await confirm('Apakah Anda yakin ingin menghapus note ini?'))) return;
 
     setIsDeletingNote(true);
     try {
@@ -675,7 +677,7 @@ function NotesContent() {
         setShowPopover(false);
         setFloatButtonPos((prev) => ({ ...prev, visible: false }));
         clearConvertingFlags();
-        alert(`Berhasil membuat Action Item: "${newAction.title}"!`);
+        await alert(`Berhasil membuat Action Item: "${newAction.title}"!`, 'Sukses', 'success');
       }
     } catch (error) {
       console.error('Error converting to action item:', error);

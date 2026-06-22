@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fira_Sans, Fira_Code } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import ModalProvider from "@/components/ModalProvider";
 
 const firaSans = Fira_Sans({
   variable: "--font-fira-sans",
@@ -28,10 +29,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${firaSans.variable} ${firaCode.variable}`}>
       <body className="layout-body">
-        <Sidebar />
-        <main className="layout-main">
-          {children}
-        </main>
+        <ModalProvider>
+          <Sidebar />
+          <main className="layout-main">
+            {children}
+          </main>
+        </ModalProvider>
       </body>
     </html>
   );

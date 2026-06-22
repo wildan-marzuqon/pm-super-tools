@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
+import { useModalDialog } from '@/components/ModalProvider';
 
 interface ProjectStage {
   id: string;
@@ -48,6 +49,7 @@ interface ProjectDetail {
 }
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { confirm, alert } = useModalDialog();
   const { id } = use(params);
   const router = useRouter();
 
@@ -304,7 +306,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const handleRemoveCategory = async (catId: string) => {
     if (!project) return;
-    if (!confirm('Hapus kategori ini? Tugas yang terkait akan dikosongkan kategorinya.')) return;
+    if (!(await confirm('Hapus kategori ini? Tugas yang terkait akan dikosongkan kategorinya.'))) return;
     try {
       const res = await fetch(`/api/projects/${project.id}/categories`, {
         method: 'DELETE',
@@ -321,7 +323,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   // Delete Action Item
   const handleDeleteActionItem = async (itemId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus Action Item ini?')) return;
+    if (!(await confirm('Apakah Anda yakin ingin menghapus Action Item ini?'))) return;
     try {
       const res = await fetch(`/api/action-items/${itemId}`, {
         method: 'DELETE'
@@ -395,7 +397,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   // Delete Artifact Link
   const handleDeleteArtifact = async (artifactId: string) => {
-    if (!confirm('Hapus link artifact ini?')) return;
+    if (!(await confirm('Hapus link artifact ini?'))) return;
     try {
       const res = await fetch(`/api/projects/${id}/artifacts`, {
         method: 'DELETE',
@@ -428,7 +430,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         })
       });
       if (res.ok) {
-        alert('Settings berhasil disimpan!');
+        await alert('Settings berhasil disimpan!', 'Sukses', 'success');
         fetchProjectDetail();
       }
     } catch (error) {
@@ -441,7 +443,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Delete Project
   const handleDeleteProject = async () => {
     if (isDeletingProject) return;
-    if (!confirm('Apakah Anda yakin ingin menghapus seluruh proyek ini beserta semua stages dan artifacts terkait?')) return;
+    if (!(await confirm('Apakah Anda yakin ingin menghapus seluruh proyek ini beserta semua stages dan artifacts terkait?'))) return;
 
     setIsDeletingProject(true);
     try {
@@ -491,7 +493,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleSaveStages = async () => {
     if (!project || isSavingStages) return;
     if (stagesList.length === 0) {
-      alert('Project harus memiliki minimal 1 stage.');
+      await alert('Project harus memiliki minimal 1 stage.', 'Peringatan', 'error');
       return;
     }
     
@@ -504,7 +506,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       });
 
       if (res.ok) {
-        alert('Stages berhasil disimpan!');
+        await alert('Stages berhasil disimpan!', 'Sukses', 'success');
         fetchProjectDetail();
       }
     } catch (error) {

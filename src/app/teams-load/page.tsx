@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { useModalDialog } from '@/components/ModalProvider';
 
 interface JiraIssue {
   id: string;
@@ -18,6 +19,7 @@ interface JiraIssue {
 }
 
 export default function TeamsLoadPage() {
+  const { alert } = useModalDialog();
   const [issues, setIssues] = useState<JiraIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -34,14 +36,14 @@ export default function TeamsLoadPage() {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.name.endsWith('.csv')) {
       setCsvFile(file);
     } else {
-      alert('Hanya file CSV yang diperbolehkan!');
+      await alert('Hanya file CSV yang diperbolehkan!', 'Format File Salah', 'error');
     }
   };
 
@@ -213,7 +215,7 @@ export default function TeamsLoadPage() {
       const text = await csvFile.text();
       const rows = parseCSV(text);
       if (rows.length < 2) {
-        alert('File CSV kosong atau tidak valid!');
+        await alert('File CSV kosong atau tidak valid!', 'File Kosong', 'error');
         setUploading(false);
         return;
       }
@@ -240,7 +242,7 @@ export default function TeamsLoadPage() {
       const estimateIdx = getIndex(['original estimate', 'estimate']);
 
       if (keyIdx === -1 || summaryIdx === -1) {
-        alert('Header CSV harus memiliki minimal kolom "Key" dan "Summary"!');
+        await alert('Header CSV harus memiliki minimal kolom "Key" dan "Summary"!', 'Header Tidak Valid', 'error');
         setUploading(false);
         return;
       }
@@ -300,17 +302,17 @@ export default function TeamsLoadPage() {
       });
 
       if (res.ok) {
-        alert('Data Jira berhasil diupload dan diperbarui!');
+        await alert('Data Jira berhasil diupload dan diperbarui!', 'Berhasil', 'success');
         setShowUploadModal(false);
         setCsvFile(null);
         fetchIssues();
       } else {
         const err = await res.json();
-        alert(`Gagal menyimpan data: ${err.error || 'Server error'}`);
+        await alert(`Gagal menyimpan data: ${err.error || 'Server error'}`, 'Gagal Menyimpan', 'error');
       }
     } catch (err) {
       console.error('File reading failed:', err);
-      alert('Gagal membaca file CSV!');
+      await alert('Gagal membaca file CSV!', 'Gagal Membaca', 'error');
     } finally {
       setUploading(false);
     }

@@ -474,7 +474,7 @@
 .actionsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .emptyTabMsg {
@@ -488,7 +488,7 @@
   background-color: #ffffff;
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  padding: 18px;
+  padding: 12px 16px;
   box-shadow: var(--shadow-sm);
   display: flex;
   gap: 14px;
@@ -1269,19 +1269,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   flex-wrap: wrap;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(8px);
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: var(--border-radius-md);
   border: 1px solid var(--card-border);
 }
 
 .searchBox {
   position: relative;
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
+  max-width: 300px;
 }
 
 .searchIcon {

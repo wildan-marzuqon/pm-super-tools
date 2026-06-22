@@ -36,7 +36,13 @@ export async function GET(
       deadline: project.deadline,
       pic: project.pic,
       current_stage_index: project.currentStageIndex,
-      stages: project.stages,
+      stages: project.stages.map((s) => ({
+        id: s.id,
+        projectId: s.projectId,
+        name: s.name,
+        order: s.order,
+        completed_at: s.completedAt ? s.completedAt.toISOString() : null
+      })),
       actionItems: project.actions.map((item) => ({
         id: item.id,
         title: item.title,

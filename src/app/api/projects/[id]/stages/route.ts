@@ -33,7 +33,13 @@ export async function POST(
       }
     });
 
-    return Response.json(newStage, { status: 201 });
+    return Response.json({
+      id: newStage.id,
+      projectId: newStage.projectId,
+      name: newStage.name,
+      order: newStage.order,
+      completed_at: newStage.completedAt ? newStage.completedAt.toISOString() : null
+    }, { status: 201 });
   } catch (error) {
     console.error('Error adding project stage:', error);
     return Response.json({ error: 'Failed to add stage' }, { status: 500 });
@@ -99,7 +105,13 @@ export async function PUT(
       orderBy: { order: 'asc' }
     });
 
-    return Response.json(updatedStages);
+    return Response.json(updatedStages.map(s => ({
+      id: s.id,
+      projectId: s.projectId,
+      name: s.name,
+      order: s.order,
+      completed_at: s.completedAt ? s.completedAt.toISOString() : null
+    })));
   } catch (error) {
     console.error('Error updating project stages:', error);
     return Response.json({ error: 'Failed to update stages' }, { status: 500 });

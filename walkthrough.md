@@ -38,7 +38,25 @@ Saat berpindah-pindah catatan (misal dari Note A ke Note B), ProseMirror/Tiptap 
 
 ---
 
-## 3. Hasil Verifikasi
+## 3. Fitur Tambahan: Custom Dialog Modal System (ModalProvider)
+
+### Masalah:
+Notifikasi default browser seperti `alert(...)` dan `confirm(...)` menghentikan sementara jalannya thread utama JS browser, berpenampilan kaku (default OS), serta mengganggu kelancaran *user flow*.
+
+### Solusi:
+- **`ModalProvider` Component**: Membuat komponen penyedia context dialog global [ModalProvider.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/components/ModalProvider.tsx) yang menawarkan API berbasis `Promise`.
+  - Fungsi `confirm(...)` mengembalikan `Promise<boolean>` sehingga penulisan logika di halaman tetap clean menggunakan sintaksis `await confirm(...)` tanpa memecah alur kode menjadi callback.
+  - Fungsi `alert(...)` mendukung tingkat keparahan (*severity*): `'success'`, `'info'`, dan `'error'`.
+- **Theme Matching Design**: Pop-up dialog dirancang secara estetik dengan animasi *popover* masuk (`animate-popover`), efek latar belakang blur (`backdrop-filter: blur`), serta dekorasi warna, ikon, dan tombol yang serasi dengan identitas SuperPM (amber/orange/emerald/red).
+- **Codebase Integration**: Mengganti seluruh pemanggilan `confirm(...)` dan `alert(...)` bawaan browser di seluruh halaman:
+  - [Action Items Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/action-items/page.tsx)
+  - [Notes Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/notes/page.tsx)
+  - [Project Detail Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/projects/%5Bid%5D/page.tsx)
+  - [Teams Load Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/teams-load/page.tsx)
+
+---
+
+## 4. Hasil Verifikasi
 
 - Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
 - **Status Git**: Semua perubahan telah di-push ke branch `main`.

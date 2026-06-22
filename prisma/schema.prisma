@@ -88,3 +88,19 @@ model Artifact {
 
   @@map("artifacts")
 }
+
+model JiraIssue {
+  id               String    @id @default(uuid())
+  key              String    @unique
+  issueType        String    @map("issue_type")
+  summary          String
+  assignee         String    @default("Unassigned")
+  priority         String
+  status           String
+  startDate        DateTime? @map("start_date")
+  dueDate          DateTime? @map("due_date")
+  originalEstimate Float     @map("original_estimate") // in seconds
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@map("jira_issues")
+}

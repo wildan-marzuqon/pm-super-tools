@@ -117,6 +117,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Custom Stages builder list state
   const [stagesList, setStagesList] = useState<Array<{ id?: string; name: string; completed_at?: string }>>([]);
   const [newStageName, setNewStageName] = useState('');
+  const [newStageDate, setNewStageDate] = useState('');
 
   const fetchProjectDetail = async () => {
     try {
@@ -460,8 +461,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   // Stage builder operations
   const handleAddStage = () => {
     if (!newStageName.trim()) return;
-    setStagesList((prev) => [...prev, { name: newStageName }]);
+    setStagesList((prev) => [
+      ...prev,
+      {
+        name: newStageName.trim(),
+        completed_at: newStageDate ? new Date(newStageDate).toISOString() : undefined
+      }
+    ]);
     setNewStageName('');
+    setNewStageDate('');
   };
 
   const handleRemoveStage = (index: number) => {
@@ -471,6 +479,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleStageNameChange = (index: number, name: string) => {
     setStagesList((prev) =>
       prev.map((s, idx) => (idx === index ? { ...s, name } : s))
+    );
+  };
+
+  const handleStageDateChange = (index: number, dateStr: string) => {
+    setStagesList((prev) =>
+      prev.map((s, idx) => (idx === index ? { ...s, completed_at: dateStr ? new Date(dateStr).toISOString() : undefined } : s))
     );
   };
 
@@ -644,7 +658,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   </span>
                   {stage.completed_at && (
                     <span className={styles.completedAtDate}>
-                      {new Date(stage.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric' })}
+                      {formatDate(stage.completed_at)}
                     </span>
                   )}
                 </div>
@@ -1136,6 +1150,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       placeholder="Nama Tahapan..."
                       className={styles.stageManagerInput}
                     />
+                    <input
+                      type="date"
+                      value={stage.completed_at ? stage.completed_at.substring(0, 10) : ''}
+                      onChange={(e) => handleStageDateChange(idx, e.target.value)}
+                      className={styles.stageManagerDateInput}
+                      title="Atur Tanggal Tahapan"
+                    />
                     <button className={styles.removeStageRowBtn} onClick={() => handleRemoveStage(idx)}>
                       ×
                     </button>
@@ -1150,6 +1171,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     className={styles.addStageInput}
+                  />
+                  <input
+                    type="date"
+                    value={newStageDate}
+                    onChange={(e) => setNewStageDate(e.target.value)}
+                    className={styles.addStageDateInput}
+                    title="Atur Tanggal Tahapan Baru"
                   />
                   <button className={styles.addStageRowBtn} onClick={handleAddStage}>
                     + Tambah

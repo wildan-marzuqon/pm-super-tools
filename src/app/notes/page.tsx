@@ -114,6 +114,7 @@ function NotesContent() {
   const [mounted, setMounted] = useState(false);
   const isDirtyRef = useRef(false);
   const lastSavedContentRef = useRef<string>('');
+  const isSettingContentRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -152,6 +153,14 @@ function NotesContent() {
       handleSelectionChange(editor);
     },
     onUpdate: ({ editor }) => {
+      if (isSettingContentRef.current) return;
+      
+      // Verify that the editor's active note ID matches the selectedNote's ID
+      const editorNoteId = editorRef.current?.getAttribute('data-note-id');
+      if (editorNoteId && selectedNote && editorNoteId !== selectedNote.id) {
+        return;
+      }
+
       const html = editor.getHTML();
       handleContentChange(html);
     },
@@ -215,13 +224,59 @@ function NotesContent() {
     if (editor && selectedNote) {
       if (editorRef.current?.getAttribute('data-note-id') !== selectedNote.id) {
         editorRef.current?.setAttribute('data-note-id', selectedNote.id);
+        isSettingContentRef.current = true;
         editor.commands.setContent(selectedNote.content || '<p></p>');
+        isSettingContentRef.current = false;
       }
     }
   }, [selectedNote, editor]);
 
+  // Flush any pending unsaved changes immediately
+  const flushSave = async (noteToSave: Note) => {
+    if (!isDirtyRef.current || !noteToSave) return;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    setSaveStatus('Saving...');
+    try {
+      const html = editor ? editor.getHTML() : noteToSave.content;
+      const updatedNote = {
+        ...noteToSave,
+        title: editorTitle,
+        folder: editorFolder,
+        tags: editorTags.split(',').map((t) => t.trim()).filter((t) => t !== ''),
+        content: html,
+        updated_at: new Date().toISOString()
+      };
+
+      const res = await fetch(`/api/notes/${noteToSave.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedNote)
+      });
+
+      if (res.ok) {
+        const savedNote = await res.json();
+        setNotes((prevNotes) =>
+          prevNotes.map((n) => (n.id === savedNote.id ? savedNote : n))
+        );
+        isDirtyRef.current = false;
+        setSaveStatus('Saved');
+      }
+    } catch (error) {
+      console.error('Error flushing note save:', error);
+      setSaveStatus('Unsaved Changes');
+    }
+  };
+
   // Handle note selection
-  const selectNote = (note: Note) => {
+  const selectNote = async (note: Note) => {
+    // Flush any unsaved changes for the current note first
+    if (isDirtyRef.current && selectedNote && selectedNote.id !== note.id) {
+      await flushSave(selectedNote);
+    }
+
+    lastSavedContentRef.current = note.content || '<p></p>';
     setSelectedNote(note);
     setEditorTitle(note.title);
     setEditorFolder(note.folder);
@@ -230,7 +285,9 @@ function NotesContent() {
     
     if (editor) {
       editorRef.current?.setAttribute('data-note-id', note.id);
+      isSettingContentRef.current = true;
       editor.commands.setContent(note.content || '<p></p>');
+      isSettingContentRef.current = false;
     }
     setSaveStatus('Saved');
     router.push(`/notes?id=${note.id}`, { scroll: false });

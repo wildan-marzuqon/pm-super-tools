@@ -635,7 +635,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
         <div className={styles.stepPipeline}>
           {project.stages.map((stage, idx) => {
-            const isStageDone = idx < project.current_stage_index || stage.completed_at;
+            const isStageDone = idx < project.current_stage_index;
             const isStageActive = idx === project.current_stage_index;
 
             return (

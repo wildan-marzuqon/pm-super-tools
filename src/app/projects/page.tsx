@@ -237,7 +237,7 @@ export default function ProjectsPage() {
                   <p className={styles.pipelineLabel}>Tahapan Proyek:</p>
                   <div className={styles.stepIndicator}>
                     {proj.stages.map((stage, idx) => {
-                      const isStageDone = idx < proj.current_stage_index || stage.completed_at;
+                      const isStageDone = idx < proj.current_stage_index;
                       const isStageActive = idx === proj.current_stage_index;
                       
                       return (

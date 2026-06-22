@@ -59,14 +59,14 @@ Notifikasi default browser seperti `alert(...)` dan `confirm(...)` menghentikan 
 ## 4. Perbaikan Bug: Sinkronisasi Tanggal Stages (completed_at)
 
 ### Masalah:
-Format tanggal pengerjaan tahapan proyek mengalami ketidakcocokan penamaan (naming mismatch) antara skema Prisma di database (`completedAt` dalam format camelCase) dengan state yang diharapkan di sisi klien/halaman React (`completed_at` dalam format snake_case). Akibatnya:
-- Tanggal input di tab *Settings & Stages* selalu kosong saat halaman di-refresh.
-- Tanggal penyelesaian tidak muncul di bawah nama stages pada visual pipeline.
-- Pengeditan/pembaruan tanggal langsung di-reset kembali menjadi kosong sesaat setelah disimpan.
+- Format tanggal pengerjaan tahapan proyek mengalami ketidakcocokan penamaan (naming mismatch) antara skema Prisma di database (`completedAt` dalam format camelCase) dengan state yang diharapkan di sisi klien/halaman React (`completed_at` dalam format snake_case). Akibatnya:
+  - Tanggal input di tab *Settings & Stages* selalu kosong saat halaman di-refresh.
+  - Pengeditan/pembaruan tanggal langsung di-reset kembali menjadi kosong sesaat setelah disimpan.
+- **Kesalahan Status Tahapan**: Pengisian tanggal target/estimasi tahapan proyek secara otomatis menandai status tahapan tersebut sebagai selesai/complete (berwarna orange dengan tanda centang ✓) pada diagram *Progress Pipeline Project*, meskipun proyek belum mencapai atau melewati tahapan tersebut.
 
 ### Solusi:
 - **API Mapping (GET & PUT)**: Menambahkan mapper objek pada handler API GET di [/api/projects/[id]/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/route.ts) dan handler PUT/POST di [/api/projects/[id]/stages/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/stages/route.ts) untuk mengonversi properti `completedAt` dari database menjadi `completed_at` sebelum dikirimkan ke klien.
-- Dengan pemetaan ini, tanggal stages kini tersimpan secara permanen di database, dapat diedit kembali dengan benar (baik untuk tahapan eksisiting maupun baru), serta terender secara dinamis tepat di bawah nama tahapan pada diagram *Progress Pipeline Project*!
+- **Koreksi Logika Penyelesaian (isStageDone)**: Memisahkan penentuan status selesai/complete dari input tanggal (karena tanggal tersebut bersifat estimasi/target, bukan tanggal penyelesaian riil). Sekarang status tahapan selesai (`isStageDone`) murni ditentukan berdasarkan urutan tahapan proyek saat ini (`idx < project.current_stage_index`), sedangkan tanggal estimasi tetap terender secara estetis di bawah nama tahapan pada visual progress pipeline!
 
 ---
 

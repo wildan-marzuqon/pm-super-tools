@@ -52,6 +52,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'actions' | 'artifacts' | 'settings'>('overview');
 
+  // Search & Sort states for action items
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('deadline-asc');
+
   // Loading States
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [isAddingAction, setIsAddingAction] = useState(false);
@@ -808,12 +812,84 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
 
+            {/* Search & Sort Toolbar */}
+            <div className={styles.toolbarRow}>
+              <div className={styles.searchBox}>
+                <span className={styles.searchIcon}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Cari action item..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={styles.searchInput}
+                />
+              </div>
+              <div className={styles.sortBox}>
+                <span className={styles.sortLabel}>Urutkan:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className={styles.sortSelect}
+                >
+                  <option value="deadline-asc">Deadline Terdekat</option>
+                  <option value="deadline-desc">Deadline Terjauh</option>
+                  <option value="title-asc">Nama A-Z</option>
+                  <option value="title-desc">Nama Z-A</option>
+                  <option value="status-asc">Belum Selesai Dahulu</option>
+                  <option value="status-desc">Selesai Dahulu</option>
+                </select>
+              </div>
+            </div>
+
             {/* Actions List */}
             <div className={styles.actionsList}>
-              {project.actionItems.length === 0 ? (
-                <p className={styles.emptyTabMsg}>Belum ada Action Item untuk proyek ini.</p>
-              ) : (
-                project.actionItems.map((item) => (
+              {(() => {
+                const filteredAndSorted = (project.actionItems || [])
+                  .filter((item) => {
+                    const query = searchQuery.toLowerCase().trim();
+                    if (!query) return true;
+                    return (
+                      item.title.toLowerCase().includes(query) ||
+                      (item.description && item.description.toLowerCase().includes(query)) ||
+                      (item.pic && item.pic.toLowerCase().includes(query)) ||
+                      (item.category_name && item.category_name.toLowerCase().includes(query))
+                    );
+                  })
+                  .sort((a, b) => {
+                    if (sortBy === 'deadline-asc') {
+                      if (!a.deadline) return 1;
+                      if (!b.deadline) return -1;
+                      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                    }
+                    if (sortBy === 'deadline-desc') {
+                      if (!a.deadline) return 1;
+                      if (!b.deadline) return -1;
+                      return new Date(b.deadline).getTime() - new Date(a.deadline).getTime();
+                    }
+                    if (sortBy === 'title-asc') {
+                      return a.title.localeCompare(b.title, 'id');
+                    }
+                    if (sortBy === 'title-desc') {
+                      return b.title.localeCompare(a.title, 'id');
+                    }
+                    if (sortBy === 'status-asc') {
+                      return (a.completed ? 1 : 0) - (b.completed ? 1 : 0);
+                    }
+                    if (sortBy === 'status-desc') {
+                      return (b.completed ? 1 : 0) - (a.completed ? 1 : 0);
+                    }
+                    return 0;
+                  });
+
+                if (filteredAndSorted.length === 0) {
+                  return (
+                    <p className={styles.emptyTabMsg}>
+                      {searchQuery ? 'Tidak ada action item yang sesuai pencarian.' : 'Belum ada Action Item untuk proyek ini.'}
+                    </p>
+                  );
+                }
+
+                return filteredAndSorted.map((item) => (
                   <div 
                     key={item.id} 
                     className={`${styles.actionCard} ${item.completed ? styles.actionDoneCard : ''}`}
@@ -849,8 +925,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       </button>
                     </div>
                   </div>
-                ))
-              )}
+                ));
+              })()}
             </div>
           </div>
         )}

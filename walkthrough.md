@@ -17,9 +17,12 @@ Fitur ini membantu Project Manager untuk melihat proyeksi alokasi beban kerja ha
 ### Fungsionalitas & Desain UI/UX Premium:
 1. **Drag-and-Drop CSV Upload**: Modal upload mendukung drag-and-drop file dengan indikasi visual yang responsif.
 2. **Robust Date Parsing**: Kompatibel dengan format tanggal Jira (`DD/MM/YYYY`, `YYYY-MM-DD`, dan singkatan nama bulan bahasa Inggris maupun bahasa Indonesia seperti `Jun`, `Mei`, `Agu`, `Oct`, dll.).
-3. **Dynamic Date Baseline**: Halaman otomatis mengatur rentang waktu awal berdasarkan tanggal terlama yang ada dalam data isu Jira yang diupload, sehingga pengguna tidak dihadapkan dengan tabel kosong.
-4. **Dynamic Team Capacity Scaling**: Jika memfilter "Semua Anggota Tim", kapasitas dasar harian otomatis dikalikan dengan jumlah anggota yang ada di database agar perbandingan total alokasi dan kapasitas tetap akurat.
-5. **Akurasi Alokasi Rentang Waktu**: Perhitungan sisa kapasitas dihitung berdasarkan beban harian yang benar-benar jatuh pada tanggal aktif di rentang waktu terpilih, bukan total estimasi tugas secara keseluruhan (yang mungkin membentang ke luar minggu/bulan terpilih).
+3. **Date Baseline Terkini (Sistem)**: Halaman selalu memproyeksikan rentang tanggal berdasarkan tanggal sistem saat ini (`new Date()`).
+   - Mingguan akan selalu ditarik dari hari Senin di minggu berjalan.
+   - Bulanan ditarik dari tanggal 1 bulan berjalan.
+4. **Task Range Overlap Filtering**: Tabel kini disaring secara cerdas sehingga hanya menampilkan tugas-tugas yang rentang kerjanya bersinggungan langsung dengan range tanggal terpilih, sehingga menghindari baris kosong/tidak relevan.
+5. **Continuous Pill Highlights**: Sel-sel aktif pengerjaan tugas yang berlangsung lebih dari 1 hari digabungkan secara visual menjadi satu pill bar horizontal berkelanjutan (tanpa border kiri-kanan pada sel tengah, dan dilengkapi *rounded corners* di ujung kiri/kanan pengerjaan) lengkap dengan kalkulasi jam/hari kerja yang proporsional.
+6. **Dynamic Team Capacity Scaling**: Jika memfilter "Semua Anggota Tim" (All), kapasitas dasar harian otomatis dikalikan dengan jumlah anggota yang ada di database agar perbandingan total alokasi dan kapasitas tetap akurat.
 
 ---
 
@@ -37,4 +40,4 @@ Saat berpindah-pindah catatan (misal dari Note A ke Note B), ProseMirror/Tiptap 
 ## 3. Hasil Verifikasi
 
 - Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
-- **Status Git**: Tidak di-push ke GitHub sesuai arahan user.
+- **Status Git**: Semua perubahan telah di-push ke branch `main`.

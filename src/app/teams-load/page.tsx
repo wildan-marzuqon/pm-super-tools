@@ -85,29 +85,9 @@ export default function TeamsLoadPage() {
     fetchIssues();
   }, []);
 
-  // Get base date from issues
-  const getBaseDate = (): Date => {
-    if (issues.length === 0) {
-      return new Date('2026-06-22');
-    }
-    // Find the earliest start date in the issues
-    let earliestObj: Date | null = null;
-    for (const issue of issues) {
-      if (issue.startDate) {
-        const d = new Date(issue.startDate);
-        if (!isNaN(d.getTime())) {
-          if (!earliestObj || d < earliestObj) {
-            earliestObj = d;
-          }
-        }
-      }
-    }
-    return earliestObj || new Date('2026-06-22');
-  };
-
-  // Initialize dates based on preset and issues
+  // Initialize dates based on preset using current system date (today)
   useEffect(() => {
-    const baseDate = new Date(getBaseDate().getTime());
+    const baseDate = new Date();
     
     if (datePreset === 'week') {
       // Find Monday of the week
@@ -126,7 +106,7 @@ export default function TeamsLoadPage() {
       setStartDateStr(firstDay.toISOString().split('T')[0]);
       setEndDateStr(lastDay.toISOString().split('T')[0]);
     }
-  }, [datePreset, issues]);
+  }, [datePreset]);
 
   // Robust date parser
   const parseJiraDate = (str: string): Date | null => {
@@ -376,10 +356,26 @@ export default function TeamsLoadPage() {
     return count || 1; // avoid divide by zero
   };
 
-  // Filter issues by assignee
+  // Filter issues by assignee and date range overlap
   const filteredIssues = issues.filter(issue => {
-    if (selectedAssignee === 'all') return true;
-    return issue.assignee.toLowerCase() === selectedAssignee.toLowerCase();
+    // 1. Assignee Filter
+    if (selectedAssignee !== 'all' && issue.assignee.toLowerCase() !== selectedAssignee.toLowerCase()) {
+      return false;
+    }
+
+    // 2. Date Overlap Filter
+    const start = issue.startDate ? new Date(issue.startDate) : null;
+    const due = issue.dueDate ? new Date(issue.dueDate) : null;
+    if (!start || !due) return true; // Keep if no dates
+
+    if (!startDateStr || !endDateStr) return true;
+
+    const rangeStart = new Date(startDateStr);
+    const rangeEnd = new Date(endDateStr);
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    return start <= rangeEnd && due >= rangeStart;
   });
 
   // Calculate daily load for each task
@@ -624,8 +620,11 @@ export default function TeamsLoadPage() {
                         {issue.status}
                       </span>
                     </td>
-                    {selectedDates.map(date => {
+                    {selectedDates.map((date, idx) => {
                       const isActive = isActiveOnDate(date);
+                      const isPrevActive = isActive && idx > 0 ? isActiveOnDate(selectedDates[idx - 1]) : false;
+                      const isNextActive = isActive && idx < selectedDates.length - 1 ? isActiveOnDate(selectedDates[idx + 1]) : false;
+
                       const day = date.getDay();
                       const isWeekend = day === 0 || day === 6;
 
@@ -633,10 +632,24 @@ export default function TeamsLoadPage() {
                         return <td key={date.getTime()} className={styles.weekendCell}></td>;
                       }
 
+                      let activeClass = '';
+                      if (isActive) {
+                        activeClass = styles.loadActive;
+                        if (!isPrevActive && !isNextActive) {
+                          activeClass += ` ${styles.loadActiveSingle}`;
+                        } else if (!isPrevActive) {
+                          activeClass += ` ${styles.loadActiveStart}`;
+                        } else if (!isNextActive) {
+                          activeClass += ` ${styles.loadActiveEnd}`;
+                        } else {
+                          activeClass += ` ${styles.loadActiveMiddle}`;
+                        }
+                      }
+
                       return (
                         <td 
                           key={date.getTime()} 
-                          className={`${styles.loadCell} ${isActive ? styles.loadActive : ''}`}
+                          className={`${styles.loadCell} ${activeClass}`}
                         >
                           {isActive ? `${dailyHours.toFixed(1)}h` : ''}
                         </td>

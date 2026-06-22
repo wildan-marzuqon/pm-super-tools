@@ -325,7 +325,33 @@
   background-color: #FFFBEB;
   color: #B45309;
   font-weight: bold;
-  border: 1px solid #FEF08A;
+  border-top: 1px solid #FEF08A;
+  border-bottom: 1px solid #FEF08A;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.loadActiveSingle {
+  border-left: 1px solid #FEF08A;
+  border-right: 1px solid #FEF08A;
+  border-radius: 6px;
+}
+
+.loadActiveStart {
+  border-left: 1px solid #FEF08A;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.loadActiveEnd {
+  border-right: 1px solid #FEF08A;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.loadActiveMiddle {
+  border-left: none;
+  border-right: none;
 }
 
 .issueKey {

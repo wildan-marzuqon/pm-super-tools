@@ -36,6 +36,8 @@ export async function GET(
       deadline: project.deadline,
       pic: project.pic,
       current_stage_index: project.currentStageIndex,
+      google_drive_folder_url: project.googleDriveFolderUrl,
+      google_api_key: project.googleApiKey,
       stages: project.stages.map((s) => ({
         id: s.id,
         projectId: s.projectId,
@@ -56,7 +58,16 @@ export async function GET(
         category_name: item.category?.name || null,
         created_at: item.createdAt
       })),
-      artifacts: project.artifacts,
+      artifacts: project.artifacts.map((a) => ({
+        id: a.id,
+        projectId: a.projectId,
+        label: a.label,
+        url: a.url,
+        description: a.description,
+        is_synced: a.isSynced,
+        type: a.type,
+        content: a.content
+      })),
       categories: project.categories,
       created_at: project.createdAt
     });
@@ -82,6 +93,8 @@ export async function PUT(
         deadline: body.deadline !== undefined ? body.deadline : undefined,
         pic: body.pic !== undefined ? body.pic : undefined,
         currentStageIndex: body.current_stage_index !== undefined ? body.current_stage_index : undefined,
+        googleDriveFolderUrl: body.google_drive_folder_url !== undefined ? body.google_drive_folder_url : undefined,
+        googleApiKey: body.google_api_key !== undefined ? body.google_api_key : undefined,
       }
     });
 

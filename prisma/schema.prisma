@@ -40,17 +40,19 @@ model ActionItem {
 }
 
 model Project {
-  id                String            @id @default(uuid())
-  name              String
-  description       String            @default("") @db.Text
-  deadline          String            @default("")
-  pic               String            @default("")
-  currentStageIndex Int               @default(0) @map("current_stage_index")
-  createdAt         DateTime          @default(now()) @map("created_at")
-  stages            ProjectStage[]
-  actions           ActionItem[]
-  artifacts         Artifact[]
-  categories        ProjectCategory[]
+  id                   String            @id @default(uuid())
+  name                 String
+  description          String            @default("") @db.Text
+  deadline             String            @default("")
+  pic                  String            @default("")
+  currentStageIndex    Int               @default(0) @map("current_stage_index")
+  googleDriveFolderUrl String?           @map("google_drive_folder_url")
+  googleApiKey         String?           @map("google_api_key")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  stages               ProjectStage[]
+  actions              ActionItem[]
+  artifacts            Artifact[]
+  categories           ProjectCategory[]
 
   @@map("projects")
 }
@@ -78,11 +80,14 @@ model ProjectStage {
 }
 
 model Artifact {
-  id          String @id @default(uuid())
-  projectId   String @map("project_id")
+  id          String  @id @default(uuid())
+  projectId   String  @map("project_id")
   label       String
   url         String
-  description String @default("")
+  description String  @default("")
+  isSynced    Boolean @default(false) @map("is_synced")
+  type        String  @default("link") // "link", "document"
+  content     String?                  // For local rich-text content
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

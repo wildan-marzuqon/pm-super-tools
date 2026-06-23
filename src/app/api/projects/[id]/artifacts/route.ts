@@ -26,11 +26,23 @@ export async function POST(
         projectId: id,
         label: body.label,
         url: body.url,
-        description: body.description || ''
+        description: body.description || '',
+        isSynced: body.is_synced !== undefined ? body.is_synced : false,
+        type: body.type || 'link',
+        content: body.content || null
       }
     });
 
-    return Response.json(newArtifact, { status: 201 });
+    return Response.json({
+      id: newArtifact.id,
+      projectId: newArtifact.projectId,
+      label: newArtifact.label,
+      url: newArtifact.url,
+      description: newArtifact.description,
+      is_synced: newArtifact.isSynced,
+      type: newArtifact.type,
+      content: newArtifact.content
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating artifact:', error);
     return Response.json({ error: 'Failed to create artifact' }, { status: 500 });
@@ -57,11 +69,23 @@ export async function PUT(
       data: {
         label: body.label !== undefined ? body.label : undefined,
         url: body.url !== undefined ? body.url : undefined,
-        description: body.description !== undefined ? body.description : undefined
+        description: body.description !== undefined ? body.description : undefined,
+        isSynced: body.is_synced !== undefined ? body.is_synced : undefined,
+        type: body.type !== undefined ? body.type : undefined,
+        content: body.content !== undefined ? body.content : undefined
       }
     });
 
-    return Response.json(updatedArt);
+    return Response.json({
+      id: updatedArt.id,
+      projectId: updatedArt.projectId,
+      label: updatedArt.label,
+      url: updatedArt.url,
+      description: updatedArt.description,
+      is_synced: updatedArt.isSynced,
+      type: updatedArt.type,
+      content: updatedArt.content
+    });
   } catch (error) {
     console.error('Error updating artifact:', error);
     return Response.json({ error: 'Failed to update artifact' }, { status: 500 });

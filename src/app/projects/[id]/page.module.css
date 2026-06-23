@@ -1522,3 +1522,164 @@
   background-color: #EF4444;
   color: white;
 }
+
+/* Google Drive Sync Panel Styles */
+.gdriveSyncPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.4) 0%, rgba(255, 251, 235, 0.6) 100%);
+  border: 1px dashed #FDE047;
+  padding: 16px 20px;
+  border-radius: var(--border-radius-lg);
+  margin-bottom: 24px;
+  gap: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.gdriveSyncInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gdriveIcon {
+  font-size: 24px;
+  background-color: #FEF3C7;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.05);
+}
+
+.gdriveSyncInfo h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #B45309;
+  margin-bottom: 2px;
+}
+
+.gdriveLink {
+  font-size: 12px;
+  color: #D97706;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.gdriveLink:hover {
+  color: #B45309;
+}
+
+.gdriveSyncActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.syncDriveBtn {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.15);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.syncDriveBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(217, 119, 6, 0.25);
+}
+
+.syncDriveBtn:disabled {
+  background: #E5E7EB;
+  color: var(--muted-text);
+  cursor: not-allowed;
+  box-shadow: none;
+  border: 1px solid #D1D5DB;
+}
+
+.syncWarningText {
+  font-size: 11px;
+  color: #D97706;
+  font-weight: 600;
+}
+
+/* Artifacts Filter Bar */
+.artFilterBar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 8px;
+}
+
+.filterBtn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  background-color: var(--background);
+  color: var(--muted-text);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filterBtn:hover {
+  background-color: #F3F4F6;
+  color: var(--foreground);
+}
+
+.filterBtn.activeFilter {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border-color: #FDE047;
+  font-weight: 700;
+}
+
+/* Document viewing links and content */
+.artTableDocLink {
+  color: #D97706;
+  text-decoration: underline;
+  font-weight: 700;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+
+.artTableDocLink:hover {
+  color: #B45309;
+}
+
+/* Large Modal View */
+.largeModal {
+  max-width: 800px;
+  width: 90%;
+}
+
+.docContentDisplay {
+  background-color: #F9FAFB;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+}

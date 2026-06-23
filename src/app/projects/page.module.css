@@ -317,25 +317,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 9999;
 }
 
 .modal {
   background-color: white;
   width: 500px;
   max-width: 90vw;
-  border-radius: var(--border-radius-lg);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
 .modalHeader {
-  padding: 20px;
-  background-color: var(--primary-light);
+  padding: 16px 20px;
+  background-color: #FFFDF5;
   border-bottom: 1px solid #FEF08A;
   display: flex;
   justify-content: space-between;
@@ -343,64 +345,47 @@
 }
 
 .modalHeader h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #B45309;
 }
 
 .closeBtn {
-  font-size: 24px;
-  color: #B45309;
+  font-size: 22px;
+  color: #9CA3AF;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
 }
 
 .modalBody {
-  padding: 24px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.formGroup label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted-text);
-  text-transform: uppercase;
-}
-
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 16px;
-}
-
-.helpText {
-  font-size: 11px;
-  color: var(--muted-text);
-  margin-top: 2px;
+  gap: 14px;
 }
 
 .modalFooter {
-  padding: 16px 24px;
+  padding: 12px 20px;
   background-color: #F9FAFB;
   border-top: 1px solid #E5E7EB;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cancelBtn {
   padding: 8px 16px;
   background-color: #ffffff;
   border: 1px solid #D1D5DB;
-  border-radius: var(--border-radius-md);
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .cancelBtn:hover {
@@ -409,15 +394,19 @@
 
 .submitBtn {
   padding: 8px 16px;
-  background-color: var(--primary);
+  background-color: #F59E0B;
   color: white;
-  border-radius: var(--border-radius-md);
+  border: none;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.15s ease;
 }
 
 .submitBtn:hover {
-  background-color: var(--primary-hover);
+  background-color: #D97706;
 }
 
 @media (max-width: 768px) {

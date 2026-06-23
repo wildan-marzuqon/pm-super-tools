@@ -702,58 +702,53 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.topNav}>
-          <div className="skeleton" style={{ height: '28px', width: '120px', borderRadius: '4px' }}></div>
-        </div>
-
-        <header className={styles.header}>
-          <div>
-            <div className="skeleton" style={{ height: '36px', width: '300px', marginBottom: '8px' }}></div>
-            <div className="skeleton" style={{ height: '16px', width: '450px' }}></div>
+        <header className={styles.pageHeader}>
+          <div className={styles.pageHeaderLeft}>
+            <div className="skeleton" style={{ height: '28px', width: '80px', borderRadius: '4px' }}></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="skeleton" style={{ height: '10px', width: '80px' }}></div>
+              <div className="skeleton" style={{ height: '22px', width: '260px' }}></div>
+              <div className="skeleton" style={{ height: '14px', width: '340px' }}></div>
+            </div>
           </div>
-          <div className={styles.headerMeta}>
-            <div className={styles.headerMetaBox}>
-              <div className="skeleton" style={{ height: '10px', width: '50px', marginBottom: '4px' }}></div>
-              <div className="skeleton" style={{ height: '14px', width: '80px' }}></div>
-            </div>
-            <div className={styles.headerMetaBox}>
-              <div className="skeleton" style={{ height: '10px', width: '50px', marginBottom: '4px' }}></div>
-              <div className="skeleton" style={{ height: '14px', width: '80px' }}></div>
-            </div>
+          <div className={styles.pageHeaderMeta}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={styles.sidebarMetaItem}>
+                <div className="skeleton" style={{ height: '10px', width: '60px', marginBottom: '4px' }}></div>
+                <div className="skeleton" style={{ height: '14px', width: '80px' }}></div>
+              </div>
+            ))}
           </div>
         </header>
-
-        <section className={styles.visualizerCard}>
-          <div className={styles.visualizerHeader} style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div className="skeleton" style={{ height: '18px', width: '180px' }}></div>
-            <div className="skeleton" style={{ height: '32px', width: '140px', borderRadius: '6px' }}></div>
-          </div>
-          <div className={styles.stepPipeline} style={{ marginTop: '16px' }}>
-            <div className="skeleton" style={{ height: '40px', width: '100%' }}></div>
-          </div>
-        </section>
-
-        <div className={styles.tabsMenu}>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton" style={{ height: '36px', width: '100px', marginRight: '8px', borderRadius: '6px' }}></div>
-          ))}
-        </div>
-
-        <div className={styles.tabContentArea}>
-          <div className={styles.overviewGrid}>
-            <div className={styles.contentCard}>
-              <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
-              <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+        <div className={styles.pageLayout}>
+          <aside className={styles.projectSidebar}>
+            <div className="skeleton" style={{ height: '180px', width: '100%', borderRadius: '10px' }}></div>
+          </aside>
+          <main className={styles.projectMain}>
+            <div className={styles.tabsMenu}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="skeleton" style={{ height: '36px', width: '100px', marginRight: '8px', borderRadius: '6px' }}></div>
+              ))}
             </div>
-            <div className={styles.contentCard}>
-              <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
-              <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+            <div className={styles.tabContentArea}>
+              <div className={styles.overviewGrid}>
+                <div className={styles.contentCard}>
+                  <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
+                  <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+                </div>
+                <div className={styles.contentCard}>
+                  <div className="skeleton" style={{ height: '16px', width: '120px', marginBottom: '12px' }}></div>
+                  <div className="skeleton" style={{ height: '100px', width: '100%' }}></div>
+                </div>
+              </div>
             </div>
-          </div>
+          </main>
         </div>
       </div>
     );
   }
+
+
 
   if (!project) return null;
 
@@ -762,111 +757,125 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className={`${styles.container} animate-fade-in`}>
-      {/* Back button & Title */}
-      <div className={styles.topNav}>
-        <Link href="/projects" className={styles.backBtn}>
-          ← Kembali ke Pipeline
-        </Link>
-      </div>
 
-      <header className={styles.header}>
-        <div>
-          <span className={styles.categoryBadge}>PROJECT DETAIL</span>
-          <h1 className={styles.projTitle}>{project.name}</h1>
-          <p className={styles.projDesc}>{project.description || 'Tidak ada deskripsi.'}</p>
-        </div>
-        <div className={styles.headerMeta}>
-          <div className={styles.headerMetaBox}>
-            <span className={styles.metaLabel}>PIC UTAMA</span>
-            <span className={styles.metaVal}>{project.pic || 'Unassigned'}</span>
+      {/* TOP HEADER: back button + title + meta (full width) */}
+      <header className={styles.pageHeader}>
+        <div className={styles.pageHeaderLeft}>
+          <Link href="/projects" className={styles.backBtn}>← Pipeline</Link>
+          <div className={styles.pageHeaderTitle}>
+            <span className={styles.categoryBadge}>PROJECT DETAIL</span>
+            <h1 className={styles.projTitle}>{project.name}</h1>
+            {project.description && (
+              <p className={styles.projDesc}>{project.description}</p>
+            )}
           </div>
-          <div className={styles.headerMetaBox}>
+        </div>
+        <div className={styles.pageHeaderMeta}>
+          <div className={styles.sidebarMetaItem}>
+            <span className={styles.metaLabel}>PIC</span>
+            <span className={styles.metaVal}>{project.pic || '—'}</span>
+          </div>
+          <div className={styles.sidebarMetaItem}>
             <span className={styles.metaLabel}>DEADLINE</span>
             <span className={styles.metaVal}>{formatDate(project.deadline)}</span>
+          </div>
+          <div className={styles.sidebarMetaItem}>
+            <span className={styles.metaLabel}>ACTION ITEMS</span>
+            <span className={styles.metaVal}>
+              {project.actionItems.filter((a) => a.completed).length}/{project.actionItems.length} selesai
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Step Visualizer Bar (Horizontal Pipeline) */}
-      <section className={styles.visualizerCard}>
-        <div className={styles.visualizerHeader}>
-          <h3>Progress Pipeline Project</h3>
-          {!isCompleted && currentStage ? (
-            <button className={styles.advanceBtn} onClick={handleAdvanceStage}>
-              ⚡ Selesaikan Tahap: <b>{currentStage.name}</b> →
-            </button>
-          ) : (
-            <span className={styles.completeBanner}>🎉 PROYEK TELAH LIVE / SELESAI!</span>
-          )}
-        </div>
+      {/* Two-column layout: sidebar + main */}
+      <div className={styles.pageLayout}>
 
-        <div className={styles.stepPipeline}>
-          {project.stages.map((stage, idx) => {
-            const isStageDone = idx < project.current_stage_index;
-            const isStageActive = idx === project.current_stage_index;
+        {/* LEFT SIDEBAR: pipeline only */}
+        <aside className={styles.projectSidebar}>
 
-            return (
-              <div key={stage.id} className={styles.stepNodeItem}>
-                {idx > 0 && (
-                  <div
-                    className={`${styles.stepLine} ${
-                      idx <= project.current_stage_index ? styles.stepLineDone : ''
-                    }`}
-                  />
-                )}
-                <div className={styles.nodeWrapper}>
-                  <div
-                    className={`${styles.nodeCircle} ${
-                      isStageDone ? styles.nodeDone : isStageActive ? styles.nodeActive : styles.nodeFuture
-                    }`}
-                  >
-                    {isStageDone ? '✓' : idx + 1}
+          {/* Vertical pipeline */}
+          <div className={styles.sidebarPipeline}>
+            <div className={styles.sidebarPipelineHeader}>
+              <span className={styles.sidebarPipelineTitle}>Pipeline</span>
+              {isCompleted ? (
+                <span className={styles.completeBanner}>🎉 Selesai!</span>
+              ) : (
+                <button className={styles.advanceBtnSm} onClick={handleAdvanceStage}>
+                  ⚡ Advance
+                </button>
+              )}
+            </div>
+            <div className={styles.verticalPipeline}>
+              {project.stages.map((stage, idx) => {
+                const isStageDone = idx < project.current_stage_index;
+                const isStageActive = idx === project.current_stage_index;
+                return (
+                  <div key={stage.id} className={styles.verticalStageRow}>
+                    <div className={styles.verticalStageTrack}>
+                      <div className={`${styles.vNodeCircle} ${isStageDone ? styles.nodeDone : isStageActive ? styles.nodeActive : styles.nodeFuture}`}>
+                        {isStageDone ? '✓' : idx + 1}
+                      </div>
+                      {idx < project.stages.length - 1 && (
+                        <div className={`${styles.vNodeLine} ${idx < project.current_stage_index ? styles.stepLineDone : ''}`} />
+                      )}
+                    </div>
+                    <div className={styles.verticalStageInfo}>
+                      <span className={`${styles.vNodeName} ${isStageActive ? styles.nodeNameActive : ''}`}>
+                        {stage.name}
+                      </span>
+                      {stage.completed_at && (
+                        <span className={styles.completedAtDate}>{formatDate(stage.completed_at)}</span>
+                      )}
+                    </div>
                   </div>
-                  <span className={`${styles.nodeName} ${isStageActive ? styles.nodeNameActive : ''}`}>
-                    {stage.name}
-                  </span>
-                  {stage.completed_at && (
-                    <span className={styles.completedAtDate}>
-                      {formatDate(stage.completed_at)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Tabs Menu */}
-      <div className={styles.tabsMenu}>
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.activeTab : ''}`}
-        >
-          📄 Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('actions')}
-          className={`${styles.tabBtn} ${activeTab === 'actions' ? styles.activeTab : ''}`}
-        >
-          📋 Action Items ({project.actionItems.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('artifacts')}
-          className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.activeTab : ''}`}
-        >
-          🔗 Artifacts ({project.artifacts.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.activeTab : ''}`}
-        >
-          ⚙️ Settings & Stages
-        </button>
-      </div>
+          {/* Quick stats */}
+          <div className={styles.sidebarStats}>
+            <div className={styles.sidebarStatItem}>
+              <span className={styles.sidebarStatVal}>{project.artifacts.length}</span>
+              <span className={styles.sidebarStatLabel}>Artifacts</span>
+            </div>
+          </div>
+        </aside>
 
-      {/* Tab Contents */}
-      <div className={styles.tabContentArea}>
+
+        {/* RIGHT MAIN: tabs + content */}
+        <main className={styles.projectMain}>
+          {/* Tabs Menu */}
+          <div className={styles.tabsMenu}>
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`${styles.tabBtn} ${activeTab === 'overview' ? styles.activeTab : ''}`}
+            >
+              📄 Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('actions')}
+              className={`${styles.tabBtn} ${activeTab === 'actions' ? styles.activeTab : ''}`}
+            >
+              📋 Action Items ({project.actionItems.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('artifacts')}
+              className={`${styles.tabBtn} ${activeTab === 'artifacts' ? styles.activeTab : ''}`}
+            >
+              🔗 Artifacts ({project.artifacts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.activeTab : ''}`}
+            >
+              ⚙️ Settings & Stages
+            </button>
+          </div>
+
+          {/* Tab Contents */}
+          <div className={styles.tabContentArea}>
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'overview' && (
           <div className={styles.overviewGrid}>
@@ -1531,7 +1540,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         )}
-      </div>
+          </div>
+
 
       {/* Edit Action Item Modal */}
       {editingAction && (
@@ -1776,6 +1786,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }

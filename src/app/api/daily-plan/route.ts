@@ -7,20 +7,29 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-// Get today's date in UTC+7 (Jakarta) timezone
+// Get today's date in UTC+7 (Jakarta) timezone in "YYYY-MM-DD" format
 function getJakartaTodayStr(): string {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const wibTime = new Date(utc + (3600000 * 7));
-  return wibTime.toISOString().split('T')[0];
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(d);
 }
 
 // Get current minutes in UTC+7
 function getJakartaCurrentMinutes(): number {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const wibTime = new Date(utc + (3600000 * 7));
-  return wibTime.getHours() * 60 + wibTime.getMinutes();
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const [h, m] = formatter.format(d).split(':').map(Number);
+  return h * 60 + m;
 }
 
 export async function GET(request: NextRequest) {
@@ -67,6 +76,36 @@ export async function GET(request: NextRequest) {
       }
 
       return Response.json({ badge: hasBadge, type });
+    }
+
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    if (startDate && endDate) {
+      const entries = await prisma.dailyPlanEntry.findMany({
+        where: {
+          date: {
+            gte: startDate,
+            lte: endDate
+          }
+        },
+        include: {
+          actionItem: {
+            include: {
+              project: true
+            }
+          }
+        },
+        orderBy: [
+          { date: 'asc' },
+          { startTime: 'asc' }
+        ]
+      });
+      return Response.json(entries, {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0'
+        }
+      });
     }
 
     // Normal list retrieval

@@ -35,30 +35,38 @@ function timeToMinutes(t: string): number {
 
 // Helper to get Jakarta (UTC+7) Date String (YYYY-MM-DD)
 function getJakartaTodayStr(): string {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const wibTime = new Date(utc + (3600000 * 7));
-  return wibTime.toISOString().split('T')[0];
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(d);
 }
 
 // Helper to get Jakarta (UTC+7) Current Time (HH:MM)
 function getJakartaCurrentTimeStr(): string {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const wibTime = new Date(utc + (3600000 * 7));
-  const h = String(wibTime.getHours()).padStart(2, '0');
-  const m = String(wibTime.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  return formatter.format(d);
 }
 
 export default function DailyPlanPage() {
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [entries, setEntries] = useState<DailyPlanEntry[]>([]);
+  const [centerDate, setCenterDate] = useState<string>('');
+  const [sidebarDates, setSidebarDates] = useState<string[]>([]);
+  const [rangeEntries, setRangeEntries] = useState<DailyPlanEntry[]>([]);
   const [todayEntries, setTodayEntries] = useState<DailyPlanEntry[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRangeLoading, setIsRangeLoading] = useState(true);
 
-  // Time tracking
+  // Time tracking for timeline line
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
   const [currentMinutes, setCurrentMinutes] = useState<number>(0);
 
@@ -83,11 +91,24 @@ export default function DailyPlanPage() {
   const [formEndTime, setFormEndTime] = useState('10:00');
   const [formActionItemId, setFormActionItemId] = useState('');
   const [formCreateActionItem, setFormCreateActionItem] = useState(false);
+  const [isFormSaving, setIsFormSaving] = useState(false);
 
-  // Initialize date and clock
+  // Quick Add Form states
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickType, setQuickType] = useState<'task' | 'meeting' | 'focus'>('task');
+  const [quickStartTime, setQuickStartTime] = useState('09:00');
+  const [quickEndTime, setQuickEndTime] = useState('10:00');
+  const [quickCreateActionItem, setQuickCreateActionItem] = useState(false);
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+
+  // Loading state for inline actions
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // Initialize selectedDate & centerDate on mount
   useEffect(() => {
     const today = getJakartaTodayStr();
     setSelectedDate(today);
+    setCenterDate(today);
     
     const time = getJakartaCurrentTimeStr();
     setCurrentTimeStr(time);
@@ -103,14 +124,41 @@ export default function DailyPlanPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch entries when date changes
+  // Generate sidebar dates centered around centerDate
   useEffect(() => {
-    if (selectedDate) {
-      fetchEntries();
-    }
-  }, [selectedDate]);
+    if (!centerDate) return;
 
-  // Fetch action items and today's entries for banner reminder
+    const base = new Date(centerDate);
+    const dates: string[] = [];
+    // Generate 7 days before and 14 days after (3 weeks range)
+    for (let i = -7; i <= 14; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+    }
+    setSidebarDates(dates);
+  }, [centerDate]);
+
+  // Adjust centerDate if selectedDate jumps out of range
+  useEffect(() => {
+    if (selectedDate && sidebarDates.length > 0) {
+      if (!sidebarDates.includes(selectedDate)) {
+        setCenterDate(selectedDate);
+      }
+    }
+  }, [selectedDate, sidebarDates]);
+
+  // Fetch entries for the entire range whenever sidebarDates changes
+  useEffect(() => {
+    if (sidebarDates.length > 0) {
+      fetchRangeEntries();
+    }
+  }, [sidebarDates]);
+
+  // Fetch initial action items and today's entries for banner reminder
   useEffect(() => {
     fetchActionItems();
     fetchTodayEntries();
@@ -120,23 +168,35 @@ export default function DailyPlanPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Re-evaluate banner whenever today's entries or current minutes changes
+  // Re-evaluate banner
   useEffect(() => {
     evaluateBanner();
   }, [todayEntries, currentMinutes, dismissedBannerId]);
 
-  const fetchEntries = async () => {
-    setIsLoading(true);
+  // Set default Quick Add start time to current hour or next hour
+  useEffect(() => {
+    const now = new Date();
+    const currentHStr = String(now.getHours()).padStart(2, '0');
+    setQuickStartTime(`${currentHStr}:00`);
+    const nextHStr = String((now.getHours() + 1) % 24).padStart(2, '0');
+    setQuickEndTime(`${nextHStr}:00`);
+  }, []);
+
+  const fetchRangeEntries = async () => {
+    if (sidebarDates.length === 0) return;
+    const start = sidebarDates[0];
+    const end = sidebarDates[sidebarDates.length - 1];
+    setIsRangeLoading(true);
     try {
-      const res = await fetch(`/api/daily-plan?date=${selectedDate}`);
+      const res = await fetch(`/api/daily-plan?startDate=${start}&endDate=${end}`);
       if (res.ok) {
         const data = await res.json();
-        setEntries(data);
+        setRangeEntries(data);
       }
     } catch (error) {
-      console.error('Error fetching entries:', error);
+      console.error('Error fetching range entries:', error);
     } finally {
-      setIsLoading(false);
+      setIsRangeLoading(false);
     }
   };
 
@@ -170,16 +230,12 @@ export default function DailyPlanPage() {
       return;
     }
 
-    // Check banner conditions
     let activeBanner: typeof bannerInfo = null;
-
-    // Sort entries to find chronologically
     const activeToday = todayEntries.filter(e => e.status !== 'done' && e.status !== 'skipped');
     
-    // 1. Check Overdue (startTime < currentMinutes, status not done/skipped)
+    // 1. Overdue
     const overdueItems = activeToday.filter(e => timeToMinutes(e.startTime) < currentMinutes);
     if (overdueItems.length > 0) {
-      // Find the one that was scheduled earliest
       overdueItems.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
       const target = overdueItems[0];
       const bannerId = `overdue-${target.id}-${target.status}`;
@@ -192,7 +248,7 @@ export default function DailyPlanPage() {
       }
     }
 
-    // 2. Check Ongoing (startTime <= currentMinutes < endTime)
+    // 2. Ongoing
     if (!activeBanner) {
       const ongoingItems = activeToday.filter(e => {
         const start = timeToMinutes(e.startTime);
@@ -212,14 +268,13 @@ export default function DailyPlanPage() {
       }
     }
 
-    // 3. Check Upcoming (startTime > currentMinutes, starts in <= 15 minutes)
+    // 3. Upcoming
     if (!activeBanner) {
       const upcomingItems = activeToday.filter(e => {
         const start = timeToMinutes(e.startTime);
         return start > currentMinutes && (start - currentMinutes) <= 15;
       });
       if (upcomingItems.length > 0) {
-        // Find nearest
         upcomingItems.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
         const target = upcomingItems[0];
         const bannerId = `upcoming-${target.id}`;
@@ -236,34 +291,60 @@ export default function DailyPlanPage() {
     setBannerInfo(activeBanner);
   };
 
-  const handleDateChange = (newDate: string) => {
-    setSelectedDate(newDate);
+  const handleQuickStartTimeChange = (start: string) => {
+    setQuickStartTime(start);
+    const [h, m] = start.split(':').map(Number);
+    const endH = (h + 1) % 24;
+    setQuickEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   };
 
-  const shiftDate = (days: number) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + days);
-    const dateStr = d.toISOString().split('T')[0];
-    setSelectedDate(dateStr);
-  };
-
-  const setDateToToday = () => {
-    setSelectedDate(getJakartaTodayStr());
-  };
-
-  const isPastDate = () => {
-    const today = getJakartaTodayStr();
-    return selectedDate < today;
-  };
-
-  // Time selection change auto-updates end time
   const handleStartTimeChange = (start: string) => {
     setFormStartTime(start);
     const [h, m] = start.split(':').map(Number);
     const endH = (h + 1) % 24;
-    const endHStr = String(endH).padStart(2, '0');
-    const endMStr = String(m).padStart(2, '0');
-    setFormEndTime(`${endHStr}:${endMStr}`);
+    setFormEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  };
+
+  const isPastDate = (dateStr?: string) => {
+    const target = dateStr || selectedDate;
+    const today = getJakartaTodayStr();
+    return target < today;
+  };
+
+  const handleQuickAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickTitle.trim()) return;
+    setIsQuickAdding(true);
+
+    const payload = {
+      date: selectedDate,
+      startTime: quickStartTime,
+      endTime: quickEndTime,
+      type: quickType,
+      title: quickTitle,
+      createActionItem: quickType === 'task' ? quickCreateActionItem : false
+    };
+
+    try {
+      const res = await fetch('/api/daily-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setQuickTitle('');
+        setQuickCreateActionItem(false);
+        // Refresh local data range
+        await fetchRangeEntries();
+        fetchTodayEntries();
+        fetchActionItems();
+      }
+    } catch (error) {
+      console.error('Error in quick add:', error);
+    } finally {
+      setIsQuickAdding(false);
+    }
   };
 
   const openAddModal = () => {
@@ -271,7 +352,6 @@ export default function DailyPlanPage() {
     setFormTitle('');
     setFormNotes('');
     setFormType('task');
-    // Set start time to current hour rounded, or 09:00
     const now = new Date();
     const currentHStr = String(now.getHours()).padStart(2, '0');
     setFormStartTime(`${currentHStr}:00`);
@@ -297,6 +377,7 @@ export default function DailyPlanPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsFormSaving(true);
 
     const payload = {
       date: selectedDate,
@@ -327,19 +408,19 @@ export default function DailyPlanPage() {
 
       if (res.ok) {
         setIsModalOpen(false);
-        fetchEntries();
+        await fetchRangeEntries();
         fetchTodayEntries();
         fetchActionItems();
-      } else {
-        const errorData = await res.json();
-        alert(`Gagal menyimpan: ${errorData.error || 'Terjadi kesalahan'}`);
       }
     } catch (error) {
       console.error('Error submitting form:', error);
+    } finally {
+      setIsFormSaving(false);
     }
   };
 
   const updateEntryStatus = async (id: string, newStatus: string) => {
+    setActionLoadingId(id);
     try {
       const res = await fetch(`/api/daily-plan/${id}`, {
         method: 'PUT',
@@ -347,271 +428,349 @@ export default function DailyPlanPage() {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        fetchEntries();
+        await fetchRangeEntries();
         fetchTodayEntries();
         fetchActionItems();
       }
     } catch (error) {
       console.error('Error updating status:', error);
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   const handleDeleteEntry = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus rencana ini?')) return;
-
+    setActionLoadingId(id);
     try {
       const res = await fetch(`/api/daily-plan/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
-        fetchEntries();
+        await fetchRangeEntries();
         fetchTodayEntries();
       }
     } catch (error) {
       console.error('Error deleting entry:', error);
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
+  // Filter entries in memory for the currently selected date
+  const filteredEntries = rangeEntries.filter(e => e.date === selectedDate);
+
+  const getDayInfo = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const dayNum = d.getDate();
+    const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' }); // "Sen", "Sel"
+    const monthName = d.toLocaleDateString('id-ID', { month: 'short' }); // "Jun"
+    
+    // Check if day has entries in pre-fetched range
+    const hasPlans = rangeEntries.some(e => e.date === dateStr);
+    const dayPlans = rangeEntries.filter(e => e.date === dateStr);
+    const allDone = hasPlans && dayPlans.every(e => e.status === 'done');
+    
+    return { dayNum, dayName, monthName, hasPlans, allDone };
+  };
+
+  const getFormattedSelectedDate = () => {
+    if (!selectedDate) return '';
+    const d = new Date(selectedDate);
+    return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   return (
-    <div className={styles.container}>
-      {/* Banner Reminder */}
-      {bannerInfo && (
-        <div className={`${styles.banner} ${styles[bannerInfo.type]}`}>
-          <span>{bannerInfo.text}</span>
-          <button 
-            className={styles.bannerClose} 
-            onClick={() => setDismissedBannerId(bannerInfo.id)}
-          >
-            &times;
-          </button>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.titleArea}>
-          <h1>📅 Rencana Harian</h1>
-          <p>Kelola jadwal harian, rapat, dan sesi fokus Anda terintegrasi dengan Action Items.</p>
-        </div>
-        {!isPastDate() && (
-          <button className={styles.addButton} onClick={openAddModal}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah Rencana
-          </button>
-        )}
-      </div>
-
-      {/* Date Navigation */}
-      <div className={styles.dateNavRow}>
-        <div className={styles.datePickerArea}>
-          <button className={styles.navBtn} onClick={() => shiftDate(-1)} title="Hari Sebelumnya">
-            &larr;
-          </button>
+    <div className={styles.splitPageContainer}>
+      {/* LEFT SIDEBAR: List of Days */}
+      <aside className={styles.dateSidebar}>
+        <div className={styles.sidebarHeader}>
+          <h3>📅 Jadwal</h3>
           <input 
-            type="date" 
-            className={styles.dateInput} 
-            value={selectedDate} 
-            onChange={(e) => handleDateChange(e.target.value)}
+            type="date"
+            className={styles.sidebarDatePicker}
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
           />
-          <button className={styles.navBtn} onClick={() => shiftDate(1)} title="Hari Berikutnya">
-            &rarr;
-          </button>
-          <button className={styles.todayBtn} onClick={setDateToToday}>
-            Hari Ini
-          </button>
         </div>
-        {isPastDate() && (
-          <span className={styles.readOnlyBadge}>Riwayat (Read-Only)</span>
-        )}
-      </div>
 
-      {/* Timeline Section */}
-      {isLoading ? (
-        <div className={styles.loadingText}>Memuat rencana harian...</div>
-      ) : entries.length === 0 ? (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📅</div>
-          <h2>Belum ada rencana harian</h2>
-          <p>Mulai atur harimu dengan menambahkan tugas (task), rapat (meeting), atau sesi fokus baru.</p>
+        <div className={styles.dateList}>
+          {sidebarDates.map((dStr) => {
+            const isSelected = selectedDate === dStr;
+            const isToday = getJakartaTodayStr() === dStr;
+            const { dayNum, dayName, monthName, hasPlans, allDone } = getDayInfo(dStr);
+            const isPast = isPastDate(dStr);
+
+            return (
+              <button
+                key={dStr}
+                className={`${styles.dateCard} ${isSelected ? styles.selected : ''} ${isToday ? styles.today : ''}`}
+                onClick={() => setSelectedDate(dStr)}
+              >
+                <div className={styles.dateCardLeft}>
+                  <span className={styles.dayName}>{dayName}</span>
+                  <span className={styles.dayNum}>{dayNum}</span>
+                  <span className={styles.monthName}>{monthName}</span>
+                </div>
+                <div className={styles.dateCardRight}>
+                  {isToday && <span className={styles.todayIndicator}>HARI INI</span>}
+                  {isPast && !isToday && <span className={styles.pastLabel}>RIWAYAT</span>}
+                  {hasPlans && (
+                    <span 
+                      className={`${styles.statusDot} ${allDone ? styles.done : styles.active}`} 
+                      title={allDone ? 'Semua rencana selesai' : 'Ada rencana aktif'}
+                    />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* RIGHT PANEL: Timeline for selected day */}
+      <main className={styles.mainContent}>
+        {/* Banner Reminder */}
+        {bannerInfo && (
+          <div className={`${styles.banner} ${styles[bannerInfo.type]}`}>
+            <span>{bannerInfo.text}</span>
+            <button 
+              className={styles.bannerClose} 
+              onClick={() => setDismissedBannerId(bannerInfo.id)}
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className={styles.contentHeader}>
+          <div className={styles.headerTitleArea}>
+            <h2>{getFormattedSelectedDate()}</h2>
+            <div className={styles.headerSubtitleArea}>
+              <p>Kelola jadwal, rapat, dan sesi fokus harian Anda.</p>
+              {isPastDate() && (
+                <span className={styles.readOnlyBadge}>Arsip / Read-Only</span>
+              )}
+            </div>
+          </div>
+          
           {!isPastDate() && (
             <button className={styles.addButton} onClick={openAddModal}>
-              Buat Rencana Pertama
+              + Tambah Detail Rencana
             </button>
           )}
         </div>
-      ) : (
-        <div className={styles.timeline}>
-          <div className={styles.timelineLine} />
-          
-          {(() => {
-            const renderedElements: React.JSX.Element[] = [];
-            let timeIndicatorRendered = false;
-            const isViewingToday = selectedDate === getJakartaTodayStr();
 
-            // Sort entries chronologically just in case
-            const sortedEntries = [...entries].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+        {/* QUICK ADD INLINE ROW (Only if selected day is NOT past) */}
+        {!isPastDate() && (
+          <form onSubmit={handleQuickAddSubmit} className={styles.quickAddRow}>
+            <div className={styles.quickInputGroup}>
+              <input 
+                type="time"
+                required
+                className={styles.quickTimeInput}
+                value={quickStartTime}
+                onChange={(e) => handleQuickStartTimeChange(e.target.value)}
+              />
+              <span className={styles.timeDash}>-</span>
+              <input 
+                type="time"
+                required
+                className={styles.quickTimeInput}
+                value={quickEndTime}
+                onChange={(e) => setQuickEndTime(e.target.value)}
+              />
+            </div>
 
-            // Render Time Indicator Helper
-            const renderTimeIndicator = () => {
-              timeIndicatorRendered = true;
-              return (
-                <div key="time-indicator" className={styles.timeIndicatorLine}>
-                  <div className={styles.indicatorLine} />
-                  <span className={styles.indicatorLabel}>jam sekarang ({currentTimeStr})</span>
-                </div>
-              );
-            };
+            <div className={styles.dividerVertical} />
 
-            sortedEntries.forEach((entry) => {
-              const entryStartMinutes = timeToMinutes(entry.startTime);
+            <select
+              className={styles.quickSelect}
+              value={quickType}
+              onChange={(e) => setQuickType(e.target.value as any)}
+            >
+              <option value="task">🎯 Task</option>
+              <option value="meeting">🤝 Meeting</option>
+              <option value="focus">🧘 Focus</option>
+            </select>
 
-              // If viewing today, and indicator hasn't been rendered yet, and this entry starts after the current time
-              if (isViewingToday && !timeIndicatorRendered && entryStartMinutes > currentMinutes) {
-                renderedElements.push(renderTimeIndicator());
-              }
+            <div className={styles.dividerVertical} />
 
-              // Duration calculation
-              const startMin = timeToMinutes(entry.startTime);
-              const endMin = timeToMinutes(entry.endTime);
-              let diffMin = endMin - startMin;
-              if (diffMin < 0) diffMin += 1440; // overnight fallback
-              const hours = Math.floor(diffMin / 60);
-              const mins = diffMin % 60;
-              const durationStr = `${hours > 0 ? `${hours} jam ` : ''}${mins > 0 ? `${mins} menit` : ''}`.trim() || '0 menit';
+            <input 
+              type="text"
+              required
+              placeholder="Ketik judul rencana baru lalu tekan Enter..."
+              className={styles.quickTitleInput}
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+            />
 
-              // Build Entry Element
-              renderedElements.push(
-                <div key={entry.id} className={styles.entryWrapper}>
-                  <div className={styles.timeCol}>
-                    <span className={styles.timeRange}>{entry.startTime} - {entry.endTime}</span>
-                    <span className={styles.duration}>{durationStr}</span>
-                  </div>
+            {quickType === 'task' && (
+              <label className={styles.quickCheckboxLabel}>
+                <input 
+                  type="checkbox"
+                  checked={quickCreateActionItem}
+                  onChange={(e) => setQuickCreateActionItem(e.target.checked)}
+                />
+                +ActionItem
+              </label>
+            )}
 
-                  <div className={styles.cardCol}>
-                    <div className={styles.cardHeader}>
-                      <div className={styles.cardTitleArea}>
+            <button 
+              type="submit" 
+              className={styles.quickSubmitBtn} 
+              disabled={isQuickAdding || !quickTitle.trim()}
+            >
+              {isQuickAdding ? '...' : 'Tambah'}
+            </button>
+          </form>
+        )}
+
+        {/* Timeline Area */}
+        <div className={styles.timelineArea}>
+          {isRangeLoading && filteredEntries.length === 0 ? (
+            <div className={styles.loadingText}>Memuat agenda harian...</div>
+          ) : filteredEntries.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>📅</div>
+              <h3>Belum ada agenda harian</h3>
+              <p>Tambahkan agenda rapat, sesi fokus, atau tugas harian menggunakan baris Quick Add di atas.</p>
+            </div>
+          ) : (
+            <div className={styles.timelineList}>
+              <div className={styles.timelineVisualLine} />
+
+              {(() => {
+                const renderedRows: React.JSX.Element[] = [];
+                let timeIndicatorRendered = false;
+                const isViewingToday = selectedDate === getJakartaTodayStr();
+                const sorted = [...filteredEntries].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+                // Render current time indicator line
+                const renderTimeIndicator = () => {
+                  timeIndicatorRendered = true;
+                  return (
+                    <div key="time-indicator" className={styles.timeIndicatorLine}>
+                      <div className={styles.indicatorLabel}>jam sekarang ({currentTimeStr})</div>
+                      <div className={styles.indicatorLine} />
+                    </div>
+                  );
+                };
+
+                sorted.forEach((entry) => {
+                  const entryStartMinutes = timeToMinutes(entry.startTime);
+                  const isProcessing = actionLoadingId === entry.id;
+
+                  // Insert current time indicator if in correct chronological place
+                  if (isViewingToday && !timeIndicatorRendered && entryStartMinutes > currentMinutes) {
+                    renderedRows.push(renderTimeIndicator());
+                  }
+
+                  renderedRows.push(
+                    <div 
+                      key={entry.id} 
+                      className={`${styles.compactRow} ${isProcessing ? styles.processingRow : ''}`}
+                    >
+                      {/* 1. Time range col */}
+                      <div className={styles.timeCol}>
+                        <span className={styles.timeLabel}>{entry.startTime} - {entry.endTime}</span>
+                      </div>
+
+                      {/* 2. Type badge */}
+                      <div className={styles.typeCol}>
                         <span className={`${styles.typeBadge} ${styles[entry.type]}`}>
                           {entry.type === 'task' && '🎯 Task'}
-                          {entry.type === 'meeting' && '🤝 Meeting'}
-                          {entry.type === 'focus' && '🧘 Focus Block'}
+                          {entry.type === 'meeting' && '🤝 Rapat'}
+                          {entry.type === 'focus' && '🧘 Fokus'}
                         </span>
-                        <h3 className={styles.entryTitle}>{entry.title}</h3>
                       </div>
-                      
+
+                      {/* 3. Title, notes snippet & links */}
+                      <div className={styles.titleCol}>
+                        <div className={styles.titleWrapper}>
+                          <span className={styles.entryTitle}>{entry.title}</span>
+                          {entry.notes && (
+                            <span className={styles.entryNotesSnippet} title={entry.notes}>
+                              — {entry.notes.length > 60 ? entry.notes.substring(0, 60) + '...' : entry.notes}
+                            </span>
+                          )}
+                        </div>
+
+                        {entry.type === 'task' && entry.actionItem && (
+                          <Link 
+                            href="/action-items" 
+                            target="_blank" 
+                            className={styles.linkedActionLink}
+                          >
+                            🔗 AI: {entry.actionItem.title} 
+                            {entry.actionItem.project && ` (${entry.actionItem.project.name})`}
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* 4. Inline Status dropdown select */}
+                      <div className={styles.statusCol}>
+                        <select
+                          className={`${styles.statusSelect} ${styles[entry.status]}`}
+                          value={entry.status}
+                          disabled={isPastDate() || isProcessing}
+                          onChange={(e) => updateEntryStatus(entry.id, e.target.value)}
+                        >
+                          {entry.type === 'task' ? (
+                            <>
+                              <option value="open">⏳ Open</option>
+                              <option value="in_progress">⚙️ In Progress</option>
+                              <option value="done">✓ Selesai</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="pending">⏳ Pending</option>
+                              <option value="done">✓ Done</option>
+                              <option value="skipped">❌ Skipped</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 5. Quick action buttons & Edit/Delete (Only if not past date) */}
                       {!isPastDate() && (
-                        <div className={styles.actionsSection}>
-                          <button className={styles.iconBtn} onClick={() => openEditModal(entry)} title="Edit rencana">
+                        <div className={styles.actionsCol}>
+                          <button 
+                            className={styles.rowIconBtn} 
+                            disabled={isProcessing}
+                            onClick={() => openEditModal(entry)} 
+                            title="Edit agenda"
+                          >
                             ✏️
                           </button>
-                          <button className={`${styles.iconBtn} ${styles.delete}`} onClick={() => handleDeleteEntry(entry.id)} title="Hapus rencana">
+                          <button 
+                            className={`${styles.rowIconBtn} ${styles.delete}`} 
+                            disabled={isProcessing}
+                            onClick={() => handleDeleteEntry(entry.id)} 
+                            title="Hapus agenda"
+                          >
                             🗑️
                           </button>
                         </div>
                       )}
                     </div>
+                  );
+                });
 
-                    {entry.notes && (
-                      <p className={styles.notesText}>{entry.notes}</p>
-                    )}
+                // Fallback time indicator at the bottom
+                if (isViewingToday && !timeIndicatorRendered) {
+                  renderedRows.push(renderTimeIndicator());
+                }
 
-                    {entry.type === 'task' && entry.actionItem && (
-                      <Link 
-                        href="/action-items" 
-                        target="_blank" 
-                        className={styles.actionItemLink}
-                      >
-                        🔗 Linked Action Item: {entry.actionItem.title} 
-                        {entry.actionItem.project && ` (${entry.actionItem.project.name})`}
-                      </Link>
-                    )}
-
-                    <div className={styles.cardFooter}>
-                      <div className={styles.statusSection}>
-                        <span className={styles.statusLabel}>Status:</span>
-                        <span className={`${styles.statusValue} ${styles[entry.status]}`}>{entry.status}</span>
-                      </div>
-
-                      {!isPastDate() && (
-                        <div className={styles.actionsSection}>
-                          {entry.type === 'task' && (
-                            <>
-                              {entry.status === 'open' && (
-                                <button 
-                                  className={`${styles.quickActionBtn} ${styles.start}`}
-                                  onClick={() => updateEntryStatus(entry.id, 'in_progress')}
-                                >
-                                  Mulai ⏩
-                                </button>
-                              )}
-                              {entry.status === 'in_progress' && (
-                                <button 
-                                  className={`${styles.quickActionBtn} ${styles.complete}`}
-                                  onClick={() => updateEntryStatus(entry.id, 'done')}
-                                >
-                                  Selesai ✅
-                                </button>
-                              )}
-                              {entry.status === 'done' && (
-                                <button 
-                                  className={`${styles.quickActionBtn} ${styles.start}`}
-                                  onClick={() => updateEntryStatus(entry.id, 'open')}
-                                >
-                                  Buka Kembali ↩️
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          {(entry.type === 'meeting' || entry.type === 'focus') && (
-                            <>
-                              {entry.status === 'pending' && (
-                                <>
-                                  <button 
-                                    className={`${styles.quickActionBtn} ${styles.complete}`}
-                                    onClick={() => updateEntryStatus(entry.id, 'done')}
-                                  >
-                                    Done ✅
-                                  </button>
-                                  <button 
-                                    className={`${styles.quickActionBtn} ${styles.skip}`}
-                                    onClick={() => updateEntryStatus(entry.id, 'skipped')}
-                                  >
-                                    Skip ❌
-                                  </button>
-                                </>
-                              )}
-                              {entry.status !== 'pending' && (
-                                <button 
-                                  className={`${styles.quickActionBtn} ${styles.start}`}
-                                  onClick={() => updateEntryStatus(entry.id, 'pending')}
-                                >
-                                  Reset ↩️
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            });
-
-            // If viewing today, and the indicator still hasn't been rendered (because all entries are in the past or list is empty), render it at the bottom
-            if (isViewingToday && !timeIndicatorRendered) {
-              renderedElements.push(renderTimeIndicator());
-            }
-
-            return renderedElements;
-          })()}
+                return renderedRows;
+              })()}
+            </div>
+          )}
         </div>
-      )}
+      </main>
 
-      {/* Modal Dialog for Add / Edit */}
+      {/* Edit Modal (Dialog) */}
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
@@ -622,7 +781,7 @@ export default function DailyPlanPage() {
               </span>
             </div>
 
-            <form onSubmit={handleFormSubmit} className={styles.modalContent}>
+            <form onSubmit={handleFormSubmit} className={styles.modalForm}>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Tipe</label>
@@ -642,7 +801,7 @@ export default function DailyPlanPage() {
                   <input 
                     type="text"
                     required
-                    placeholder="Contoh: Sprint Review, Kerja Mandiri"
+                    placeholder="Contoh: Sprint Review, Deep Work"
                     className={styles.input}
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
@@ -678,7 +837,7 @@ export default function DailyPlanPage() {
                 <label className={styles.label}>Catatan Tambahan (Opsional)</label>
                 <textarea 
                   className={styles.textarea}
-                  placeholder="Detail rencana atau hasil rapat..."
+                  placeholder="Detail agenda..."
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                 />
@@ -745,14 +904,16 @@ export default function DailyPlanPage() {
                   type="button" 
                   className={`${styles.btn} ${styles.secondary}`}
                   onClick={() => setIsModalOpen(false)}
+                  disabled={isFormSaving}
                 >
                   Batal
                 </button>
                 <button 
                   type="submit" 
                   className={`${styles.btn} ${styles.primary}`}
+                  disabled={isFormSaving}
                 >
-                  Simpan
+                  {isFormSaving ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
             </form>

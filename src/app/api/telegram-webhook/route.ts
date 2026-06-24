@@ -32,6 +32,20 @@ async function answerCallbackQuery(token: string, callbackQueryId: string, text?
   });
 }
 
+// Helper to edit messages on Telegram (remove inline buttons and change text)
+async function editTelegramMessageText(token: string, chatId: string, messageId: number, text: string) {
+  const url = `https://api.telegram.org/bot${token}/editMessageText`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text
+    })
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
@@ -73,15 +87,7 @@ export async function POST(request: Request) {
         const selectedDate = parts[1];
         const pendingFileId = parts[2] ? parseInt(parts[2], 10) : null;
 
-        await answerCallbackQuery(token, callbackQueryId, `Memproses tanggal ${selectedDate}...`);
-
-        await sendTelegramMessage(
-          token,
-          chatId,
-          `Memfilter log obrolan untuk tanggal ${selectedDate} dan menganalisis dengan AI... ⏳`,
-          undefined,
-          callbackQuery.message.message_id
-        );
+        await answerCallbackQuery(token, callbackQueryId, `Tanggal ${selectedDate} dipilih.`);
 
         // Fetch pending file
         const pendingFile = pendingFileId
@@ -99,23 +105,103 @@ export async function POST(request: Request) {
           return Response.json({ ok: true });
         }
 
+        // Update selected date and status for this specific file
+        await prisma.wAPendingFile.update({
+          where: { id: pendingFile.id },
+          data: {
+            selectedDate,
+            status: 'date_selected'
+          }
+        });
+
+        // Edit original message text to replace buttons with a checkmark confirmation text
+        await editTelegramMessageText(
+          token,
+          chatId,
+          callbackQuery.message.message_id,
+          `✅ Berkas "${pendingFile.fileName}" terpilih untuk tanggal ${selectedDate}.`
+        );
+
+        // Check if there are other pending files for this chat session
+        const remainingPending = await prisma.wAPendingFile.findMany({
+          where: { chatId, status: 'pending' }
+        });
+
+        if (remainingPending.length > 0) {
+          // Send a status message that we're still waiting for other files
+          const names = remainingPending.map(f => `"${f.fileName}"`).join(', ');
+          await sendTelegramMessage(
+            token,
+            chatId,
+            `Tanggal untuk "${pendingFile.fileName}" berhasil ditentukan. Masih ada berkas lain yang menunggu pilihan tanggal Anda: ${names}`
+          );
+        } else {
+          // All pending files are set! Present a final process confirmation message.
+          const readyFiles = await prisma.wAPendingFile.findMany({
+            where: { chatId, status: 'date_selected' }
+          });
+
+          let readyListText = `Semua berkas obrolan Anda telah dipilih tanggalnya! 📅\n\n`;
+          readyFiles.forEach((f, idx) => {
+            readyListText += `${idx + 1}. ${f.fileName} -> Tanggal: ${f.selectedDate}\n`;
+          });
+          readyListText += `\nSilakan klik tombol di bawah untuk mulai menganalisis gabungan obrolan dengan AI:`;
+
+          const keyboard = {
+            inline_keyboard: [
+              [{ text: '🚀 Mulai Analisis AI', callback_data: 'process_batch' }],
+              [{ text: '❌ Batalkan Semua', callback_data: 'cancel_all' }]
+            ]
+          };
+
+          await sendTelegramMessage(token, chatId, readyListText, keyboard);
+        }
+
+      } else if (callbackData === 'process_batch') {
+        await answerCallbackQuery(token, callbackQueryId, 'Memulai analisis...');
+
+        const readyFiles = await prisma.wAPendingFile.findMany({
+          where: { chatId, status: 'date_selected' }
+        });
+
+        if (readyFiles.length === 0) {
+          await sendTelegramMessage(
+            token,
+            chatId,
+            'Tidak ada berkas yang siap dianalisis. Silakan unggah ZIP baru.',
+            undefined,
+            callbackQuery.message.message_id
+          );
+          return Response.json({ ok: true });
+        }
+
+        await sendTelegramMessage(
+          token,
+          chatId,
+          `Menggabungkan log chat dari ${readyFiles.length} berkas dan menganalisis dengan AI... ⏳`,
+          undefined,
+          callbackQuery.message.message_id
+        );
+
         try {
-          // 1. Filter chat content
-          const filteredChat = filterChatByDate(pendingFile.fileContent, selectedDate);
-          
-          if (!filteredChat.trim()) {
-            await sendTelegramMessage(
-              token,
-              chatId,
-              'Tidak ditemukan pesan pada tanggal terpilih.',
-              undefined,
-              callbackQuery.message.message_id
-            );
+          // 1. Combine chat content from all selected files/dates
+          let combinedChatText = "";
+          for (const file of readyFiles) {
+            const filteredChat = filterChatByDate(file.fileContent, file.selectedDate!);
+            if (filteredChat.trim()) {
+              combinedChatText += `--- Berkas: ${file.fileName} (Tanggal: ${file.selectedDate}) ---\n`;
+              combinedChatText += `${filteredChat}\n\n`;
+            }
+          }
+
+          if (!combinedChatText.trim()) {
+            await sendTelegramMessage(token, chatId, 'Tidak ditemukan pesan pada tanggal-tanggal terpilih.');
+            await prisma.wAPendingFile.deleteMany({ where: { chatId } });
             return Response.json({ ok: true });
           }
 
           // 2. Anonymize chat content
-          const { anonymizedText, map } = anonymize(filteredChat);
+          const { anonymizedText, map } = anonymize(combinedChatText);
 
           // 3. Call AI
           const aiResult = await extractInsightsFromChat(anonymizedText);
@@ -132,7 +218,7 @@ export async function POST(request: Request) {
                 description: deanonymize(item.description || '', map),
                 pic: deanonymize(item.pic || '', map),
                 deadline: item.deadline || '',
-                rawChat: filteredChat
+                rawChat: combinedChatText
               }
             });
             draftIds.push(draft.id);
@@ -144,8 +230,8 @@ export async function POST(request: Request) {
               data: {
                 type: 'decision',
                 title: deanonymize(item.summary, map),
-                description: deanonymize(item.decided_by || '', map), // Use description for decided_by context
-                rawChat: filteredChat
+                description: deanonymize(item.decided_by || '', map),
+                rawChat: combinedChatText
               }
             });
             draftIds.push(draft.id);
@@ -161,15 +247,15 @@ export async function POST(request: Request) {
                   item.impact ? `Dampak: ${deanonymize(item.impact, map)}` : '',
                   `Keparahan: ${item.severity || 'medium'}`
                 ].filter(Boolean).join('\n'),
-                rawChat: filteredChat
+                rawChat: combinedChatText
               }
             });
             draftIds.push(draft.id);
           }
 
-          // Delete pending file cache
-          await prisma.wAPendingFile.delete({
-            where: { id: pendingFile.id }
+          // Delete all pending files in the batch
+          await prisma.wAPendingFile.deleteMany({
+            where: { chatId }
           });
 
           // Generate app link
@@ -195,15 +281,37 @@ export async function POST(request: Request) {
             callbackQuery.message.message_id
           );
         }
+
+      } else if (callbackData === 'cancel_all') {
+        await answerCallbackQuery(token, callbackQueryId, 'Semua dibatalkan.');
+        
+        await prisma.wAPendingFile.deleteMany({
+          where: { chatId }
+        });
+
+        await editTelegramMessageText(
+          token,
+          chatId,
+          callbackQuery.message.message_id,
+          '❌ Semua antrean berkas dibatalkan.'
+        );
+
       } else if (callbackData === 'cancel' || callbackData.startsWith('cancel:')) {
         await answerCallbackQuery(token, callbackQueryId, 'Dibatalkan');
         
         if (callbackData.startsWith('cancel:')) {
           const pendingFileId = parseInt(callbackData.replace('cancel:', ''), 10);
           try {
-            await prisma.wAPendingFile.delete({
-              where: { id: pendingFileId }
-            });
+            const file = await prisma.wAPendingFile.findUnique({ where: { id: pendingFileId } });
+            if (file) {
+              await prisma.wAPendingFile.delete({ where: { id: pendingFileId } });
+              await editTelegramMessageText(
+                token,
+                chatId,
+                callbackQuery.message.message_id,
+                `❌ Antrean berkas "${file.fileName}" dibatalkan.`
+              );
+            }
           } catch (e) {
             console.error('Error deleting pending file on cancel:', e);
           }
@@ -211,15 +319,14 @@ export async function POST(request: Request) {
           await prisma.wAPendingFile.deleteMany({
             where: { chatId }
           });
+          await sendTelegramMessage(
+            token,
+            chatId,
+            'Proses dibatalkan. Silakan kirim berkas ZIP baru kapan saja.',
+            undefined,
+            callbackQuery.message.message_id
+          );
         }
-
-        await sendTelegramMessage(
-          token,
-          chatId,
-          'Proses dibatalkan. Silakan kirim berkas ZIP baru kapan saja.',
-          undefined,
-          callbackQuery.message.message_id
-        );
       }
 
       return Response.json({ ok: true });

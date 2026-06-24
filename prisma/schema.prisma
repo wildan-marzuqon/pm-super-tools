@@ -147,6 +147,8 @@ model WAPendingFile {
   fileName     String   @map("file_name")
   fileContent  String   @db.Text @map("file_content")
   dates        String[]
+  selectedDate String?  @map("selected_date")
+  status       String   @default("pending")
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("wa_pending_files")

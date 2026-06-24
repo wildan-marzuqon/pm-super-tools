@@ -21,49 +21,17 @@ interface WACopilotDraft {
   createdAt: string;
 }
 
-interface SystemSetting {
-  tgBotName: string;
-  tgBotToken: string;
-  tgBotPin: string;
-  geminiApiKey: string;
-  appUrl: string;
-  jiraUrl: string;
-  jiraEmail: string;
-  jiraToken: string;
-}
+
 
 function WaCopilotContent() {
   const searchParams = useSearchParams();
   const highlightIds = searchParams.get('drafts') || '';
   const { alert: showAlertDialog } = useModalDialog();
 
-  const [activeTab, setActiveTab] = useState<'drafts' | 'settings'>('drafts');
   const [drafts, setDrafts] = useState<WACopilotDraft[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [processingDraftId, setProcessingDraftId] = useState<string | null>(null);
-
-  // Filters State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'action_item' | 'decision' | 'blocker'>('all');
-
-  // Settings State
-  const [settings, setSettings] = useState<SystemSetting>({
-    tgBotName: '',
-    tgBotToken: '',
-    tgBotPin: '1234',
-    geminiApiKey: '',
-    appUrl: '',
-    jiraUrl: '',
-    jiraEmail: '',
-    jiraToken: ''
-  });
-
-  const [settingsFeedback, setSettingsFeedback] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
 
   // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -83,32 +51,22 @@ function WaCopilotContent() {
     severity: 'medium'
   });
 
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'action_item' | 'decision' | 'blocker'>('all');
+
   // Load all data
   const loadData = async () => {
     setLoading(true);
     try {
       const draftsUrl = highlightIds ? `/api/wa-copilot?ids=${highlightIds}` : '/api/wa-copilot';
-      const [draftsRes, projectsRes, settingsRes] = await Promise.all([
+      const [draftsRes, projectsRes] = await Promise.all([
         fetch(draftsUrl),
-        fetch('/api/projects'),
-        fetch('/api/wa-copilot/settings')
+        fetch('/api/projects')
       ]);
 
       if (draftsRes.ok) setDrafts(await draftsRes.json());
       if (projectsRes.ok) setProjects(await projectsRes.json());
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json();
-        setSettings({
-          tgBotName: settingsData.tgBotName || '',
-          tgBotToken: settingsData.tgBotToken || '',
-          tgBotPin: settingsData.tgBotPin || '1234',
-          geminiApiKey: settingsData.geminiApiKey || '',
-          appUrl: settingsData.appUrl || '',
-          jiraUrl: settingsData.jiraUrl || '',
-          jiraEmail: settingsData.jiraEmail || '',
-          jiraToken: settingsData.jiraToken || ''
-        });
-      }
     } catch (error) {
       console.error('Failed to load WA Copilot data:', error);
     } finally {
@@ -119,49 +77,6 @@ function WaCopilotContent() {
   useEffect(() => {
     loadData();
   }, [highlightIds]);
-
-  // Handle saving settings
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingSettings(true);
-    setSettingsFeedback(null);
-
-    try {
-      const res = await fetch('/api/wa-copilot/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        if (data.webhookRegistered) {
-          setSettingsFeedback({
-            type: 'success',
-            message: 'Pengaturan berhasil disimpan dan Webhook Telegram sukses didaftarkan!'
-          });
-        } else {
-          setSettingsFeedback({
-            type: 'error',
-            message: `Pengaturan disimpan, namun GAGAL mendaftarkan Webhook Telegram: ${data.webhookError || 'Unknown Error'}. Harap periksa Token Bot Anda.`
-          });
-        }
-      } else {
-        setSettingsFeedback({
-          type: 'error',
-          message: data.error || 'Gagal menyimpan pengaturan.'
-        });
-      }
-    } catch (error: any) {
-      setSettingsFeedback({
-        type: 'error',
-        message: `Terjadi kesalahan jaringan: ${error.message || 'Error'}`
-      });
-    } finally {
-      setSavingSettings(false);
-    }
-  };
 
   // Start editing a draft inline
   const startEdit = (draft: WACopilotDraft) => {
@@ -324,24 +239,9 @@ function WaCopilotContent() {
         </p>
       </header>
 
-      <div className={styles.tabs}>
-        <button
-          onClick={() => setActiveTab('drafts')}
-          className={`${styles.tab} ${activeTab === 'drafts' ? styles.activeTab : ''}`}
-        >
-          Tinjau Draf ({drafts.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`${styles.tab} ${activeTab === 'settings' ? styles.activeTab : ''}`}
-        >
-          Pengaturan Bot
-        </button>
-      </div>
-
       {loading ? (
         <div className={styles.loadingContainer}>Memuat data...</div>
-      ) : activeTab === 'drafts' ? (
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* SEARCH AND FILTER TOOLBAR */}
           <div className={styles.toolbar}>
@@ -652,140 +552,6 @@ function WaCopilotContent() {
             )}
           </div>
         </div>
-      ) : (
-        <form onSubmit={handleSaveSettings} className={styles.settingsForm}>
-          {settingsFeedback && (
-            <div
-              className={`${styles.alert} ${
-                settingsFeedback.type === 'success' ? styles.alertSuccess : styles.alertError
-              }`}
-            >
-              {settingsFeedback.message}
-            </div>
-          )}
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Username Bot Telegram</label>
-            <input
-              type="text"
-              placeholder="Contoh: SuperPM_Copilot_Bot"
-              className={styles.formInput}
-              value={settings.tgBotName}
-              onChange={e => setSettings({ ...settings, tgBotName: e.target.value })}
-            />
-            <span className={styles.formHelp}>Masukkan nama bot Telegram Anda (tanpa tanda @).</span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Token Bot Telegram</label>
-            <input
-              type="password"
-              placeholder="••••••••••••••••••••••••"
-              className={styles.formInput}
-              value={settings.tgBotToken}
-              onChange={e => setSettings({ ...settings, tgBotToken: e.target.value })}
-            />
-            <span className={styles.formHelp}>
-              Didapat dari @BotFather di Telegram saat Anda membuat bot baru.
-            </span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>PIN Keamanan Bot</label>
-            <input
-              type="text"
-              className={styles.formInput}
-              value={settings.tgBotPin}
-              onChange={e => setSettings({ ...settings, tgBotPin: e.target.value })}
-            />
-            <span className={styles.formHelp}>
-              PIN angka bebas untuk verifikasi akses awal saat chat bot Telegram Anda.
-            </span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Google Gemini API Key</label>
-            <input
-              type="password"
-              placeholder="••••••••••••••••••••••••"
-              className={styles.formInput}
-              value={settings.geminiApiKey}
-              onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
-            />
-            <span className={styles.formHelp}>
-              API Key Google Gemini untuk memproses penguraian percakapan chat.
-            </span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>URL Aplikasi (App URL)</label>
-            <input
-              type="url"
-              placeholder="e.g. https://pm-super-tools.vercel.app atau domain ngrok"
-              className={styles.formInput}
-              value={settings.appUrl}
-              onChange={e => setSettings({ ...settings, appUrl: e.target.value })}
-            />
-            <span className={styles.formHelp}>
-              Domain publik tempat aplikasi berjalan. Jika mencoba di lokal, Anda harus menggunakan tunnel publik (seperti ngrok) dan memasukkan URL ngrok tersebut di sini agar Telegram dapat mengirim data ke komputer Anda.
-            </span>
-          </div>
-
-          <div style={{ marginTop: '24px', marginBottom: '16px', borderTop: '1px solid var(--card-border)', paddingTop: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--foreground)', marginBottom: '4px' }}>Integrasi Jira Cloud 🔄</h3>
-            <p style={{ fontSize: '12px', color: 'var(--muted-text)', marginBottom: '16px' }}>Konfigurasi koneksi ke Jira Cloud untuk sinkronisasi Action Items dan data Team Load.</p>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>URL Jira Cloud</label>
-            <input
-              type="url"
-              placeholder="Contoh: https://nama-domain.atlassian.net"
-              className={styles.formInput}
-              value={settings.jiraUrl}
-              onChange={e => setSettings({ ...settings, jiraUrl: e.target.value })}
-            />
-            <span className={styles.formHelp}>URL lengkap workspace Jira Cloud Anda.</span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Email Akun Atlassian</label>
-            <input
-              type="email"
-              placeholder="Contoh: email@perusahaan.com"
-              className={styles.formInput}
-              value={settings.jiraEmail}
-              onChange={e => setSettings({ ...settings, jiraEmail: e.target.value })}
-            />
-            <span className={styles.formHelp}>Email yang digunakan untuk masuk ke akun Atlassian/Jira Anda.</span>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>API Token Atlassian</label>
-            <input
-              type="password"
-              placeholder="Masukkan API Token Anda"
-              className={styles.formInput}
-              value={settings.jiraToken}
-              onChange={e => setSettings({ ...settings, jiraToken: e.target.value })}
-            />
-            <span className={styles.formHelp}>
-              API Token Atlassian. Dapatkan token di:{' '}
-              <a
-                href="https://id.atlassian.com/manage-profile/security/api-tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#B45309', textDecoration: 'underline', fontWeight: '600' }}
-              >
-                Atlassian API Tokens
-              </a>.
-            </span>
-          </div>
-
-          <button type="submit" disabled={savingSettings} className={styles.saveButton}>
-            {savingSettings ? 'Menyimpan & Mendaftarkan Webhook...' : 'Simpan & Daftarkan Webhook'}
-          </button>
-        </form>
       )}
     </div>
   );

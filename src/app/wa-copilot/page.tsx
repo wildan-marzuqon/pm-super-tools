@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useModalDialog } from '@/components/ModalProvider';
 import styles from './page.module.css';
 
 interface Project {
@@ -31,6 +32,7 @@ interface SystemSetting {
 function WaCopilotContent() {
   const searchParams = useSearchParams();
   const highlightIds = searchParams.get('drafts') || '';
+  const { alert: showAlertDialog } = useModalDialog();
 
   const [activeTab, setActiveTab] = useState<'drafts' | 'settings'>('drafts');
   const [drafts, setDrafts] = useState<WACopilotDraft[]>([]);
@@ -130,7 +132,7 @@ function WaCopilotContent() {
         } else {
           setSettingsFeedback({
             type: 'error',
-            message: `Pengaturan disimpan, namun GAGAL mendaftarkan Webhook Telegram: ${data.webhookError || 'Unknown Error'}. Harap periksa Token Bot dan App URL Anda.`
+            message: `Pengaturan disimpan, namun GAGAL mendaftarkan Webhook Telegram: ${data.webhookError || 'Unknown Error'}. Harap periksa Token Bot Anda.`
           });
         }
       } else {
@@ -204,6 +206,13 @@ function WaCopilotContent() {
     setEditingId(null);
   };
 
+  // Quick update project on the card
+  const handleUpdateProject = (id: string, projectId: string) => {
+    setDrafts(prev =>
+      prev.map(d => (d.id === id ? { ...d, projectId: projectId || null } : d))
+    );
+  };
+
   // Ignore draft
   const handleIgnore = async (id: string) => {
     setProcessingDraftId(id);
@@ -226,9 +235,16 @@ function WaCopilotContent() {
 
   // Approve and sync draft
   const handleApprove = async (id: string) => {
-    setProcessingDraftId(id);
     const draft = drafts.find(d => d.id === id);
     if (!draft) return;
+
+    // Check project validation
+    if (!draft.projectId) {
+      showAlertDialog('Pilih Proyek Terlebih Dahulu sebelum menyetujui draf!', 'error');
+      return;
+    }
+
+    setProcessingDraftId(id);
 
     // Build the payload
     let finalDesc = draft.description;
@@ -250,7 +266,7 @@ function WaCopilotContent() {
         description: finalDesc,
         pic: draft.pic,
         deadline: draft.deadline,
-        projectId: draft.projectId || null,
+        projectId: draft.projectId,
         severity
       }
     };
@@ -266,10 +282,11 @@ function WaCopilotContent() {
         setDrafts(prev => prev.filter(d => d.id !== id));
       } else {
         const errorData = await res.json();
-        alert(`Gagal approve draft: ${errorData.error || 'Server error'}`);
+        showAlertDialog(`Gagal menyetujui draf: ${errorData.error || 'Server error'}`, 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error approving draft:', err);
+      showAlertDialog(`Terjadi kesalahan: ${err.message || 'Error'}`, 'error');
     } finally {
       setProcessingDraftId(null);
     }
@@ -278,9 +295,9 @@ function WaCopilotContent() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title}>WA Copilot Insights</h1>
+        <h1 className={styles.title}>WA Copilot</h1>
         <p className={styles.subtitle}>
-          Urai draf action items, keputusan penting, dan blocker proyek yang dikirim via bot Telegram Anda.
+          Tinjau draf action items, keputusan, dan blocker proyek dari WhatsApp yang diproses oleh AI.
         </p>
       </header>
 
@@ -289,13 +306,13 @@ function WaCopilotContent() {
           onClick={() => setActiveTab('drafts')}
           className={`${styles.tab} ${activeTab === 'drafts' ? styles.activeTab : ''}`}
         >
-          Drafts Review ({drafts.length})
+          Tinjau Draf ({drafts.length})
         </button>
         <button
           onClick={() => setActiveTab('settings')}
           className={`${styles.tab} ${activeTab === 'settings' ? styles.activeTab : ''}`}
         >
-          Bot Settings
+          Pengaturan Bot
         </button>
       </div>
 
@@ -307,7 +324,7 @@ function WaCopilotContent() {
             <div className={styles.emptyState}>
               <h3 className={styles.emptyTitle}>Tidak Ada Draf Tertunda</h3>
               <p className={styles.emptyText}>
-                Belum ada draf hasil ekstraksi WhatsApp di database. Kirimkan berkas ZIP chat WhatsApp Anda ke bot Telegram untuk mulai mendeteksi otomatis!
+                Belum ada draf hasil ekstraksi WhatsApp di database. Kirimkan berkas ZIP chat WhatsApp Anda ke bot Telegram untuk mulai mendeteksi secara otomatis!
               </p>
             </div>
           ) : (
@@ -347,7 +364,7 @@ function WaCopilotContent() {
 
                       <div className={styles.formGroup}>
                         <label className={styles.formLabel}>
-                          {draft.type === 'blocker' ? 'Dampak Risiko' : 'Keterangan Detail'}
+                          {draft.type === 'blocker' ? 'Dampak Risiko' : 'Deskripsi Detail'}
                         </label>
                         <textarea
                           className={`${styles.formInput} ${styles.textarea}`}
@@ -358,7 +375,7 @@ function WaCopilotContent() {
 
                       <div className={styles.editorRow}>
                         <div className={styles.formGroup}>
-                          <label className={styles.formLabel}>Assignee / PIC</label>
+                          <label className={styles.formLabel}>PIC / Pelaksana</label>
                           <input
                             type="text"
                             className={styles.formInput}
@@ -373,7 +390,7 @@ function WaCopilotContent() {
                             <input
                               type="text"
                               className={styles.formInput}
-                              placeholder="YYYY-MM-DD atau teks bebas"
+                              placeholder="YYYY-MM-DD"
                               value={editFields.deadline}
                               onChange={e => setEditFields({ ...editFields, deadline: e.target.value })}
                             />
@@ -382,7 +399,7 @@ function WaCopilotContent() {
 
                         {draft.type === 'blocker' && (
                           <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Keparahan (Severity)</label>
+                            <label className={styles.formLabel}>Tingkat Keparahan</label>
                             <select
                               className={styles.formInput}
                               value={editFields.severity || 'medium'}
@@ -402,7 +419,7 @@ function WaCopilotContent() {
                       </div>
 
                       <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Hubungkan ke Project (Opsional)</label>
+                        <label className={styles.formLabel}>Hubungkan ke Project (Wajib)</label>
                         <select
                           className={styles.formInput}
                           value={editFields.projectId}
@@ -434,23 +451,35 @@ function WaCopilotContent() {
                       <h3 className={styles.draftTitle}>{draft.title}</h3>
                       {draft.description && <p className={styles.draftDesc}>{draft.description}</p>}
 
-                      <div className={styles.draftMeta}>
-                        {draft.pic && (
-                          <span className={styles.metaItem}>
-                            <span className={styles.metaLabel}>PIC:</span> {draft.pic}
-                          </span>
-                        )}
-                        {draft.deadline && (
-                          <span className={styles.metaItem}>
-                            <span className={styles.metaLabel}>Deadline:</span> {draft.deadline}
-                          </span>
-                        )}
-                        {draft.projectId && (
-                          <span className={styles.metaItem}>
-                            <span className={styles.metaLabel}>Project:</span>{' '}
-                            {projects.find(p => p.id === draft.projectId)?.name || 'Unknown'}
-                          </span>
-                        )}
+                      <div className={styles.draftMetaRow}>
+                        <div className={styles.draftMeta}>
+                          {draft.pic && (
+                            <span className={styles.metaItem}>
+                              <span className={styles.metaLabel}>PIC:</span> {draft.pic}
+                            </span>
+                          )}
+                          {draft.deadline && (
+                            <span className={styles.metaItem}>
+                              <span className={styles.metaLabel}>Tenggat:</span> {draft.deadline}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className={styles.projectSelectorGroup}>
+                          <label className={styles.projectSelectorLabel}>Hubungkan Proyek:</label>
+                          <select
+                            className={styles.projectSelector}
+                            value={draft.projectId || ''}
+                            onChange={e => handleUpdateProject(draft.id, e.target.value)}
+                          >
+                            <option value="">-- Pilih Project --</option>
+                            {projects.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       <div className={styles.cardActions} style={{ marginTop: '16px' }}>
@@ -466,7 +495,7 @@ function WaCopilotContent() {
                           onClick={() => handleIgnore(draft.id)}
                           className={`${styles.btn} ${styles.btnDanger}`}
                         >
-                          {isProcessing && processingDraftId === draft.id ? 'Loading...' : 'Ignore'}
+                          {isProcessing && processingDraftId === draft.id ? 'Memproses...' : 'Abaikan'}
                         </button>
                         <button
                           disabled={isProcessing}
@@ -474,8 +503,8 @@ function WaCopilotContent() {
                           className={`${styles.btn} ${styles.btnPrimary}`}
                         >
                           {isProcessing && processingDraftId === draft.id
-                            ? 'Processing...'
-                            : 'Approve & Sync'}
+                            ? 'Menyinkronkan...'
+                            : 'Setujui & Sinkronkan'}
                         </button>
                       </div>
                     </div>
@@ -498,10 +527,10 @@ function WaCopilotContent() {
           )}
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Telegram Bot Username</label>
+            <label className={styles.formLabel}>Username Bot Telegram</label>
             <input
               type="text"
-              placeholder="e.g. SuperPM_Copilot_Bot"
+              placeholder="Contoh: SuperPM_Copilot_Bot"
               className={styles.formInput}
               value={settings.tgBotName}
               onChange={e => setSettings({ ...settings, tgBotName: e.target.value })}
@@ -510,7 +539,7 @@ function WaCopilotContent() {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Telegram Bot Token</label>
+            <label className={styles.formLabel}>Token Bot Telegram</label>
             <input
               type="password"
               placeholder="••••••••••••••••••••••••"
@@ -524,7 +553,7 @@ function WaCopilotContent() {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>PIN Keamanan Bot (Bot Security PIN)</label>
+            <label className={styles.formLabel}>PIN Keamanan Bot</label>
             <input
               type="text"
               className={styles.formInput}
@@ -532,12 +561,12 @@ function WaCopilotContent() {
               onChange={e => setSettings({ ...settings, tgBotPin: e.target.value })}
             />
             <span className={styles.formHelp}>
-              PIN angka bebas yang wajib diinput di Telegram pertama kali untuk memverifikasi akun Anda.
+              PIN angka bebas untuk verifikasi akses awal saat chat bot Telegram Anda.
             </span>
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Gemini API Key</label>
+            <label className={styles.formLabel}>Google Gemini API Key</label>
             <input
               type="password"
               placeholder="••••••••••••••••••••••••"
@@ -546,12 +575,12 @@ function WaCopilotContent() {
               onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
             />
             <span className={styles.formHelp}>
-              API Key Google Gemini untuk memproses penguraian chat AI.
+              API Key Google Gemini untuk memproses penguraian percakapan chat.
             </span>
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Application URL (App URL)</label>
+            <label className={styles.formLabel}>URL Aplikasi (App URL)</label>
             <input
               type="url"
               placeholder="e.g. https://pm-super-tools.vercel.app atau domain ngrok"
@@ -565,7 +594,7 @@ function WaCopilotContent() {
           </div>
 
           <button type="submit" disabled={savingSettings} className={styles.saveButton}>
-            {savingSettings ? 'Saving & Registering...' : 'Save & Register Webhook'}
+            {savingSettings ? 'Menyimpan & Mendaftarkan Webhook...' : 'Simpan & Daftarkan Webhook'}
           </button>
         </form>
       )}

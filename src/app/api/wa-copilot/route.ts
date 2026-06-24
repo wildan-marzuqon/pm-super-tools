@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
@@ -104,6 +105,19 @@ export async function POST(request: Request) {
       await prisma.wACopilotDraft.delete({
         where: { id: draftId }
       });
+
+      // Clear Next.js cache so the newly created item shows up immediately on Vercel
+      try {
+        revalidatePath('/action-items');
+        revalidatePath('/projects');
+        if (dataToSave.projectId) {
+          revalidatePath(`/projects/${dataToSave.projectId}`);
+        }
+        revalidatePath('/');
+        revalidatePath('/wa-copilot');
+      } catch (cacheErr) {
+        console.error('Failed to revalidate paths:', cacheErr);
+      }
 
       return Response.json({ success: true, message: 'Draft approved and promoted successfully' });
     }

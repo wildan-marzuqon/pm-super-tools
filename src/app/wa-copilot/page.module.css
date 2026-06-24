@@ -3,7 +3,7 @@
   flex-direction: column;
   height: 100vh;
   background-color: var(--background);
-  padding: 32px;
+  padding: 20px 24px;
   overflow-y: auto;
 }
 
@@ -52,13 +52,12 @@
   font-weight: 700;
 }
 
-/* Settings Form Styles */
 .settingsForm {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  padding: 28px;
-  max-width: 680px;
+  padding: 20px 24px;
+  max-width: 600px;
   box-shadow: var(--shadow-md);
 }
 
@@ -141,19 +140,18 @@
   color: #991B1B;
 }
 
-/* Draft List Styles */
 .draftList {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 900px;
+  gap: 16px;
+  max-width: 800px;
 }
 
 .draftCard {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-lg);
-  padding: 24px;
+  padding: 16px 20px;
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -167,8 +165,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--card-border);
 }
 
@@ -202,21 +200,21 @@
 }
 
 .draftBody {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .draftTitle {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--foreground);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .draftDesc {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted-text);
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   white-space: pre-wrap;
 }
 
@@ -347,4 +345,43 @@
   font-size: 14px;
   color: var(--muted-text);
   line-height: 1.5;
+}
+
+.draftMetaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--card-border);
+}
+
+.projectSelectorGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projectSelectorLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.projectSelector {
+  padding: 6px 10px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  background-color: var(--background);
+  color: var(--foreground);
+  cursor: pointer;
+  max-width: 250px;
+}
+
+.projectSelector:focus {
+  outline: none;
+  border-color: var(--primary);
 }

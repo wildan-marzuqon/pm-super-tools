@@ -73,7 +73,7 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
   }
 
   const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')})`;
-  const url = `${config.jiraUrl}/rest/api/3/search`;
+  const url = `${config.jiraUrl}/rest/api/3/search/jql`;
 
   const response = await fetch(url, {
     method: 'POST',

@@ -526,11 +526,11 @@
 .compactRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-sm);
-  padding: 7px 12px;
+  padding: 10px 14px;
   box-shadow: var(--shadow-sm);
   transition: all var(--transition-fast);
   position: relative;
@@ -558,7 +558,7 @@
 }
 
 .timeLabel {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--foreground);
   font-family: var(--font-fira-code), monospace;
@@ -576,7 +576,7 @@
 }
 
 .typeBadge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 5px;
   border-radius: 4px;
@@ -622,7 +622,7 @@
 }
 
 .entryTitle {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--foreground);
   overflow: hidden;
@@ -663,7 +663,7 @@
 .statusSelect {
   width: 100%;
   padding: 4px 5px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   border-radius: 4px;
   border: 1px solid var(--card-border);

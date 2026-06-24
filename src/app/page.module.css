@@ -1336,3 +1336,144 @@
   color: #EF4444;
   font-weight: 700;
 }
+
+/* =========================================
+   COMPACT 1-LINE ROW — shared between
+   Rencana Harian & Action Items Mendesak
+   ========================================= */
+.compactRowList {
+  display: flex;
+  flex-direction: column;
+}
+
+.compactItemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid #F3F4F6;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  border-radius: 4px;
+}
+
+.compactItemRow:last-of-type {
+  border-bottom: none;
+}
+
+.compactItemRow:hover {
+  background-color: rgba(254, 243, 199, 0.4);
+}
+
+.compactItemOverdue {
+  border-left: 2px solid #EF4444;
+  padding-left: 4px;
+}
+
+.compactItemDone {
+  opacity: 0.5;
+}
+
+/* Time — fixed width monospace */
+.compactTime {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-text);
+  font-family: var(--font-fira-code), monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 86px;
+}
+
+/* Type emoji */
+.compactTypeDot {
+  font-size: 13px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+/* Title — grows to fill remaining */
+.compactTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Status pill */
+.compactStatus {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  border: 1px solid;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.status_open {
+  background-color: #FFFBEB;
+  color: #D97706;
+  border-color: #FEF3C7;
+}
+
+.status_in_progress {
+  background-color: #EFF6FF;
+  color: #2563EB;
+  border-color: #BFDBFE;
+}
+
+.status_done {
+  background-color: #ECFDF5;
+  color: #059669;
+  border-color: #A7F3D0;
+}
+
+.status_pending {
+  background-color: #F3F4F6;
+  color: #6B7280;
+  border-color: #E5E7EB;
+}
+
+/* Overdue "!" indicator */
+.compactOverdueDot {
+  font-size: 10px;
+  font-weight: 800;
+  color: #EF4444;
+  background-color: #FEE2E2;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Date — far right */
+.compactDate {
+  font-size: 11px;
+  color: var(--muted-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* More link */
+.compactMoreLink {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-hover);
+  text-decoration: none;
+  padding: 8px 0 2px;
+}
+
+.compactMoreLink:hover {
+  text-decoration: underline;
+}

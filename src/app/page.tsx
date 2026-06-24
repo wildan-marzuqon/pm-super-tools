@@ -616,31 +616,23 @@ export default function Dashboard() {
                   <Link href="/daily-plan" className={styles.createLink}>Buat Rencana Harian</Link>
                 </div>
               ) : (
-                <div className={styles.miniPlanList}>
-                  {dailyPlanToday.slice(0, 3).map((entry) => (
-                    <div key={entry.id} className={styles.miniPlanRow}>
-                      <span className={styles.miniPlanTime}>{entry.startTime} - {entry.endTime}</span>
-                      <div className={styles.miniPlanBody}>
-                        <span className={styles.miniPlanTitle}>{entry.title}</span>
-                        <div className={styles.miniPlanTags}>
-                          <span className={`${styles.miniTypeBadge} ${styles[entry.type]}`}>
-                            {entry.type === 'task' && '🎯 Task'}
-                            {entry.type === 'meeting' && '🤝 Meeting'}
-                            {entry.type === 'focus' && '🧘 Focus'}
-                          </span>
-                          <span className={`${styles.miniStatusBadge} ${styles[entry.status]}`}>
-                            {entry.status}
-                          </span>
-                        </div>
-                      </div>
+                <div className={styles.compactRowList}>
+                  {dailyPlanToday.slice(0, 5).map((entry) => (
+                    <div key={entry.id} className={styles.compactItemRow}>
+                      <span className={styles.compactTime}>{entry.startTime}–{entry.endTime}</span>
+                      <span className={`${styles.compactTypeDot} ${styles[entry.type]}`}>
+                        {entry.type === 'task' ? '🎯' : entry.type === 'meeting' ? '🤝' : '🧘'}
+                      </span>
+                      <span className={styles.compactTitle}>{entry.title}</span>
+                      <span className={`${styles.compactStatus} ${styles[`status_${entry.status}`]}`}>
+                        {entry.status === 'open' ? 'Open' : entry.status === 'in_progress' ? 'On' : entry.status === 'done' ? '✓' : entry.status}
+                      </span>
                     </div>
                   ))}
-                  {dailyPlanToday.length > 3 && (
-                    <div style={{ textAlign: 'center', paddingTop: '8px' }}>
-                      <Link href="/daily-plan" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary-hover)' }}>
-                        Lihat {dailyPlanTotalCount - 3} rencana lainnya &rarr;
-                      </Link>
-                    </div>
+                  {dailyPlanToday.length > 5 && (
+                    <Link href="/daily-plan" className={styles.compactMoreLink}>
+                      +{dailyPlanTotalCount - 5} rencana lainnya →
+                    </Link>
                   )}
                 </div>
               )}
@@ -700,7 +692,7 @@ export default function Dashboard() {
               <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Action Items ⚡' : 'Action Items Mendesak ⚡'}</h2>
               <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
             </div>
-            <div className={styles.sectionCard} style={{ padding: '12px', minHeight: 'auto' }}>
+            <div className={styles.sectionCard}>
               {filteredUrgentActions.length === 0 ? (
                 <div className={styles.emptyState}>
                   <span className={styles.emptyIcon}>🎉</span>
@@ -708,50 +700,22 @@ export default function Dashboard() {
                   <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
                 </div>
               ) : (
-                <div className={styles.actionCardGrid}>
+                <div className={styles.compactRowList}>
                   {filteredUrgentActions.map((item) => {
-                    const associatedProject = projects.find((p) => p.id === item.project_id);
                     const overdue = isOverdue(item.deadline);
-                    const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
+                    const effectiveStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'));
                     return (
                       <div
                         key={item.id}
-                        className={`${styles.actionCard} ${item.completed ? styles.actionCardDone : ''} ${overdue ? styles.actionCardOverdue : ''}`}
+                        className={`${styles.compactItemRow} ${overdue ? styles.compactItemOverdue : ''} ${item.completed ? styles.compactItemDone : ''}`}
                         onClick={() => handleStartEdit(item)}
                       >
-                        {/* Header row: status badge + overdue label */}
-                        <div className={styles.actionCardHeader}>
-                          <span
-                            className={styles.actionCardStatus}
-                            style={{ backgroundColor: badge.styles.backgroundColor, color: badge.styles.color, borderColor: badge.styles.borderColor }}
-                          >
-                            {badge.text}
-                          </span>
-                          {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
-                        </div>
-
-                        {/* Title */}
-                        <p className={styles.actionCardTitle}>{item.title}</p>
-
-                        {/* Meta: project & category */}
-                        {(associatedProject || item.category_name) && (
-                          <div className={styles.actionCardTags}>
-                            {associatedProject && (
-                              <span className={styles.projectTagBadge}>📁 {associatedProject.name}</span>
-                            )}
-                            {item.category_name && (
-                              <span className={styles.categoryTagBadge}>🏷️ {item.category_name}</span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Footer: PIC + date */}
-                        <div className={styles.actionCardFooter}>
-                          <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
-                          <span className={`${styles.actionCardDate} ${overdue ? styles.overdueDateText : ''}`}>
-                            📅 {formatDate(item.deadline)}
-                          </span>
-                        </div>
+                        <span className={`${styles.compactStatus} ${styles[`status_${effectiveStatus}`]}`}>
+                          {effectiveStatus === 'open' ? 'Open' : effectiveStatus === 'in_progress' ? 'On' : '✓'}
+                        </span>
+                        <span className={styles.compactTitle}>{item.title}</span>
+                        {overdue && <span className={styles.compactOverdueDot} title="Overdue">!</span>}
+                        <span className={styles.compactDate}>{formatDate(item.deadline)}</span>
                       </div>
                     );
                   })}

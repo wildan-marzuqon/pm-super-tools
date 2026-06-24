@@ -41,6 +41,10 @@ function WaCopilotContent() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [processingDraftId, setProcessingDraftId] = useState<string | null>(null);
 
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'action_item' | 'decision' | 'blocker'>('all');
+
   // Settings State
   const [settings, setSettings] = useState<SystemSetting>({
     tgBotName: '',
@@ -77,7 +81,6 @@ function WaCopilotContent() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load drafts
       const draftsUrl = highlightIds ? `/api/wa-copilot?ids=${highlightIds}` : '/api/wa-copilot';
       const [draftsRes, projectsRes, settingsRes] = await Promise.all([
         fetch(draftsUrl),
@@ -155,7 +158,6 @@ function WaCopilotContent() {
   const startEdit = (draft: WACopilotDraft) => {
     setEditingId(draft.id);
     
-    // Check if description has blocker severity mapped
     let severity: 'low' | 'medium' | 'high' = 'medium';
     let cleanDesc = draft.description;
     
@@ -246,7 +248,6 @@ function WaCopilotContent() {
 
     setProcessingDraftId(id);
 
-    // Build the payload
     let finalDesc = draft.description;
     let severity = 'medium';
 
@@ -292,6 +293,19 @@ function WaCopilotContent() {
     }
   };
 
+  // Filter drafts based on search query and category tab
+  const filteredDrafts = drafts.filter(draft => {
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      draft.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      draft.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      draft.pic.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType = filterType === 'all' || draft.type === filterType;
+
+    return matchesSearch && matchesType;
+  });
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -319,158 +333,161 @@ function WaCopilotContent() {
       {loading ? (
         <div className={styles.loadingContainer}>Memuat data...</div>
       ) : activeTab === 'drafts' ? (
-        <div className={styles.draftList}>
-          {drafts.length === 0 ? (
-            <div className={styles.emptyState}>
-              <h3 className={styles.emptyTitle}>Tidak Ada Draf Tertunda</h3>
-              <p className={styles.emptyText}>
-                Belum ada draf hasil ekstraksi WhatsApp di database. Kirimkan berkas ZIP chat WhatsApp Anda ke bot Telegram untuk mulai mendeteksi secara otomatis!
-              </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* SEARCH AND FILTER TOOLBAR */}
+          <div className={styles.toolbar}>
+            <div className={styles.searchGroup}>
+              <svg
+                className={styles.searchIcon}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Cari draf..."
+                className={styles.searchInput}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
             </div>
-          ) : (
-            drafts.map(draft => {
-              const isEditing = editingId === draft.id;
-              const isProcessing = processingDraftId === draft.id;
 
-              return (
-                <div key={draft.id} className={styles.draftCard}>
-                  <div className={styles.draftHeader}>
-                    <span className={`${styles.typeBadge} ${styles[`badge_${draft.type}`]}`}>
-                      {draft.type === 'action_item' && '📋 Action Item'}
-                      {draft.type === 'decision' && '🎯 Keputusan'}
-                      {draft.type === 'blocker' && '⚠️ Blocker'}
-                    </span>
-                    <span className={styles.draftDate}>
-                      {new Date(draft.createdAt).toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
+            <div className={styles.filterGroup}>
+              <button
+                onClick={() => setFilterType('all')}
+                className={`${styles.filterTab} ${filterType === 'all' ? styles.activeFilterTab : ''}`}
+              >
+                Semua ({drafts.length})
+              </button>
+              <button
+                onClick={() => setFilterType('action_item')}
+                className={`${styles.filterTab} ${filterType === 'action_item' ? styles.activeFilterTab : ''}`}
+              >
+                📋 Action Item ({drafts.filter(d => d.type === 'action_item').length})
+              </button>
+              <button
+                onClick={() => setFilterType('decision')}
+                className={`${styles.filterTab} ${filterType === 'decision' ? styles.activeFilterTab : ''}`}
+              >
+                🎯 Keputusan ({drafts.filter(d => d.type === 'decision').length})
+              </button>
+              <button
+                onClick={() => setFilterType('blocker')}
+                className={`${styles.filterTab} ${filterType === 'blocker' ? styles.activeFilterTab : ''}`}
+              >
+                ⚠️ Blocker ({drafts.filter(d => d.type === 'blocker').length})
+              </button>
+            </div>
+          </div>
 
-                  {isEditing ? (
-                    <div className={styles.editorForm}>
-                      <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Judul / Ringkasan</label>
-                        <input
-                          type="text"
-                          className={styles.formInput}
-                          value={editFields.title}
-                          onChange={e => setEditFields({ ...editFields, title: e.target.value })}
-                        />
+          {/* DRAFTS COMPACT LIST */}
+          <div className={styles.draftList}>
+            {filteredDrafts.length === 0 ? (
+              <div className={styles.emptyState}>
+                <h3 className={styles.emptyTitle}>Tidak Ada Draf Cocok</h3>
+                <p className={styles.emptyText}>
+                  {drafts.length === 0
+                    ? 'Belum ada draf hasil ekstraksi WhatsApp di database. Kirimkan berkas ZIP chat WhatsApp Anda ke bot Telegram untuk mulai mendeteksi!'
+                    : 'Tidak ada draf yang sesuai dengan filter pencarian atau kategori Anda.'}
+                </p>
+              </div>
+            ) : (
+              filteredDrafts.map(draft => {
+                const isEditing = editingId === draft.id;
+                const isProcessing = processingDraftId === draft.id;
+
+                if (isEditing) {
+                  return (
+                    <div key={draft.id} className={styles.draftCard}>
+                      <div className={styles.draftHeader}>
+                        <span className={`${styles.typeBadge} ${styles[`badge_${draft.type}`]}`}>
+                          {draft.type === 'action_item' && '📋 Action Item'}
+                          {draft.type === 'decision' && '🎯 Keputusan'}
+                          {draft.type === 'blocker' && '⚠️ Blocker'}
+                        </span>
+                        <span className={styles.draftDate}>Edit Mode</span>
                       </div>
-
-                      <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>
-                          {draft.type === 'blocker' ? 'Dampak Risiko' : 'Deskripsi Detail'}
-                        </label>
-                        <textarea
-                          className={`${styles.formInput} ${styles.textarea}`}
-                          value={editFields.description}
-                          onChange={e => setEditFields({ ...editFields, description: e.target.value })}
-                        />
-                      </div>
-
-                      <div className={styles.editorRow}>
+                      <div className={styles.editorForm}>
                         <div className={styles.formGroup}>
-                          <label className={styles.formLabel}>PIC / Pelaksana</label>
+                          <label className={styles.formLabel}>Judul / Ringkasan</label>
                           <input
                             type="text"
                             className={styles.formInput}
-                            value={editFields.pic}
-                            onChange={e => setEditFields({ ...editFields, pic: e.target.value })}
+                            value={editFields.title}
+                            onChange={e => setEditFields({ ...editFields, title: e.target.value })}
                           />
                         </div>
 
-                        {draft.type === 'action_item' && (
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>
+                            {draft.type === 'blocker' ? 'Dampak Risiko' : 'Deskripsi Detail'}
+                          </label>
+                          <textarea
+                            className={`${styles.formInput} ${styles.textarea}`}
+                            value={editFields.description}
+                            onChange={e => setEditFields({ ...editFields, description: e.target.value })}
+                          />
+                        </div>
+
+                        <div className={styles.editorRow}>
                           <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Tenggat Waktu (Deadline)</label>
+                            <label className={styles.formLabel}>PIC / Pelaksana</label>
                             <input
                               type="text"
                               className={styles.formInput}
-                              placeholder="YYYY-MM-DD"
-                              value={editFields.deadline}
-                              onChange={e => setEditFields({ ...editFields, deadline: e.target.value })}
+                              value={editFields.pic}
+                              onChange={e => setEditFields({ ...editFields, pic: e.target.value })}
                             />
                           </div>
-                        )}
 
-                        {draft.type === 'blocker' && (
-                          <div className={styles.formGroup}>
-                            <label className={styles.formLabel}>Tingkat Keparahan</label>
-                            <select
-                              className={styles.formInput}
-                              value={editFields.severity || 'medium'}
-                              onChange={e =>
-                                setEditFields({
-                                  ...editFields,
-                                  severity: e.target.value as 'low' | 'medium' | 'high'
-                                })
-                              }
-                            >
-                              <option value="low">Low</option>
-                              <option value="medium">Medium</option>
-                              <option value="high">High</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>Hubungkan ke Project (Wajib)</label>
-                        <select
-                          className={styles.formInput}
-                          value={editFields.projectId}
-                          onChange={e => setEditFields({ ...editFields, projectId: e.target.value })}
-                        >
-                          <option value="">-- Pilih Project --</option>
-                          {projects.map(p => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className={styles.cardActions}>
-                        <button onClick={cancelEdit} className={`${styles.btn} ${styles.btnSecondary}`}>
-                          Batal
-                        </button>
-                        <button
-                          onClick={() => saveLocalDraft(draft.id)}
-                          className={`${styles.btn} ${styles.btnPrimary}`}
-                        >
-                          Simpan Perubahan
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={styles.draftBody}>
-                      <h3 className={styles.draftTitle}>{draft.title}</h3>
-                      {draft.description && <p className={styles.draftDesc}>{draft.description}</p>}
-
-                      <div className={styles.draftMetaRow}>
-                        <div className={styles.draftMeta}>
-                          {draft.pic && (
-                            <span className={styles.metaItem}>
-                              <span className={styles.metaLabel}>PIC:</span> {draft.pic}
-                            </span>
+                          {draft.type === 'action_item' && (
+                            <div className={styles.formGroup}>
+                              <label className={styles.formLabel}>Tenggat Waktu (Deadline)</label>
+                              <input
+                                type="text"
+                                className={styles.formInput}
+                                placeholder="YYYY-MM-DD"
+                                value={editFields.deadline}
+                                onChange={e => setEditFields({ ...editFields, deadline: e.target.value })}
+                              />
+                            </div>
                           )}
-                          {draft.deadline && (
-                            <span className={styles.metaItem}>
-                              <span className={styles.metaLabel}>Tenggat:</span> {draft.deadline}
-                            </span>
+
+                          {draft.type === 'blocker' && (
+                            <div className={styles.formGroup}>
+                              <label className={styles.formLabel}>Tingkat Keparahan</label>
+                              <select
+                                className={styles.formInput}
+                                value={editFields.severity || 'medium'}
+                                onChange={e =>
+                                  setEditFields({
+                                    ...editFields,
+                                    severity: e.target.value as 'low' | 'medium' | 'high'
+                                  })
+                                }
+                              >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                              </select>
+                            </div>
                           )}
                         </div>
 
-                        <div className={styles.projectSelectorGroup}>
-                          <label className={styles.projectSelectorLabel}>Hubungkan Proyek:</label>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Hubungkan ke Project (Wajib)</label>
                           <select
-                            className={styles.projectSelector}
-                            value={draft.projectId || ''}
-                            onChange={e => handleUpdateProject(draft.id, e.target.value)}
+                            className={styles.formInput}
+                            value={editFields.projectId}
+                            onChange={e => setEditFields({ ...editFields, projectId: e.target.value })}
                           >
                             <option value="">-- Pilih Project --</option>
                             {projects.map(p => (
@@ -480,39 +497,151 @@ function WaCopilotContent() {
                             ))}
                           </select>
                         </div>
-                      </div>
 
-                      <div className={styles.cardActions} style={{ marginTop: '16px' }}>
-                        <button
-                          disabled={isProcessing}
-                          onClick={() => startEdit(draft)}
-                          className={`${styles.btn} ${styles.btnSecondary}`}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          disabled={isProcessing}
-                          onClick={() => handleIgnore(draft.id)}
-                          className={`${styles.btn} ${styles.btnDanger}`}
-                        >
-                          {isProcessing && processingDraftId === draft.id ? 'Memproses...' : 'Abaikan'}
-                        </button>
-                        <button
-                          disabled={isProcessing}
-                          onClick={() => handleApprove(draft.id)}
-                          className={`${styles.btn} ${styles.btnPrimary}`}
-                        >
-                          {isProcessing && processingDraftId === draft.id
-                            ? 'Menyinkronkan...'
-                            : 'Setujui & Sinkronkan'}
-                        </button>
+                        <div className={styles.cardActions}>
+                          <button onClick={cancelEdit} className={`${styles.btn} ${styles.btnSecondary}`}>
+                            Batal
+                          </button>
+                          <button
+                            onClick={() => saveLocalDraft(draft.id)}
+                            className={`${styles.btn} ${styles.btnPrimary}`}
+                          >
+                            Simpan Perubahan
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+                  );
+                }
+
+                return (
+                  <div key={draft.id} className={styles.draftRow}>
+                    {/* TYPE ICON BADGE */}
+                    <span
+                      className={`${styles.typeBadge} ${styles[`badge_${draft.type}`]}`}
+                      title={
+                        draft.type === 'action_item'
+                          ? 'Action Item'
+                          : draft.type === 'decision'
+                          ? 'Keputusan'
+                          : 'Blocker'
+                      }
+                      style={{ padding: '6px 10px' }}
+                    >
+                      {draft.type === 'action_item' && '📋 Action Item'}
+                      {draft.type === 'decision' && '🎯 Keputusan'}
+                      {draft.type === 'blocker' && '⚠️ Blocker'}
+                    </span>
+
+                    {/* MAIN CONTENT (Title & Description truncated) */}
+                    <div className={styles.draftContent}>
+                      <div className={styles.draftTitleText} title={draft.title}>
+                        {draft.title}
+                      </div>
+                      {draft.description && (
+                        <div className={styles.draftDescText} title={draft.description}>
+                          {draft.description.replace(/^Dampak: /i, '').replace(/\nKeparahan:.*/gi, '')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* PIC & DEADLINE METADATA */}
+                    <div className={styles.draftMetaCol}>
+                      {draft.pic && (
+                        <span className={styles.metaBadge} title={`PIC: ${draft.pic}`}>
+                          👤 {draft.pic.split(' ')[0]}
+                        </span>
+                      )}
+                      {draft.deadline && (
+                        <span className={styles.metaBadge} title={`Tenggat: ${draft.deadline}`}>
+                          📅 {draft.deadline}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* PROJECT SELECTOR DROPDOWN */}
+                    <div className={styles.projectSelectorGroup}>
+                      <select
+                        className={styles.projectSelector}
+                        value={draft.projectId || ''}
+                        onChange={e => handleUpdateProject(draft.id, e.target.value)}
+                      >
+                        <option value="">-- Proyek (Wajib) --</option>
+                        {projects.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* ICON ACTIONS */}
+                    <div className={styles.rowActions}>
+                      <button
+                        disabled={isProcessing}
+                        onClick={() => startEdit(draft)}
+                        className={styles.iconBtn}
+                        title="Edit Draf"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        disabled={isProcessing}
+                        onClick={() => handleIgnore(draft.id)}
+                        className={`${styles.iconBtn} ${styles.iconBtnIgnore}`}
+                        title="Abaikan Draf"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                      <button
+                        disabled={isProcessing}
+                        onClick={() => handleApprove(draft.id)}
+                        className={`${styles.iconBtn} ${styles.iconBtnApprove}`}
+                        title="Setujui & Sinkronkan"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSaveSettings} className={styles.settingsForm}>

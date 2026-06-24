@@ -142,7 +142,8 @@ model TelegramSession {
 }
 
 model WAPendingFile {
-  chatId       String   @id @map("chat_id")
+  id           Int      @id @default(autoincrement())
+  chatId       String   @map("chat_id")
   fileName     String   @map("file_name")
   fileContent  String   @db.Text @map("file_content")
   dates        String[]

@@ -26,6 +26,7 @@ export default function TeamsLoadPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -80,6 +81,29 @@ export default function TeamsLoadPage() {
       console.error('Error fetching Jira issues:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncJira = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/jira/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        await alert(
+          `Sinkronisasi Jira sukses!\n- Cached: ${data.cached} issue(s) di cache local\n- Pushed: ${data.pushed} task(s)\n- Pulled: ${data.pulled} task(s)`,
+          'Sukses',
+          'success'
+        );
+        fetchIssues();
+      } else {
+        await alert(data.error || 'Terjadi kesalahan saat sinkronisasi Jira.', 'Gagal', 'error');
+      }
+    } catch (err: any) {
+      console.error('Error syncing Jira:', err);
+      await alert(`Gagal terhubung ke server: ${err.message || 'Error'}`, 'Error Jaringan', 'error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -467,9 +491,32 @@ export default function TeamsLoadPage() {
           <h1 className={styles.title}>👥 Teams Capacity & Load Projection</h1>
           <p className={styles.subtitle}>Analisis proyeksi beban kerja anggota tim berdasarkan estimasi tugas Jira.</p>
         </div>
-        <button className={styles.uploadBtn} onClick={() => setShowUploadModal(true)}>
-          📤 Upload Jira CSV
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={handleSyncJira}
+            disabled={isSyncing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#1E293B',
+              color: '#F8FAFC',
+              border: '1px solid #334155',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              opacity: isSyncing ? 0.7 : 1
+            }}
+          >
+            {isSyncing ? '🔄 Menyinkronkan...' : '🔄 Sinkronkan Jira'}
+          </button>
+          <button className={styles.uploadBtn} onClick={() => setShowUploadModal(true)}>
+            📤 Upload Jira CSV
+          </button>
+        </div>
       </header>
 
       {/* Stats Board */}
@@ -562,10 +609,33 @@ export default function TeamsLoadPage() {
           <div className={styles.emptyState}>
             <span className={styles.emptyIcon}>📊</span>
             <h3>Belum Ada Data Team Load</h3>
-            <p>Silakan upload export Jira CSV terlebih dahulu untuk melihat proyeksi beban kerja tim.</p>
-            <button className={styles.uploadBtn} onClick={() => setShowUploadModal(true)} style={{ marginTop: '16px' }}>
-              Upload Jira CSV Sekarang
-            </button>
+            <p>Silakan sinkronisasikan dari Jira API atau upload file export Jira CSV terlebih dahulu untuk melihat proyeksi beban kerja tim.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+              <button 
+                onClick={handleSyncJira}
+                disabled={isSyncing}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#1E293B',
+                  color: '#F8FAFC',
+                  border: '1px solid #334155',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  opacity: isSyncing ? 0.7 : 1
+                }}
+              >
+                {isSyncing ? '🔄 Menyinkronkan...' : '🔄 Sinkronkan Jira API'}
+              </button>
+              <button className={styles.uploadBtn} onClick={() => setShowUploadModal(true)}>
+                Upload Jira CSV Sekarang
+              </button>
+            </div>
           </div>
         ) : (
           <div className={styles.tableWrapper}>

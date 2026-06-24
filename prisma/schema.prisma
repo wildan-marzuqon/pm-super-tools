@@ -38,6 +38,10 @@ model ActionItem {
   waChatLink    String?   @map("wa_chat_link")
   waExtractedAt DateTime? @map("wa_extracted_at")
 
+  // Jira sync fields
+  jiraKey      String?   @map("jira_key")
+  jiraSyncedAt DateTime? @map("jira_synced_at")
+
   note     Note?            @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
   project  Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category ProjectCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -54,6 +58,7 @@ model Project {
   currentStageIndex    Int               @default(0) @map("current_stage_index")
   googleDriveFolderUrl String?           @map("google_drive_folder_url")
   googleApiKey         String?           @map("google_api_key")
+  jiraProjectKey       String?           @map("jira_project_key")
   createdAt            DateTime          @default(now()) @map("created_at")
   stages               ProjectStage[]
   actions              ActionItem[]
@@ -125,6 +130,9 @@ model SystemSetting {
   tgBotPin     String   @default("1234") @map("tg_bot_pin")
   geminiApiKey String?  @map("gemini_api_key")
   appUrl       String?  @map("app_url")
+  jiraUrl      String?  @map("jira_url")
+  jiraEmail    String?  @map("jira_email")
+  jiraToken    String?  @map("jira_token")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

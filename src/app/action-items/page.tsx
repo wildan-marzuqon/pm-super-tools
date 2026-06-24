@@ -22,15 +22,19 @@ interface ActionItem {
   category_name?: string;
   project_id?: string;
   source_note_id?: string;
+  jiraKey?: string | null;
+  jiraSyncedAt?: string | null;
   created_at: string;
 }
 
 export default function ActionItemsPage() {
-  const { confirm } = useModalDialog();
+  const { confirm, alert } = useModalDialog();
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingAction, setIsCreatingAction] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [jiraUrl, setJiraUrl] = useState('');
 
   // Edit action item state
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
@@ -73,19 +77,48 @@ export default function ActionItemsPage() {
 
   const fetchData = async () => {
     try {
-      const [actionRes, projRes] = await Promise.all([
+      const [actionRes, projRes, settingsRes] = await Promise.all([
         fetch('/api/action-items'),
-        fetch('/api/projects')
+        fetch('/api/projects'),
+        fetch('/api/wa-copilot/settings')
       ]);
 
       if (actionRes.ok && projRes.ok) {
         setActionItems(await actionRes.json());
         setProjects(await projRes.json());
       }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        setJiraUrl(settingsData.jiraUrl || '');
+      }
     } catch (error) {
       console.error('Error fetching action items data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncJira = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/jira/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        await alert(
+          `Sinkronisasi Jira sukses!\n- Pushed: ${data.pushed} task(s)\n- Pulled: ${data.pulled} task(s)\n- Cached: ${data.cached} issues`, 
+          'Sukses', 
+          'success'
+        );
+        fetchData();
+      } else {
+        await alert(data.error || 'Terjadi kesalahan saat sinkronisasi Jira.', 'Gagal', 'error');
+      }
+    } catch (err: any) {
+      console.error('Error syncing Jira:', err);
+      await alert(`Gagal terhubung ke server: ${err.message || 'Error'}`, 'Error Jaringan', 'error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -353,9 +386,32 @@ export default function ActionItemsPage() {
           <h1 className={styles.title}>📋 Action Items Tracker</h1>
           <p className={styles.subtitle}>Daftar semua tugas dan to-do list yang perlu diselesaikan.</p>
         </div>
-        <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
-          + Action Item Baru
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={handleSyncJira}
+            disabled={isSyncing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#1E293B',
+              color: '#F8FAFC',
+              border: '1px solid #334155',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              opacity: isSyncing ? 0.7 : 1
+            }}
+          >
+            {isSyncing ? '🔄 Menyinkronkan...' : '🔄 Sinkronkan Jira'}
+          </button>
+          <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
+            + Action Item Baru
+          </button>
+        </div>
       </header>
 
       {/* Add Action Item Modal */}
@@ -585,6 +641,32 @@ export default function ActionItemsPage() {
                           >
                             📝 Lihat Note Asal
                           </Link>
+                        )}
+                        {item.jiraKey && (
+                          <a
+                            href={jiraUrl ? `${jiraUrl.replace(/\/+$/, '')}/browse/${item.jiraKey}` : '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.jiraBadge}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Buka isu di Jira"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backgroundColor: '#E0F2FE',
+                              color: '#0369A1',
+                              border: '1px solid #BAE6FD',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            🔵 Jira: {item.jiraKey}
+                          </a>
                         )}
                       </div>
                     </div>

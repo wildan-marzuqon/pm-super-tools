@@ -27,6 +27,9 @@ interface SystemSetting {
   tgBotPin: string;
   geminiApiKey: string;
   appUrl: string;
+  jiraUrl: string;
+  jiraEmail: string;
+  jiraToken: string;
 }
 
 function WaCopilotContent() {
@@ -51,7 +54,10 @@ function WaCopilotContent() {
     tgBotToken: '',
     tgBotPin: '1234',
     geminiApiKey: '',
-    appUrl: ''
+    appUrl: '',
+    jiraUrl: '',
+    jiraEmail: '',
+    jiraToken: ''
   });
 
   const [settingsFeedback, setSettingsFeedback] = useState<{
@@ -97,7 +103,10 @@ function WaCopilotContent() {
           tgBotToken: settingsData.tgBotToken || '',
           tgBotPin: settingsData.tgBotPin || '1234',
           geminiApiKey: settingsData.geminiApiKey || '',
-          appUrl: settingsData.appUrl || ''
+          appUrl: settingsData.appUrl || '',
+          jiraUrl: settingsData.jiraUrl || '',
+          jiraEmail: settingsData.jiraEmail || '',
+          jiraToken: settingsData.jiraToken || ''
         });
       }
     } catch (error) {
@@ -719,6 +728,57 @@ function WaCopilotContent() {
             />
             <span className={styles.formHelp}>
               Domain publik tempat aplikasi berjalan. Jika mencoba di lokal, Anda harus menggunakan tunnel publik (seperti ngrok) dan memasukkan URL ngrok tersebut di sini agar Telegram dapat mengirim data ke komputer Anda.
+            </span>
+          </div>
+
+          <div style={{ marginTop: '24px', marginBottom: '16px', borderTop: '1px solid var(--card-border)', paddingTop: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--foreground)', marginBottom: '4px' }}>Integrasi Jira Cloud 🔄</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted-text)', marginBottom: '16px' }}>Konfigurasi koneksi ke Jira Cloud untuk sinkronisasi Action Items dan data Team Load.</p>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>URL Jira Cloud</label>
+            <input
+              type="url"
+              placeholder="Contoh: https://nama-domain.atlassian.net"
+              className={styles.formInput}
+              value={settings.jiraUrl}
+              onChange={e => setSettings({ ...settings, jiraUrl: e.target.value })}
+            />
+            <span className={styles.formHelp}>URL lengkap workspace Jira Cloud Anda.</span>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Email Akun Atlassian</label>
+            <input
+              type="email"
+              placeholder="Contoh: email@perusahaan.com"
+              className={styles.formInput}
+              value={settings.jiraEmail}
+              onChange={e => setSettings({ ...settings, jiraEmail: e.target.value })}
+            />
+            <span className={styles.formHelp}>Email yang digunakan untuk masuk ke akun Atlassian/Jira Anda.</span>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>API Token Atlassian</label>
+            <input
+              type="password"
+              placeholder="Masukkan API Token Anda"
+              className={styles.formInput}
+              value={settings.jiraToken}
+              onChange={e => setSettings({ ...settings, jiraToken: e.target.value })}
+            />
+            <span className={styles.formHelp}>
+              API Token Atlassian. Dapatkan token di:{' '}
+              <a
+                href="https://id.atlassian.com/manage-profile/security/api-tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#B45309', textDecoration: 'underline', fontWeight: '600' }}
+              >
+                Atlassian API Tokens
+              </a>.
             </span>
           </div>
 

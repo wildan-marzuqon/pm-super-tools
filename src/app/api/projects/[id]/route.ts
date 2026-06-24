@@ -38,6 +38,7 @@ export async function GET(
       current_stage_index: project.currentStageIndex,
       google_drive_folder_url: project.googleDriveFolderUrl,
       google_api_key: project.googleApiKey,
+      jira_project_key: project.jiraProjectKey,
       stages: project.stages.map((s) => ({
         id: s.id,
         projectId: s.projectId,
@@ -95,6 +96,7 @@ export async function PUT(
         currentStageIndex: body.current_stage_index !== undefined ? body.current_stage_index : undefined,
         googleDriveFolderUrl: body.google_drive_folder_url !== undefined ? body.google_drive_folder_url : undefined,
         googleApiKey: body.google_api_key !== undefined ? body.google_api_key : undefined,
+        jiraProjectKey: body.jira_project_key !== undefined ? body.jira_project_key : undefined,
       }
     });
 

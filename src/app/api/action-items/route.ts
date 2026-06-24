@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
       source_note_id: item.sourceNoteId || null,
       category_id: item.categoryId || null,
       category_name: item.category?.name || null,
+      jiraKey: item.jiraKey || null,
+      jiraSyncedAt: item.jiraSyncedAt || null,
       created_at: item.createdAt
     }));
 
@@ -98,6 +100,8 @@ export async function POST(request: Request) {
       source_note_id: createdItem.sourceNoteId || null,
       category_id: createdItem.categoryId || null,
       category_name: createdItem.category?.name || null,
+      jiraKey: createdItem.jiraKey || null,
+      jiraSyncedAt: createdItem.jiraSyncedAt || null,
       created_at: createdItem.createdAt
     }, { status: 201 });
   } catch (error) {

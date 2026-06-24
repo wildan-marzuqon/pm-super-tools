@@ -141,6 +141,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [settingsDesc, setSettingsDesc] = useState('');
   const [settingsPic, setSettingsPic] = useState('');
   const [settingsDeadline, setSettingsDeadline] = useState('');
+  const [settingsJiraProjectKey, setSettingsJiraProjectKey] = useState('');
   
   // Custom Stages builder list state
   const [stagesList, setStagesList] = useState<Array<{ id?: string; name: string; completed_at?: string }>>([]);
@@ -160,6 +161,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setSettingsDeadline(data.deadline ? data.deadline.substring(0, 10) : '');
         setSettingsGDriveUrl(data.google_drive_folder_url || '');
         setSettingsGDriveApiKey(data.google_api_key || '');
+        setSettingsJiraProjectKey(data.jira_project_key || '');
         setStagesList(data.stages);
       } else {
         router.push('/projects');
@@ -593,7 +595,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           pic: settingsPic,
           deadline: settingsDeadline,
           google_drive_folder_url: settingsGDriveUrl,
-          google_api_key: settingsGDriveApiKey
+          google_api_key: settingsGDriveApiKey,
+          jira_project_key: settingsJiraProjectKey
         })
       });
       if (res.ok) {
@@ -1431,6 +1434,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     onChange={(e) => setSettingsGDriveApiKey(e.target.value)}
                     placeholder="Masukkan Google API Key untuk sinkronisasi..."
                   />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Jira Project Key (e.g. PROJ)</label>
+                  <input
+                    type="text"
+                    value={settingsJiraProjectKey}
+                    onChange={(e) => setSettingsJiraProjectKey(e.target.value.toUpperCase())}
+                    placeholder="Contoh: PROJ"
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--muted-text)', marginTop: '4px', display: 'block' }}>
+                    Key proyek Jira Cloud Anda. Digunakan untuk sinkronisasi dua arah Action Items dan Team Load.
+                  </span>
                 </div>
                 <button type="submit" className={styles.saveSettingsBtn} disabled={isSavingSettings}>
                   {isSavingSettings ? 'Menyimpan...' : 'Simpan Perubahan Detail'}

@@ -14,7 +14,10 @@ export async function GET() {
         tgBotToken: '',
         tgBotPin: '1234',
         geminiApiKey: '',
-        appUrl: 'https://pm-super-tools.vercel.app'
+        appUrl: 'https://pm-super-tools.vercel.app',
+        jiraUrl: '',
+        jiraEmail: '',
+        jiraToken: ''
       }
     );
   } catch (error) {
@@ -36,7 +39,10 @@ export async function POST(request: Request) {
         tgBotToken: body.tgBotToken || '',
         tgBotPin: body.tgBotPin || '1234',
         geminiApiKey: body.geminiApiKey || '',
-        appUrl: finalAppUrl
+        appUrl: finalAppUrl,
+        jiraUrl: body.jiraUrl || '',
+        jiraEmail: body.jiraEmail || '',
+        jiraToken: body.jiraToken || ''
       },
       create: {
         id: 'default',
@@ -44,7 +50,10 @@ export async function POST(request: Request) {
         tgBotToken: body.tgBotToken || '',
         tgBotPin: body.tgBotPin || '1234',
         geminiApiKey: body.geminiApiKey || '',
-        appUrl: finalAppUrl
+        appUrl: finalAppUrl,
+        jiraUrl: body.jiraUrl || '',
+        jiraEmail: body.jiraEmail || '',
+        jiraToken: body.jiraToken || ''
       }
     });
 

@@ -9,6 +9,21 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    let status = body.status;
+    let completed = body.completed;
+
+    if (status !== undefined && completed !== undefined) {
+      if (status === 'done') {
+        completed = true;
+      } else if (completed) {
+        status = 'done';
+      }
+    } else if (status !== undefined) {
+      completed = status === 'done';
+    } else if (completed !== undefined) {
+      status = completed ? 'done' : 'open';
+    }
+
     const updatedItem = await prisma.actionItem.update({
       where: { id },
       data: {
@@ -16,7 +31,8 @@ export async function PUT(
         description: body.description !== undefined ? body.description : undefined,
         deadline: body.deadline !== undefined ? body.deadline : undefined,
         pic: body.pic !== undefined ? body.pic : undefined,
-        completed: body.completed !== undefined ? body.completed : undefined,
+        completed: completed !== undefined ? completed : undefined,
+        status: status !== undefined ? status : undefined,
         projectId: body.project_id !== undefined ? body.project_id : undefined,
         categoryId: body.category_id !== undefined ? body.category_id : undefined,
         sourceNoteId: body.source_note_id !== undefined ? body.source_note_id : undefined,
@@ -33,10 +49,13 @@ export async function PUT(
       deadline: updatedItem.deadline,
       pic: updatedItem.pic,
       completed: updatedItem.completed,
+      status: updatedItem.status,
       project_id: updatedItem.projectId || null,
       source_note_id: updatedItem.sourceNoteId || null,
       category_id: updatedItem.categoryId || null,
       category_name: updatedItem.category?.name || null,
+      jiraKey: updatedItem.jiraKey || null,
+      jiraSyncedAt: updatedItem.jiraSyncedAt || null,
       created_at: updatedItem.createdAt
     });
   } catch (error) {

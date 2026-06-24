@@ -70,7 +70,24 @@ Notifikasi default browser seperti `alert(...)` dan `confirm(...)` menghentikan 
 
 ---
 
-## 5. Hasil Verifikasi
-
+## 5. Hasil Verifikasi (Sebelumnya)
 - Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
 - **Status Git**: Semua perubahan telah di-push ke branch `main`.
+
+---
+
+## 6. Bidirectional Jira Sync & Fitur Status Action Item
+
+### Perubahan File & Struktur:
+- **Database Model**: Menambahkan kolom `status` ("open", "in_progress", "done") dan kolom `updatedAt` pada tabel `ActionItem` di [schema.prisma](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/prisma/schema.prisma) untuk melacak perubahan waktu edit lokal secara akurat.
+- **Jira Client Updates**: Memperbarui [jira-client.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/lib/jira-client.ts) dengan dukungan parsing format ADF (Atlassian Document Format) deskripsi Jira ke plain text, pengambilan field updated, serta fungsionalitas pembaruan due date (`duedate`).
+- **API Endpoint**:
+  - Memperbarui route list [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/action-items/route.ts) dan route detail [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/action-items/[id]/route.ts) untuk mendukung pengembalian dan pembaruan field `status` serta penyelarasan status `completed` secara otomatis.
+  - Memperbarui route sinkronisasi [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/jira/sync/route.ts) untuk melakukan rekonsiliasi sinkronisasi dua arah (bidirectional) berbasis timestamp (push local update ke Jira jika ada edit lokal terbaru, dan pull update dari Jira ke lokal jika ada pembaruan di Jira, serta sinkronisasi status pengerjaan).
+- **Halaman Tampilan (UI)**:
+  - **Action Items Tracker**: Menambahkan inline status select dropdown (`⏳ Open`, `⚙️ In Progress`, `✓ Selesai`) langsung pada baris kartu tugas di [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/action-items/page.tsx). Menyediakan filter status pencarian yang lebih detail.
+  - **Dashboard & Project Details**: Menampilkan label status statis dengan warna serasi (amber/blue/green) pada kartu tugas di [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/page.tsx) and [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/projects/[id]/page.tsx).
+  - **Create & Edit Modals**: Menambahkan input dropdown status pada seluruh form modal pembuatan dan pengeditan tugas di ketiga halaman di atas.
+
+### Hasil Verifikasi:
+- Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).

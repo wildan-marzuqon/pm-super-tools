@@ -18,6 +18,7 @@ interface ActionItem {
   deadline: string;
   pic: string;
   completed: boolean;
+  status: string;
   category_id?: string;
   category_name?: string;
   project_id?: string;
@@ -27,6 +28,19 @@ interface ActionItem {
   created_at: string;
 }
 
+const getStatusStyles = (status: string) => {
+  switch (status) {
+    case 'open':
+      return { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' };
+    case 'in_progress':
+      return { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' };
+    case 'done':
+      return { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' };
+    default:
+      return { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' };
+  }
+};
+
 export default function ActionItemsPage() {
   const { confirm, alert } = useModalDialog();
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
@@ -35,6 +49,7 @@ export default function ActionItemsPage() {
   const [isCreatingAction, setIsCreatingAction] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [jiraUrl, setJiraUrl] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Edit action item state
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
@@ -45,23 +60,25 @@ export default function ActionItemsPage() {
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
-    completed: false
+    completed: false,
+    status: 'open'
   });
 
   // Dropdown state for task completion
   const [showCompleteDropdown, setShowCompleteDropdown] = useState(false);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'done'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'done' | 'pending'>('pending');
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset page on filter change
+  // Reset page and selection on filter change
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [statusFilter, projectFilter, searchQuery, startDate, endDate]);
 
   // Form State for creating action item
@@ -72,7 +89,8 @@ export default function ActionItemsPage() {
     deadline: '',
     pic: 'Wildan',
     projectId: '',
-    categoryId: ''
+    categoryId: '',
+    status: 'open'
   });
 
   const fetchData = async () => {
@@ -99,18 +117,29 @@ export default function ActionItemsPage() {
     }
   };
 
-  const handleSyncJira = async () => {
+  const handleSyncJira = async (direction: 'pull' | 'push') => {
     setIsSyncing(true);
     try {
-      const url = projectFilter !== 'all' ? `/api/jira/sync?projectId=${projectFilter}` : '/api/jira/sync';
+      let url = projectFilter !== 'all' 
+        ? `/api/jira/sync?projectId=${projectFilter}&direction=${direction}` 
+        : `/api/jira/sync?direction=${direction}`;
+      
+      if (direction === 'push' && selectedIds.length > 0) {
+        url += `&actionItemIds=${selectedIds.join(',')}`;
+      }
+
       const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
+        const actionLabel = direction === 'pull' ? 'Pull dari Jira' : 'Push ke Jira';
         await alert(
-          `Sinkronisasi Jira sukses!\n- Pushed: ${data.pushed} task(s)\n- Pulled: ${data.pulled} task(s)\n- Cached: ${data.cached} issues`, 
+          `${actionLabel} sukses!\n- Pushed: ${data.pushed} task(s)\n- Pulled: ${data.pulled} task(s)\n- Cached: ${data.cached} issues`, 
           'Sukses', 
           'success'
         );
+        if (direction === 'push') {
+          setSelectedIds([]);
+        }
         fetchData();
       } else {
         await alert(data.error || 'Terjadi kesalahan saat sinkronisasi Jira.', 'Gagal', 'error');
@@ -147,7 +176,7 @@ export default function ActionItemsPage() {
     if (!newAction.title.trim() || isCreatingAction) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '' });
+    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
     setShowAddForm(false);
     setIsCreatingAction(true);
 
@@ -161,7 +190,8 @@ export default function ActionItemsPage() {
           deadline: formData.deadline,
           pic: formData.pic,
           project_id: formData.projectId || undefined,
-          category_id: formData.categoryId || undefined
+          category_id: formData.categoryId || undefined,
+          status: formData.status
         })
       });
 
@@ -194,7 +224,8 @@ export default function ActionItemsPage() {
       pic: item.pic || '',
       projectId: item.project_id || '',
       categoryId: item.category_id || '',
-      completed: item.completed
+      completed: item.completed,
+      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
     });
   };
 
@@ -210,6 +241,7 @@ export default function ActionItemsPage() {
       projectId: editActionFields.projectId,
       categoryId: editActionFields.categoryId,
       completed: editActionFields.completed,
+      status: editActionFields.status,
       ...fieldsToUpdate
     };
 
@@ -226,6 +258,8 @@ export default function ActionItemsPage() {
               pic: mergedFields.pic,
               project_id: mergedFields.projectId || item.project_id,
               category_id: mergedFields.categoryId || item.category_id,
+              completed: mergedFields.completed,
+              status: mergedFields.status
             }
           : item
       )
@@ -242,7 +276,8 @@ export default function ActionItemsPage() {
           pic: mergedFields.pic,
           project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
           category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
-          completed: mergedFields.completed
+          completed: mergedFields.completed,
+          status: mergedFields.status
         })
       });
     } catch (error) {
@@ -262,7 +297,7 @@ export default function ActionItemsPage() {
     setShowCompleteDropdown(false);
     setActionItems(prev =>
       prev.map(item =>
-        item.id === completedId ? { ...item, completed: true } : item
+        item.id === completedId ? { ...item, completed: true, status: 'done' } : item
       )
     );
 
@@ -282,16 +317,35 @@ export default function ActionItemsPage() {
       await fetch(`/api/action-items/${completedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true })
+        body: JSON.stringify({ completed: true, status: 'done' })
       });
     } catch (error) {
       console.error('Error completing action item:', error);
       // Rollback on failure
       setActionItems(prev =>
         prev.map(item =>
-          item.id === completedId ? { ...item, completed: false } : item
+          item.id === completedId ? { ...item, completed: false, status: 'open' } : item
         )
       );
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    // Optimistic local update
+    setActionItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, status: newStatus, completed: newStatus === 'done' } : item
+      )
+    );
+
+    try {
+      await fetch(`/api/action-items/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (error) {
+      console.error('Error updating action item status:', error);
     }
   };
 
@@ -315,8 +369,10 @@ export default function ActionItemsPage() {
   const filteredItems = actionItems.filter((item) => {
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'pending' && !item.completed) ||
-      (statusFilter === 'done' && item.completed);
+      (statusFilter === 'pending' && item.status !== 'done') ||
+      (statusFilter === 'open' && item.status === 'open') ||
+      (statusFilter === 'in_progress' && item.status === 'in_progress') ||
+      (statusFilter === 'done' && item.status === 'done');
 
     const matchesProject =
       projectFilter === 'all' || item.project_id === projectFilter;
@@ -389,7 +445,7 @@ export default function ActionItemsPage() {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
-            onClick={handleSyncJira}
+            onClick={() => handleSyncJira('pull')}
             disabled={isSyncing}
             style={{
               display: 'inline-flex',
@@ -398,16 +454,39 @@ export default function ActionItemsPage() {
               backgroundColor: '#1E293B',
               color: '#F8FAFC',
               border: '1px solid #334155',
-              padding: '10px 16px',
+              padding: '10px 14px',
               borderRadius: '8px',
               fontWeight: 600,
-              fontSize: '14px',
+              fontSize: '13px',
               cursor: 'pointer',
               transition: 'all 0.2s',
               opacity: isSyncing ? 0.7 : 1
             }}
+            title="Tarik data dari Jira untuk memperbarui data lokal"
           >
-            {isSyncing ? '🔄 Menyinkronkan...' : '🔄 Sinkronkan Jira'}
+            {isSyncing ? '🔄 Menyinkronkan...' : '📥 Pull dari Jira'}
+          </button>
+          <button 
+            onClick={() => handleSyncJira('push')}
+            disabled={isSyncing || selectedIds.length === 0}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: selectedIds.length === 0 ? '#E2E8F0' : '#B45309',
+              color: selectedIds.length === 0 ? '#94A3B8' : '#F8FAFC',
+              border: selectedIds.length === 0 ? '1px solid #CBD5E1' : '1px solid #9A3412',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              opacity: isSyncing ? 0.7 : 1
+            }}
+            title={selectedIds.length === 0 ? "Pilih tugas terlebih dahulu menggunakan checkbox untuk melakukan push ke Jira" : "Kirim tugas terpilih ke Jira"}
+          >
+            {isSyncing ? '🔄 Menyinkronkan...' : `📤 Push ke Jira ${selectedIds.length > 0 ? `(${selectedIds.length})` : ''}`}
           </button>
           <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
             + Action Item Baru
@@ -453,6 +532,25 @@ export default function ActionItemsPage() {
                       onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
                     />
                   </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Status</label>
+                  <select
+                    value={newAction.status}
+                    onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="open">⏳ Open</option>
+                    <option value="in_progress">⚙️ In Progress</option>
+                    <option value="done">✓ Selesai</option>
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Kaitkan ke Project</label>
@@ -512,12 +610,24 @@ export default function ActionItemsPage() {
         <div className={styles.filterRow}>
           <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>Status:</span>
-            <div className={styles.btnGroup}>
+            <div className={styles.btnGroup} style={{ flexWrap: 'wrap' }}>
               <button
                 onClick={() => setStatusFilter('pending')}
                 className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
               >
                 ⏳ Pending
+              </button>
+              <button
+                onClick={() => setStatusFilter('open')}
+                className={`${styles.filterBtn} ${statusFilter === 'open' ? styles.activeFilter : ''}`}
+              >
+                📂 Open
+              </button>
+              <button
+                onClick={() => setStatusFilter('in_progress')}
+                className={`${styles.filterBtn} ${statusFilter === 'in_progress' ? styles.activeFilter : ''}`}
+              >
+                ⚙️ In Progress
               </button>
               <button
                 onClick={() => setStatusFilter('done')}
@@ -602,19 +712,77 @@ export default function ActionItemsPage() {
           </div>
         ) : (
           <>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              backgroundColor: 'var(--card-bg, #ffffff)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color, #e5e7eb)',
+              marginBottom: '12px',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: 'var(--text-color, #1f2937)'
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={displayedItems.length > 0 && displayedItems.every(item => selectedIds.includes(item.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedIds(prev => {
+                        const newIds = [...prev];
+                        displayedItems.forEach(item => {
+                          if (!newIds.includes(item.id)) {
+                            newIds.push(item.id);
+                          }
+                        });
+                        return newIds;
+                      });
+                    } else {
+                      setSelectedIds(prev => prev.filter(id => !displayedItems.map(di => di.id).includes(id)));
+                    }
+                  }}
+                  style={{ width: '16px', height: '16px', accentColor: '#B45309', cursor: 'pointer' }}
+                />
+                Pilih Semua di Halaman Ini
+              </label>
+              <span>Terpilih: <strong>{selectedIds.length}</strong> tugas</span>
+            </div>
+
             <div className={styles.itemsList}>
               {displayedItems.map((item) => {
                 const assocProject = projects.find((p) => p.id === item.project_id);
                 const overdue = isOverdue(item.deadline, item.completed);
+                const resolvedStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'));
                 
                 return (
                   <div
                     key={item.id}
                     className={`${styles.itemRow} ${item.completed ? styles.itemRowDone : ''}`}
                     onClick={() => handleStartEdit(item)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
                   >
-                    <div className={styles.itemContent}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedIds(prev =>
+                          prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
+                        );
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#B45309',
+                        flexShrink: 0
+                      }}
+                    />
+                    <div className={styles.itemContent} style={{ flexGrow: 1 }}>
                       <h3 className={styles.itemTitle}>{item.title}</h3>
                       {item.description && <p className={styles.itemDesc}>{item.description}</p>}
                       <div className={styles.itemMeta}>
@@ -670,6 +838,31 @@ export default function ActionItemsPage() {
                           </a>
                         )}
                       </div>
+                    </div>
+
+                    <div 
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'center' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <select
+                        value={resolvedStatus}
+                        onChange={(e) => handleUpdateStatus(item.id, e.target.value)}
+                        style={{
+                          ...getStatusStyles(resolvedStatus),
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          border: '1px solid',
+                          cursor: 'pointer',
+                          outline: 'none',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <option value="open">⏳ Open</option>
+                        <option value="in_progress">⚙️ In Progress</option>
+                        <option value="done">✓ Selesai</option>
+                      </select>
                     </div>
 
                     <div className={styles.itemDateCol}>
@@ -812,6 +1005,29 @@ export default function ActionItemsPage() {
                       </select>
                     </div>
                   )}
+                </div>
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Status</label>
+                  <select
+                    value={editActionFields.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
+                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="open">⏳ Open</option>
+                    <option value="in_progress">⚙️ In Progress</option>
+                    <option value="done">✓ Selesai</option>
+                  </select>
                 </div>
               </div>
               <div className={styles.modalFooter}>

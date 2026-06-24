@@ -30,21 +30,25 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    const mappedItems = items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      deadline: item.deadline,
-      pic: item.pic,
-      completed: item.completed,
-      project_id: item.projectId || null,
-      source_note_id: item.sourceNoteId || null,
-      category_id: item.categoryId || null,
-      category_name: item.category?.name || null,
-      jiraKey: item.jiraKey || null,
-      jiraSyncedAt: item.jiraSyncedAt || null,
-      created_at: item.createdAt
-    }));
+    const mappedItems = items.map((item) => {
+      const resolvedStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : item.status);
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        deadline: item.deadline,
+        pic: item.pic,
+        completed: item.completed,
+        status: resolvedStatus,
+        project_id: item.projectId || null,
+        source_note_id: item.sourceNoteId || null,
+        category_id: item.categoryId || null,
+        category_name: item.category?.name || null,
+        jiraKey: item.jiraKey || null,
+        jiraSyncedAt: item.jiraSyncedAt || null,
+        created_at: item.createdAt
+      };
+    });
 
     return Response.json(mappedItems, {
       headers: {
@@ -65,13 +69,17 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
+    const status = body.status || (body.completed ? 'done' : 'open');
+    const completed = status === 'done';
+
     const newItem = await prisma.actionItem.create({
       data: {
         title: body.title,
         description: body.description || '',
         deadline: body.deadline || '',
         pic: body.pic || '',
-        completed: body.completed || false,
+        completed,
+        status,
         sourceNoteId: body.source_note_id || null,
         projectId: body.project_id || null,
         categoryId: body.category_id || null,
@@ -96,6 +104,7 @@ export async function POST(request: Request) {
       deadline: createdItem.deadline,
       pic: createdItem.pic,
       completed: createdItem.completed,
+      status: createdItem.status,
       project_id: createdItem.projectId || null,
       source_note_id: createdItem.sourceNoteId || null,
       category_id: createdItem.categoryId || null,

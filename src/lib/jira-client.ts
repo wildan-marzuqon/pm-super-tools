@@ -59,6 +59,43 @@ function buildADFDescription(text: string) {
   };
 }
 
+function parseADFDescription(adf: any): string {
+  if (!adf) return '';
+  if (typeof adf === 'string') return adf;
+  if (adf.type === 'doc' && Array.isArray(adf.content)) {
+    let text = '';
+    for (const block of adf.content) {
+      if (block.type === 'paragraph' && Array.isArray(block.content)) {
+        for (const inline of block.content) {
+          if (inline.type === 'text' && inline.text) {
+            text += inline.text;
+          }
+        }
+        text += '\n';
+      } else if (block.type === 'bulletList' || block.type === 'orderedList') {
+        if (Array.isArray(block.content)) {
+          for (const item of block.content) {
+            if (item.type === 'listItem' && Array.isArray(item.content)) {
+              for (const p of item.content) {
+                if (p.type === 'paragraph' && Array.isArray(p.content)) {
+                  for (const inline of p.content) {
+                    if (inline.type === 'text' && inline.text) {
+                      text += `- ${inline.text}`;
+                    }
+                  }
+                  text += '\n';
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return text.trim();
+  }
+  return '';
+}
+
 /**
  * Fetch issues from Jira for a list of project keys.
  */
@@ -85,11 +122,13 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
         'key',
         'issuetype',
         'summary',
+        'description',
         'assignee',
         'priority',
         'status',
         'duedate',
         'created',
+        'updated',
         'timetracking',
         'timeoriginalestimate'
       ]
@@ -111,14 +150,44 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
       key: issue.key,
       issueType: fields.issuetype?.name || 'Task',
       summary: fields.summary || '',
+      description: parseADFDescription(fields.description),
       assignee: fields.assignee?.displayName || 'Unassigned',
       priority: fields.priority?.name || 'Medium',
       status: fields.status?.name || 'To Do',
       startDate: fields.created ? new Date(fields.created) : null,
       dueDate: fields.duedate ? new Date(fields.duedate) : null,
-      originalEstimate: fields.timetracking?.originalEstimateSeconds || fields.timeoriginalestimate || 0
+      originalEstimate: fields.timetracking?.originalEstimateSeconds || fields.timeoriginalestimate || 0,
+      updatedAt: fields.updated ? new Date(fields.updated) : null
     };
   });
+}
+
+/**
+ * Find a Jira user's accountId by their display name.
+ */
+export async function findJiraUser(displayName: string): Promise<string | null> {
+  if (!displayName || displayName.toLowerCase() === 'unassigned') {
+    return null;
+  }
+  const config = await getJiraConfig();
+  if (!config) return null;
+
+  try {
+    const url = `${config.jiraUrl}/rest/api/3/user/search?query=${encodeURIComponent(displayName)}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(config)
+    });
+    if (response.ok) {
+      const users = await response.json();
+      if (Array.isArray(users) && users.length > 0) {
+        return users[0].accountId || null;
+      }
+    }
+  } catch (err) {
+    console.error(`Error searching Jira user by display name "${displayName}":`, err);
+  }
+  return null;
 }
 
 /**
@@ -127,15 +196,22 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
 export async function createJiraIssue(
   projectKey: string,
   summary: string,
-  description: string
+  description: string,
+  deadline?: string,
+  assigneeName?: string
 ): Promise<{ key: string; self: string }> {
   const config = await getJiraConfig();
   if (!config) {
     throw new Error('Jira is not configured. Please set credentials in Settings.');
   }
 
+  let accountId: string | null = null;
+  if (assigneeName) {
+    accountId = await findJiraUser(assigneeName);
+  }
+
   const url = `${config.jiraUrl}/rest/api/3/issue`;
-  const body = {
+  const body: any = {
     fields: {
       project: {
         key: projectKey
@@ -147,6 +223,13 @@ export async function createJiraIssue(
       }
     }
   };
+
+  if (deadline) {
+    body.fields.duedate = deadline;
+  }
+  if (accountId) {
+    body.fields.assignee = { accountId };
+  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -173,20 +256,39 @@ export async function createJiraIssue(
 export async function updateJiraIssue(
   jiraKey: string,
   summary: string,
-  description: string
+  description: string,
+  deadline?: string,
+  assigneeName?: string
 ): Promise<void> {
   const config = await getJiraConfig();
   if (!config) {
     throw new Error('Jira is not configured. Please set credentials in Settings.');
   }
 
+  let accountId: string | null = null;
+  if (assigneeName) {
+    accountId = await findJiraUser(assigneeName);
+  }
+
   const url = `${config.jiraUrl}/rest/api/3/issue/${jiraKey}`;
-  const body = {
+  const body: any = {
     fields: {
       summary,
       description: buildADFDescription(description)
     }
   };
+
+  if (deadline) {
+    body.fields.duedate = deadline;
+  } else {
+    body.fields.duedate = null;
+  }
+
+  if (accountId) {
+    body.fields.assignee = { accountId };
+  } else if (assigneeName && (assigneeName.toLowerCase() === 'unassigned' || assigneeName.toLowerCase() === '')) {
+    body.fields.assignee = { accountId: null };
+  }
 
   const response = await fetch(url, {
     method: 'PUT',

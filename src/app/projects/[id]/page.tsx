@@ -20,6 +20,7 @@ interface ActionItem {
   deadline: string;
   pic: string;
   completed: boolean;
+  status?: string;
   category_id?: string;
   category_name?: string;
   project_id?: string;
@@ -53,6 +54,19 @@ interface ProjectDetail {
   created_at: string;
 }
 
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'open':
+      return { text: '⏳ Open', styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' } };
+    case 'in_progress':
+      return { text: '⚙️ In Progress', styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' } };
+    case 'done':
+      return { text: '✓ Selesai', styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' } };
+    default:
+      return { text: 'Open', styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' } };
+  }
+};
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { confirm, alert } = useModalDialog();
   const { id } = use(params);
@@ -82,7 +96,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     deadline: '',
     pic: 'Wildan',
     categoryId: '',
-    completed: false
+    completed: false,
+    status: 'open'
   });
 
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -103,7 +118,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     description: '',
     deadline: '',
     pic: 'Wildan',
-    categoryId: ''
+    categoryId: '',
+    status: 'open'
   });
   const [showAddActionForm, setShowAddActionForm] = useState(false);
 
@@ -211,12 +227,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           deadline: newAction.deadline,
           pic: newAction.pic,
           project_id: project.id,
-          category_id: newAction.categoryId || null
+          category_id: newAction.categoryId || null,
+          status: newAction.status
         })
       });
 
       if (res.ok) {
-        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', categoryId: '' });
+        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', categoryId: '', status: 'open' });
         setShowAddActionForm(false);
         fetchProjectDetail();
       }
@@ -236,7 +253,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       deadline: item.deadline ? item.deadline.substring(0, 10) : '',
       pic: item.pic || '',
       categoryId: item.category_id || '',
-      completed: item.completed
+      completed: item.completed,
+      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
     });
   };
 
@@ -258,6 +276,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         pic: editActionFields.pic,
         category_id: editActionFields.categoryId || null,
         completed: editActionFields.completed,
+        status: editActionFields.status,
         ...fieldsToUpdate
       };
 
@@ -270,7 +289,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           deadline: mergedFields.deadline,
           pic: mergedFields.pic,
           category_id: mergedFields.category_id === '' ? null : mergedFields.category_id,
-          completed: mergedFields.completed
+          completed: mergedFields.completed,
+          status: mergedFields.status
         })
       });
 
@@ -289,7 +309,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          completed: true
+          completed: true,
+          status: 'done'
         })
       });
       if (res.ok) {
@@ -983,6 +1004,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       </div>
                       <div className={styles.formGroup}>
+                        <label>Status</label>
+                        <select
+                          value={newAction.status}
+                          onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            fontSize: '14px',
+                            outline: 'none',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          <option value="open">⏳ Open</option>
+                          <option value="in_progress">⚙️ In Progress</option>
+                          <option value="done">✓ Selesai</option>
+                        </select>
+                      </div>
+                      <div className={styles.formGroup}>
                         <label>Kategori</label>
                         <select
                           value={newAction.categoryId}
@@ -1112,6 +1152,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <h3 className={styles.itemTitle}>{item.title}</h3>
                             {item.description && <p className={styles.itemDesc}>{item.description}</p>}
                             <div className={styles.itemMeta}>
+                              {(() => {
+                                const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
+                                return (
+                                  <span
+                                    style={{
+                                      ...badge.styles,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '10px',
+                                      fontWeight: 700,
+                                      border: '1px solid',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    {badge.text}
+                                  </span>
+                                );
+                              })()}
                               <span className={styles.picBadge}>PIC: {item.pic}</span>
                               {item.category_name && (
                                 <span className={styles.categoryTagBadge} title={item.category_name}>
@@ -1626,6 +1685,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         {cat.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Status</label>
+                  <select
+                    value={editActionFields.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
+                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="open">⏳ Open</option>
+                    <option value="in_progress">⚙️ In Progress</option>
+                    <option value="done">✓ Selesai</option>
                   </select>
                 </div>
               </div>

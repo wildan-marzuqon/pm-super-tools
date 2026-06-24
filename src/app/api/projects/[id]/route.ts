@@ -46,19 +46,25 @@ export async function GET(
         order: s.order,
         completed_at: s.completedAt ? s.completedAt.toISOString() : null
       })),
-      actionItems: project.actions.map((item) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        deadline: item.deadline,
-        pic: item.pic,
-        completed: item.completed,
-        project_id: item.projectId || null,
-        source_note_id: item.sourceNoteId || null,
-        category_id: item.categoryId || null,
-        category_name: item.category?.name || null,
-        created_at: item.createdAt
-      })),
+      actionItems: project.actions.map((item) => {
+        const resolvedStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : item.status);
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          deadline: item.deadline,
+          pic: item.pic,
+          completed: item.completed,
+          status: resolvedStatus,
+          project_id: item.projectId || null,
+          source_note_id: item.sourceNoteId || null,
+          category_id: item.categoryId || null,
+          category_name: item.category?.name || null,
+          jiraKey: item.jiraKey || null,
+          jiraSyncedAt: item.jiraSyncedAt || null,
+          created_at: item.createdAt
+        };
+      }),
       artifacts: project.artifacts.map((a) => ({
         id: a.id,
         projectId: a.projectId,

@@ -24,6 +24,7 @@ interface ActionItem {
   deadline: string;
   pic: string;
   completed: boolean;
+  status: string;
   category_id?: string;
   category_name?: string;
   project_id?: string;
@@ -39,6 +40,19 @@ interface Note {
   tags: string[];
   updated_at: string;
 }
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'open':
+      return { text: '⏳ Open', styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' } };
+    case 'in_progress':
+      return { text: '⚙️ In Progress', styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' } };
+    case 'done':
+      return { text: '✓ Selesai', styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' } };
+    default:
+      return { text: 'Open', styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' } };
+  }
+};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -61,7 +75,8 @@ export default function Dashboard() {
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
-    completed: false
+    completed: false,
+    status: 'open'
   });
 
   // Dropdown state for task completion
@@ -75,7 +90,8 @@ export default function Dashboard() {
     deadline: '',
     pic: 'Wildan',
     projectId: '',
-    categoryId: ''
+    categoryId: '',
+    status: 'open'
   });
 
   useEffect(() => {
@@ -124,7 +140,8 @@ export default function Dashboard() {
       pic: item.pic || '',
       projectId: item.project_id || '',
       categoryId: item.category_id || '',
-      completed: item.completed
+      completed: item.completed,
+      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
     });
   };
 
@@ -139,6 +156,7 @@ export default function Dashboard() {
       projectId: editActionFields.projectId,
       categoryId: editActionFields.categoryId,
       completed: editActionFields.completed,
+      status: editActionFields.status,
       ...fieldsToUpdate
     };
 
@@ -155,6 +173,8 @@ export default function Dashboard() {
               pic: mergedFields.pic,
               project_id: mergedFields.projectId || item.project_id,
               category_id: mergedFields.categoryId || item.category_id,
+              completed: mergedFields.completed,
+              status: mergedFields.status
             }
           : item
       )
@@ -171,7 +191,8 @@ export default function Dashboard() {
           pic: mergedFields.pic,
           project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
           category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
-          completed: mergedFields.completed
+          completed: mergedFields.completed,
+          status: mergedFields.status
         })
       });
     } catch (error) {
@@ -190,7 +211,7 @@ export default function Dashboard() {
     setShowCompleteDropdown(false);
     setActionItems(prev =>
       prev.map(item =>
-        item.id === completedId ? { ...item, completed: true } : item
+        item.id === completedId ? { ...item, completed: true, status: 'done' } : item
       )
     );
 
@@ -198,7 +219,8 @@ export default function Dashboard() {
       setNewAction(prev => ({
         ...prev,
         projectId: assocProj ? assocProj.id : '',
-        categoryId: ''
+        categoryId: '',
+        status: 'open'
       }));
       setShowAddForm(true);
     }
@@ -207,14 +229,14 @@ export default function Dashboard() {
       await fetch(`/api/action-items/${completedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true })
+        body: JSON.stringify({ completed: true, status: 'done' })
       });
     } catch (error) {
       console.error('Error completing action item:', error);
       // Rollback on failure
       setActionItems(prev =>
         prev.map(item =>
-          item.id === completedId ? { ...item, completed: false } : item
+          item.id === completedId ? { ...item, completed: false, status: 'open' } : item
         )
       );
     }
@@ -225,7 +247,7 @@ export default function Dashboard() {
     if (!newAction.title) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '' });
+    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
     setShowAddForm(false);
 
     try {
@@ -237,7 +259,8 @@ export default function Dashboard() {
           description: formData.description,
           deadline: formData.deadline,
           pic: formData.pic,
-          completed: false,
+          completed: formData.status === 'done',
+          status: formData.status,
           project_id: formData.projectId || null,
           category_id: formData.categoryId || null
         })
@@ -564,6 +587,25 @@ export default function Dashboard() {
                       <div className={styles.actionMain}>
                         <p className={styles.actionTitle}>{item.title}</p>
                         <div className={styles.actionMeta}>
+                          {(() => {
+                            const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
+                            return (
+                              <span
+                                style={{
+                                  ...badge.styles,
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  border: '1px solid',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                {badge.text}
+                              </span>
+                            );
+                          })()}
                           <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
                           {item.category_name && (
                             <span className={styles.categoryTagBadge} title={item.category_name}>
@@ -719,6 +761,29 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Status</label>
+                  <select
+                    value={editActionFields.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
+                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="open">⏳ Open</option>
+                    <option value="in_progress">⚙️ In Progress</option>
+                    <option value="done">✓ Selesai</option>
+                  </select>
+                </div>
               </div>
               <div className={styles.modalFooter}>
                 <button type="button" className={styles.cancelBtn} onClick={() => { setEditingAction(null); setShowCompleteDropdown(false); }}>
@@ -805,6 +870,25 @@ export default function Dashboard() {
                       onChange={(e) => setNewAction({ ...newAction, deadline: e.target.value })}
                     />
                   </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Status</label>
+                  <select
+                    value={newAction.status}
+                    onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="open">⏳ Open</option>
+                    <option value="in_progress">⚙️ In Progress</option>
+                    <option value="done">✓ Selesai</option>
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Kaitkan ke Project</label>

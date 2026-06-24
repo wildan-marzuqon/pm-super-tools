@@ -30,7 +30,9 @@ model ActionItem {
   sourceNoteId String?  @map("source_note_id")
   projectId    String?  @map("project_id")
   categoryId   String?  @map("category_id")
+  status       String   @default("open")
   createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   // WhatsApp Copilot specific fields
   sourceType    String    @default("manual") @map("source_type")

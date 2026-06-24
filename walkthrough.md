@@ -1,93 +1,61 @@
-# Walkthrough — Teams Load Feature & Notes Selection Bug Fix
+# Walkthrough — Daily Plan Page & Dashboard Rework 📅⚡
 
-Dokumentasi mengenai penambahan menu baru **Teams Load** untuk memproyeksikan kapasitas kerja tim dari Jira export serta perbaikan bug **Notes auto-save overwrite** ketika berpindah catatan.
-
----
-
-## 1. Fitur Baru: Teams Load (Proyeksi Kapasitas Tim)
-
-Fitur ini membantu Project Manager untuk melihat proyeksi alokasi beban kerja harian tim selama seminggu, sebulan, atau rentang waktu kustom (custom dates) berdasarkan file ekspor CSV dari Jira.
-
-### Perubahan File & Struktur:
-- **Database Model**: Menambahkan tabel [JiraIssue](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/prisma/schema.prisma#L92-L106) di schema Prisma untuk menyimpan informasi tugas yang diimpor.
-- **Sidebar Menu**: Menambahkan menu "Teams Load" di [Sidebar.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/components/Sidebar.tsx#L59-L69).
-- **API Endpoint**: Membuat [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/jira-issues/route.ts) untuk mengambil (`GET`) dan menyimpan (`POST` via database transaction bulk replace) data isu Jira.
-- **Halaman Proyeksi**: Membuat halaman visualisasi utama di [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/teams-load/page.tsx) dan stylesheet [page.module.css](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/teams-load/page.module.css).
-
-### Fungsionalitas & Desain UI/UX Premium:
-1. **Drag-and-Drop CSV Upload**: Modal upload mendukung drag-and-drop file dengan indikasi visual yang responsif.
-2. **Robust Date Parsing**: Kompatibel dengan format tanggal Jira (`DD/MM/YYYY`, `YYYY-MM-DD`, dan singkatan nama bulan bahasa Inggris maupun bahasa Indonesia seperti `Jun`, `Mei`, `Agu`, `Oct`, dll.).
-3. **Date Baseline Terkini (Sistem)**: Halaman selalu memproyeksikan rentang tanggal berdasarkan tanggal sistem saat ini (`new Date()`).
-   - Mingguan akan selalu ditarik dari hari Senin di minggu berjalan.
-   - Bulanan ditarik dari tanggal 1 bulan berjalan.
-4. **Task Range Overlap Filtering**: Tabel kini disaring secara cerdas sehingga hanya menampilkan tugas-tugas yang rentang kerjanya bersinggungan langsung dengan range tanggal terpilih, sehingga menghindari baris kosong/tidak relevan.
-5. **Continuous Pill Highlights**: Sel-sel aktif pengerjaan tugas yang berlangsung lebih dari 1 hari digabungkan secara visual menjadi satu pill bar horizontal berkelanjutan (tanpa border kiri-kanan pada sel tengah, dan dilengkapi *rounded corners* di ujung kiri/kanan pengerjaan) lengkap dengan kalkulasi jam/hari kerja yang proporsional.
-6. **Dynamic Team Capacity Scaling**: Jika memfilter "Semua Anggota Tim" (All), kapasitas dasar harian otomatis dikalikan dengan jumlah anggota yang ada di database agar perbandingan total alokasi dan kapasitas tetap akurat.
-7. **Jira Issue Clickable Links**: Kode kunci isu (Issue Key) di kolom tabel utama sekarang berupa tautan aktif yang jika di-klik akan membuka tiket Jira asli secara otomatis pada tab browser baru (`https://cakra.atlassian.net/browse/[KEY]`). Kami juga menambahkan efek transisi hover premium berwarna amber pada tombol tag kunci isu tersebut.
+Perubahan ini menambahkan halaman **Daily Plan** baru untuk pengelolaan agenda harian (Task, Meeting, Focus Block) yang terintegrasi dengan Action Items, melengkapi menu Sidebar dengan dot badge indikator, serta mendesain ulang layout **Dashboard** utama dengan visualisasi progress bar proyek dan ringkasan agenda.
 
 ---
 
-## 2. Perbaikan Bug: Notes Auto-Save Overwrite
+## 1. Perubahan Utama yang Dilakukan:
 
-### Masalah:
-Saat berpindah-pindah catatan (misal dari Note A ke Note B), ProseMirror/Tiptap memicu event `onUpdate` secara asinkron. Karena render React asinkron dan status `selectedNote` di dalam callback masih menyimpan Note lama (Note A) sementara isi editor sudah berubah ke Note baru (Note B), sistem menyimpan isi Note B ke dalam data Note A.
+### A. Skema Database & Sinkronisasi (`prisma/schema.prisma`)
+- Menambahkan model `DailyPlanEntry` untuk melacak entri agenda harian:
+  - `date`: format tanggal `"YYYY-MM-DD"`.
+  - `startTime` & `endTime`: format waktu `"HH:MM"`.
+  - `type`: tipe entri (`"task"` | `"meeting"` | `"focus"`).
+  - `status`: untuk tipe `task` (`"open"`, `"in_progress"`, `"done"`) dan tipe `meeting/focus` (`"pending"`, `"done"`, `"skipped"`).
+  - `actionItemId`: relasi opsional ke `ActionItem` (dengan opsi `onDelete: SetNull`).
+- Menambahkan relasi `dailyPlanEntries` ke dalam model `ActionItem`.
+- Menjalankan sinkronisasi skema ke database Neon PostgreSQL (`npx prisma db push`) dan memperbarui client (`npx prisma generate`).
 
-### Solusi:
-- **`data-note-id` Validation**: Menambahkan atribut `data-note-id` pada container editor. Sebelum `handleContentChange` dipicu pada event `onUpdate`, editor memvalidasi apakah note ID saat ini sesuai dengan state render `selectedNote.id`. Jika tidak sama, update diabaikan karena merupakan sisa transition asinkron.
-- **Synchronous Reference Update**: Melakukan pembaruan terhadap `lastSavedContentRef.current` secara sinkron langsung di dalam fungsi `selectNote` sebelum content editor di-set ulang. Hal ini mencegah perbandingan konten mendeteksi "perubahan" palsu akibat membandingkan note baru dengan konten note lama yang tersisa di cache.
+### B. API Routes (`src/app/api/daily-plan`)
+- **`GET /api/daily-plan?date=YYYY-MM-DD`**:
+  - Mengambil daftar agenda harian berdasarkan tanggal, diurutkan kronologis berdasarkan `startTime`.
+  - Mendukung pengecekan badge di sidebar (`?date=today&badge=true`) yang memeriksa apakah ada agenda aktif untuk hari ini yang sedang berjalan (*ongoing*) atau akan mulai dalam 15 menit (*upcoming*).
+- **`POST /api/daily-plan`**:
+  - Membuat rencana harian baru.
+  - Jika bertipe `task` dan opsi `"Buat action item baru otomatis"` dicentang, sistem otomatis membuat `ActionItem` baru dengan default PIC `"Wildan"` dan menautkannya.
+- **`PUT /api/daily-plan/[id]`**:
+  - Mengubah detail rencana harian.
+  - **Sinkronisasi Status Otomatis**: Jika tipe entri adalah `task` dan status rencana diubah (`open`/`in_progress`/`done`), sistem otomatis menyinkronkan status tersebut ke `ActionItem` yang terhubung.
+- **`PUT /api/action-items/[id]` (Sync Tambahan)**:
+  - Ketika status `ActionItem` diubah langsung di halaman Action Items tracker, sistem otomatis menyinkronkan status tersebut ke semua entri `DailyPlanEntry` bertipe `task` yang terhubung.
+- **`DELETE /api/daily-plan/[id]`**:
+  - Menghapus rencana harian secara aman.
+
+### C. Halaman Daily Plan (`src/app/daily-plan`)
+- **Timeline Harian**: Menampilkan daftar agenda secara kronologis dengan garis timeline visual yang elegan.
+- **Current Time Indicator**: Garis horizontal merah dengan penunjuk waktu riil `"jam sekarang (09:32)"` yang otomatis tersisip secara dinamis di sela-sela entri agenda harian (hanya aktif jika tanggal yang dipilih adalah hari ini).
+- **In-App Banner Reminder** (Sticky di atas):
+  - 🔴 **Overdue**: Muncul jika ada rencana hari ini yang sudah lewat jam selesainya namun statusnya belum diselesaikan.
+  - 🟠 **Ongoing**: Muncul jika rencana sedang berlangsung.
+  - 🟡 **Upcoming**: Muncul jika rencana akan dimulai dalam waktu $\le 15$ menit.
+  - Banner dapat di-dismiss oleh pengguna (tombol &times;) dan mengevaluasi status secara otomatis setiap 60 detik.
+- **Read-Only Mode untuk Tanggal Lampau**: Jika pengguna melihat tanggal kemarin/lampau, tombol tambah rencana, edit, hapus, dan tombol aksi cepat status dinonaktifkan secara penuh.
+- **Modal Add/Edit**: Form premium dengan validasi, di mana pilihan waktu selesai otomatis diset +1 jam saat waktu mulai diubah, serta dropdown pencarian Action Item pending untuk kemudahan tautan.
+
+### D. Sidebar Menu (`src/components/Sidebar.tsx`)
+- Menata ulang menu Sidebar dan menyisipkan **Daily Plan** di urutan ke-2 (setelah Dashboard).
+- Menambahkan dot badge berkedip (merah untuk *ongoing*, amber untuk *upcoming*) di samping nama menu "Daily Plan" berdasarkan polling API latar belakang setiap 60 detik.
+
+### E. Desain Baru Dashboard (`src/app/page.tsx`)
+- **5 Metric Cards**: Ditambah kartu statistik **"Rencana Hari Ini"** yang menampilkan progres kegiatan hari ini (misal: `2/5 selesai`).
+- **Akses Cepat (Quick Actions)**: Baris tombol pintasan cepat untuk membuat Rencana Harian, tambah Action Item, Note Baru, dan Sync Jira.
+- **Rencana Hari Ini (Mini Preview)**: Menampilkan 3 rencana teratas hari ini secara kronologis dengan indikator tipe dan status.
+- **Proyek Aktif (Stage progress)**: Menampilkan seluruh proyek yang berstatus aktif lengkap dengan visual progress bar persentase tahap pengerjaan proyek.
 
 ---
 
-## 3. Fitur Tambahan: Custom Dialog Modal System (ModalProvider)
+## 2. Hasil Verifikasi dan Build:
 
-### Masalah:
-Notifikasi default browser seperti `alert(...)` dan `confirm(...)` menghentikan sementara jalannya thread utama JS browser, berpenampilan kaku (default OS), serta mengganggu kelancaran *user flow*.
-
-### Solusi:
-- **`ModalProvider` Component**: Membuat komponen penyedia context dialog global [ModalProvider.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/components/ModalProvider.tsx) yang menawarkan API berbasis `Promise`.
-  - Fungsi `confirm(...)` mengembalikan `Promise<boolean>` sehingga penulisan logika di halaman tetap clean menggunakan sintaksis `await confirm(...)` tanpa memecah alur kode menjadi callback.
-  - Fungsi `alert(...)` mendukung tingkat keparahan (*severity*): `'success'`, `'info'`, dan `'error'`.
-- **Theme Matching Design**: Pop-up dialog dirancang secara estetik dengan animasi *popover* masuk (`animate-popover`), efek latar belakang blur (`backdrop-filter: blur`), serta dekorasi warna, ikon, dan tombol yang serasi dengan identitas SuperPM (amber/orange/emerald/red).
-- **Codebase Integration**: Mengganti seluruh pemanggilan `confirm(...)` dan `alert(...)` bawaan browser di seluruh halaman:
-  - [Action Items Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/action-items/page.tsx)
-  - [Notes Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/notes/page.tsx)
-  - [Project Detail Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/projects/%5Bid%5D/page.tsx)
-  - [Teams Load Page](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/teams-load/page.tsx)
-
----
-
-## 4. Perbaikan Bug: Sinkronisasi Tanggal Stages (completed_at)
-
-### Masalah:
-- Format tanggal pengerjaan tahapan proyek mengalami ketidakcocokan penamaan (naming mismatch) antara skema Prisma di database (`completedAt` dalam format camelCase) dengan state yang diharapkan di sisi klien/halaman React (`completed_at` dalam format snake_case). Akibatnya:
-  - Tanggal input di tab *Settings & Stages* selalu kosong saat halaman di-refresh.
-  - Pengeditan/pembaruan tanggal langsung di-reset kembali menjadi kosong sesaat setelah disimpan.
-- **Kesalahan Status Tahapan**: Pengisian tanggal target/estimasi tahapan proyek secara otomatis menandai status tahapan tersebut sebagai selesai/complete (berwarna orange dengan tanda centang ✓) pada diagram *Progress Pipeline Project*, meskipun proyek belum mencapai atau melewati tahapan tersebut.
-
-### Solusi:
-- **API Mapping (GET & PUT)**: Menambahkan mapper objek pada handler API GET di [/api/projects/[id]/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/route.ts) dan handler PUT/POST di [/api/projects/[id]/stages/route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/projects/[id]/stages/route.ts) untuk mengonversi properti `completedAt` dari database menjadi `completed_at` sebelum dikirimkan ke klien.
-- **Koreksi Logika Penyelesaian (isStageDone)**: Memisahkan penentuan status selesai/complete dari input tanggal (karena tanggal tersebut bersifat estimasi/target, bukan tanggal penyelesaian riil). Sekarang status tahapan selesai (`isStageDone`) murni ditentukan berdasarkan urutan tahapan proyek saat ini (`idx < project.current_stage_index`), sedangkan tanggal estimasi tetap terender secara estetis di bawah nama tahapan pada visual progress pipeline!
-
----
-
-## 5. Hasil Verifikasi (Sebelumnya)
-- Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
-- **Status Git**: Semua perubahan telah di-push ke branch `main`.
-
----
-
-## 6. Bidirectional Jira Sync & Fitur Status Action Item
-
-### Perubahan File & Struktur:
-- **Database Model**: Menambahkan kolom `status` ("open", "in_progress", "done") dan kolom `updatedAt` pada tabel `ActionItem` di [schema.prisma](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/prisma/schema.prisma) untuk melacak perubahan waktu edit lokal secara akurat.
-- **Jira Client Updates**: Memperbarui [jira-client.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/lib/jira-client.ts) dengan dukungan parsing format ADF (Atlassian Document Format) deskripsi Jira ke plain text, pengambilan field updated, serta fungsionalitas pembaruan due date (`duedate`).
-- **API Endpoint**:
-  - Memperbarui route list [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/action-items/route.ts) dan route detail [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/action-items/[id]/route.ts) untuk mendukung pengembalian dan pembaruan field `status` serta penyelarasan status `completed` secara otomatis.
-  - Memperbarui route sinkronisasi [route.ts](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/api/jira/sync/route.ts) untuk melakukan rekonsiliasi sinkronisasi dua arah (bidirectional) berbasis timestamp (push local update ke Jira jika ada edit lokal terbaru, dan pull update dari Jira ke lokal jika ada pembaruan di Jira, serta sinkronisasi status pengerjaan).
-- **Halaman Tampilan (UI)**:
-  - **Action Items Tracker**: Menambahkan inline status select dropdown (`⏳ Open`, `⚙️ In Progress`, `✓ Selesai`) langsung pada baris kartu tugas di [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/action-items/page.tsx). Menyediakan filter status pencarian yang lebih detail.
-  - **Dashboard & Project Details**: Menampilkan label status statis dengan warna serasi (amber/blue/green) pada kartu tugas di [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/page.tsx) and [page.tsx](file:///Users/wildanmarzuqon/Documents/PM%20Advancements/Learning/pm-1/src/app/projects/[id]/page.tsx).
-  - **Create & Edit Modals**: Menambahkan input dropdown status pada seluruh form modal pembuatan dan pengeditan tugas di ketiga halaman di atas.
-
-### Hasil Verifikasi:
-- Menjalankan build via `rtk npm run build` (Build selesai sukses tanpa error TypeScript maupun Turbopack).
+- **Build Sukses**: Kompilasi production Next.js (`npm run build`) berjalan dengan sukses tanpa error tipe data atau Turbopack.
+- **Bahasa Indonesia**: Seluruh antarmuka rencana harian, penunjuk waktu, modal, formulir, dan tombol aksi menggunakan Bahasa Indonesia yang ramah pengguna.
+- **Scrolling Lancar**: Sesuai dengan aturan layout workspace, kontainer halaman `/daily-plan` menggunakan CSS module dengan `height: 100%` dan `overflow-y: auto`.

@@ -41,6 +41,18 @@ interface Note {
   updated_at: string;
 }
 
+interface DailyPlanEntry {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  type: 'task' | 'meeting' | 'focus';
+  title: string;
+  notes: string | null;
+  status: string;
+  actionItemId: string | null;
+}
+
 const getStatusLabel = (status: string) => {
   switch (status) {
     case 'open':
@@ -59,6 +71,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [dailyPlanToday, setDailyPlanToday] = useState<DailyPlanEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -106,20 +119,23 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [projRes, actionRes, notesRes] = await Promise.all([
+        const [projRes, actionRes, notesRes, dailyPlanRes] = await Promise.all([
           fetch('/api/projects'),
           fetch('/api/action-items'),
           fetch('/api/notes'),
+          fetch('/api/daily-plan?date=today')
         ]);
 
-        if (projRes.ok && actionRes.ok && notesRes.ok) {
+        if (projRes.ok && actionRes.ok && notesRes.ok && dailyPlanRes.ok) {
           const projs = await projRes.json();
           const items = await actionRes.json();
           const nts = await notesRes.json();
+          const planToday = await dailyPlanRes.json();
           
           setProjects(projs);
           setActionItems(items);
           setNotes(nts);
+          setDailyPlanToday(planToday);
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -315,7 +331,7 @@ export default function Dashboard() {
         </header>
 
         <section className={styles.metricsGrid}>
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className={styles.metricCard}>
               <div className="skeleton" style={{ height: '14px', width: '80px', marginBottom: '12px' }}></div>
               <div className="skeleton" style={{ height: '36px', width: '50px', marginBottom: '8px' }}></div>
@@ -339,29 +355,16 @@ export default function Dashboard() {
               ))}
             </div>
           </section>
-
-          <section className={styles.cardSection}>
-            <div className="skeleton" style={{ height: '20px', width: '150px', marginBottom: '16px' }}></div>
-            <div className={styles.notesGrid}>
-              {[1, 2].map((i) => (
-                <div key={i} className={styles.noteCard}>
-                  <div className="skeleton" style={{ height: '16px', width: '40px', marginBottom: '8px' }}></div>
-                  <div className="skeleton" style={{ height: '18px', width: '80%', marginBottom: '8px' }}></div>
-                  <div className="skeleton" style={{ height: '12px', width: '100%', marginBottom: '4px' }}></div>
-                  <div className="skeleton" style={{ height: '12px', width: '90%' }}></div>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
       </div>
     );
   }
 
   // Derived metrics
-  const activeProjectsCount = projects.filter(
+  const activeProjects = projects.filter(
     (p) => p.current_stage_index < p.stages.length
-  ).length;
+  );
+  const activeProjectsCount = activeProjects.length;
 
   const pendingActions = actionItems.filter((item) => !item.completed);
   const pendingActionsCount = pendingActions.length;
@@ -395,6 +398,10 @@ export default function Dashboard() {
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
   };
   const weekRangeStr = `${formatShortDate(monday)} - ${formatShortDate(sunday)}`;
+
+  // Daily plan stats for today
+  const dailyPlanDoneCount = dailyPlanToday.filter(e => e.status === 'done').length;
+  const dailyPlanTotalCount = dailyPlanToday.length;
 
   // Urgent actions (deadline in the next 7 days or overdue, sorted by date)
   const urgentActions = [...pendingActions]
@@ -462,24 +469,49 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
       {/* Header */}
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>💡 PM Workspace</h1>
-          <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau notes & pipeline proyek startup AI.</p>
-        </div>
-        <div className={styles.actions}>
-          <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
-            + Action Item Baru
-          </button>
-          <Link href="/notes" className={styles.primaryBtn}>
-            <span>+ Note Baru</span>
-          </Link>
-          <Link href="/projects" className={styles.secondaryBtn}>
-            <span>+ Proyek Baru</span>
-          </Link>
+          <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau rencana harian, proyek, action items, dan catatan Anda.</p>
         </div>
       </header>
+
+      {/* Quick Actions Row */}
+      <section className={styles.quickActionsSection}>
+        <h3 className={styles.sectionSmallTitle}>Akses Cepat</h3>
+        <div className={styles.quickActionsGrid}>
+          <Link href="/daily-plan" className={styles.quickActionCard}>
+            <span className={styles.quickActionIcon}>📅</span>
+            <div className={styles.quickActionText}>
+              <strong>Rencana Harian</strong>
+              <span>Atur jadwal hari ini</span>
+            </div>
+          </Link>
+          <button onClick={() => setShowAddForm(true)} className={styles.quickActionCard}>
+            <span className={styles.quickActionIcon}>📋</span>
+            <div className={styles.quickActionText}>
+              <strong>+ Action Item</strong>
+              <span>Tugas baru yang pending</span>
+            </div>
+          </button>
+          <Link href="/notes" className={styles.quickActionCard}>
+            <span className={styles.quickActionIcon}>📝</span>
+            <div className={styles.quickActionText}>
+              <strong>+ Catatan Baru</strong>
+              <span>Tulis ide & rapat</span>
+            </div>
+          </Link>
+          <Link href="/action-items" className={styles.quickActionCard}>
+            <span className={styles.quickActionIcon}>🔄</span>
+            <div className={styles.quickActionText}>
+              <strong>Sync Jira</strong>
+              <span>Tarik/dorong data Jira</span>
+            </div>
+          </Link>
+        </div>
+      </section>
 
       {/* Global Search Bar */}
       <div className={styles.searchBarContainer}>
@@ -500,7 +532,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Metrics Row (5 Cards) */}
       <section className={styles.metricsGrid}>
         <div className={styles.metricCard}>
           <div className={styles.metricHeader}>
@@ -517,7 +549,7 @@ export default function Dashboard() {
             <span className={styles.metricIcon}>⏳</span>
           </div>
           <p className={styles.metricVal}>{pendingActionsCount}</p>
-          <p className={styles.metricSub}>segera selesaikan task secepatnya</p>
+          <p className={styles.metricSub}>Selesaikan segera secepatnya</p>
         </div>
 
         <div className={styles.metricCard}>
@@ -527,6 +559,15 @@ export default function Dashboard() {
           </div>
           <p className={styles.metricVal}>{dueThisWeekCount}</p>
           <p className={styles.metricSub}>Rentang: {weekRangeStr}</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricHeader}>
+            <span className={styles.metricLabel}>Rencana Hari Ini</span>
+            <span className={styles.metricIcon}>🎯</span>
+          </div>
+          <p className={styles.metricVal}>{dailyPlanDoneCount}/{dailyPlanTotalCount}</p>
+          <p className={styles.metricSub}>{dailyPlanTotalCount > 0 ? `${Math.round((dailyPlanDoneCount / dailyPlanTotalCount) * 100)}% selesai` : 'Belum ada rencana'}</p>
         </div>
 
         <div className={styles.metricCard}>
@@ -559,114 +600,209 @@ export default function Dashboard() {
 
       {/* Content Grid */}
       <div className={styles.mainGrid}>
-        {/* Left Column: Urgent Action Items */}
-        <section className={styles.cardSection}>
-          <div className={styles.sectionHeader}>
-            <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Action Items ⚡' : 'Urgent Action Items ⚡'}</h2>
-            <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
-          </div>
-          <div className={styles.sectionCard}>
-            {filteredUrgentActions.length === 0 ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>🎉</span>
-                <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Tidak ada action item mendesak.'}</p>
-                <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
-              </div>
-            ) : (
-              <div className={styles.actionList}>
-                {filteredUrgentActions.map((item) => {
-                  const associatedProject = projects.find((p) => p.id === item.project_id);
-                  const overdue = isOverdue(item.deadline);
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`${styles.actionItemRow} ${item.completed ? styles.actionItemRowDone : ''}`}
-                      onClick={() => handleStartEdit(item)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className={styles.actionMain}>
-                        <p className={styles.actionTitle}>{item.title}</p>
-                        <div className={styles.actionMeta}>
-                          {(() => {
-                            const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
-                            return (
-                              <span
-                                style={{
-                                  ...badge.styles,
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontSize: '10px',
-                                  fontWeight: 700,
-                                  border: '1px solid',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {badge.text}
-                              </span>
-                            );
-                          })()}
-                          <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
-                          {item.category_name && (
-                            <span className={styles.categoryTagBadge} title={item.category_name}>
-                              🏷️ {item.category_name}
-                            </span>
-                          )}
-                          {associatedProject && (
-                            <span className={styles.projectTagBadge} title={associatedProject.name}>
-                              📁 {associatedProject.name}
-                            </span>
-                          )}
+        {/* Left Column: Today's Plan & Active Projects */}
+        <div className={styles.columnGroup}>
+          {/* Today's Plan (Mini) */}
+          <section className={styles.cardSection}>
+            <div className={styles.sectionHeader}>
+              <h2>📅 Rencana Hari Ini</h2>
+              <Link href="/daily-plan" className={styles.viewAll}>Kelola Rencana</Link>
+            </div>
+            <div className={styles.sectionCard}>
+              {dailyPlanToday.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>📅</span>
+                  <p>Belum ada rencana kegiatan untuk hari ini.</p>
+                  <Link href="/daily-plan" className={styles.createLink}>Buat Rencana Harian</Link>
+                </div>
+              ) : (
+                <div className={styles.miniPlanList}>
+                  {dailyPlanToday.slice(0, 3).map((entry) => (
+                    <div key={entry.id} className={styles.miniPlanRow}>
+                      <span className={styles.miniPlanTime}>{entry.startTime} - {entry.endTime}</span>
+                      <div className={styles.miniPlanBody}>
+                        <span className={styles.miniPlanTitle}>{entry.title}</span>
+                        <div className={styles.miniPlanTags}>
+                          <span className={`${styles.miniTypeBadge} ${styles[entry.type]}`}>
+                            {entry.type === 'task' && '🎯 Task'}
+                            {entry.type === 'meeting' && '🤝 Meeting'}
+                            {entry.type === 'focus' && '🧘 Focus'}
+                          </span>
+                          <span className={`${styles.miniStatusBadge} ${styles[entry.status]}`}>
+                            {entry.status}
+                          </span>
                         </div>
                       </div>
-                      <div className={styles.actionDateContainer}>
-                        <span className={`${styles.actionDate} ${overdue ? styles.overdue : ''}`}>
-                          {formatDate(item.deadline)}
-                        </span>
-                        {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
+                  ))}
+                  {dailyPlanToday.length > 3 && (
+                    <div style={{ textAlign: 'center', paddingTop: '8px' }}>
+                      <Link href="/daily-plan" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary-hover)' }}>
+                        Lihat {dailyPlanTotalCount - 3} rencana lainnya &rarr;
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
 
-        {/* Right Column: Recent Notes */}
-        <section className={styles.cardSection}>
-          <div className={styles.sectionHeader}>
-            <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Catatan 📝' : 'Notes Terakhir Diedit 📝'}</h2>
-            <Link href="/notes" className={styles.viewAll}>Buka Notes</Link>
-          </div>
-          <div className={styles.notesGrid}>
-            {filteredRecentNotes.length === 0 ? (
-              <div className={styles.emptyNotesState}>
-                <span className={styles.emptyIcon}>✍️</span>
-                <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Belum ada notes dibuat.'}</p>
-                <Link href="/notes" className={styles.createLink}>Buat note pertama</Link>
-              </div>
-            ) : (
-              filteredRecentNotes.map((note) => (
-                <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
-                  <div className={styles.noteFolderTag}>{note.folder}</div>
-                  <h3 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h3>
-                  <div 
-                    className={styles.noteSnippet}
-                    dangerouslySetInnerHTML={{ 
-                      __html: note.content 
-                        ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + '...'
-                        : 'No content yet...'
-                    }}
-                  />
-                  <div className={styles.noteFooter}>
-                    <span className={styles.noteDate}>Update: {formatDate(note.updated_at)}</span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
+          {/* Active Projects */}
+          <section className={styles.cardSection}>
+            <div className={styles.sectionHeader}>
+              <h2>📁 Proyek Aktif</h2>
+              <Link href="/projects" className={styles.viewAll}>Semua Proyek</Link>
+            </div>
+            <div className={styles.projectsContainer}>
+              {activeProjects.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>📁</span>
+                  <p>Tidak ada proyek aktif saat ini.</p>
+                  <Link href="/projects" className={styles.createLink}>Buat proyek baru</Link>
+                </div>
+              ) : (
+                activeProjects.map((proj) => {
+                  const totalStages = proj.stages.length;
+                  const progressPct = totalStages > 0 
+                    ? Math.round((proj.current_stage_index / totalStages) * 100)
+                    : 0;
+                  const currentStageName = proj.stages[proj.current_stage_index]?.name || 'Selesai';
+                  
+                  return (
+                    <Link href={`/projects/${proj.id}`} key={proj.id} className={styles.projectProgressCard}>
+                      <div className={styles.projectProgressHeader}>
+                        <h3>{proj.name}</h3>
+                        <span className={styles.progressValue}>{progressPct}%</span>
+                      </div>
+                      <span className={styles.currentStageLabel}>Tahap: <strong>{currentStageName}</strong></span>
+                      <div className={styles.progressBarWrapper}>
+                        <div 
+                          className={styles.progressBarFill} 
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                      <p className={styles.projectProgressDesc}>
+                        {proj.description ? proj.description.substring(0, 60) + '...' : 'Tidak ada deskripsi.'}
+                      </p>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* Right Column: Urgent Action Items & Recent Notes */}
+        <div className={styles.columnGroup}>
+          {/* Urgent Action Items */}
+          <section className={styles.cardSection}>
+            <div className={styles.sectionHeader}>
+              <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Action Items ⚡' : 'Action Items Mendesak ⚡'}</h2>
+              <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
+            </div>
+            <div className={styles.sectionCard}>
+              {filteredUrgentActions.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>🎉</span>
+                  <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Tidak ada action item mendesak.'}</p>
+                  <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
+                </div>
+              ) : (
+                <div className={styles.actionList}>
+                  {filteredUrgentActions.map((item) => {
+                    const associatedProject = projects.find((p) => p.id === item.project_id);
+                    const overdue = isOverdue(item.deadline);
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`${styles.actionItemRow} ${item.completed ? styles.actionItemRowDone : ''}`}
+                        onClick={() => handleStartEdit(item)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className={styles.actionMain}>
+                          <p className={styles.actionTitle}>{item.title}</p>
+                          <div className={styles.actionMeta}>
+                            {(() => {
+                              const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
+                              return (
+                                <span
+                                  style={{
+                                    ...badge.styles,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    border: '1px solid',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  {badge.text}
+                                </span>
+                              );
+                            })()}
+                            <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
+                            {item.category_name && (
+                              <span className={styles.categoryTagBadge} title={item.category_name}>
+                                🏷️ {item.category_name}
+                              </span>
+                            )}
+                            {associatedProject && (
+                              <span className={styles.projectTagBadge} title={associatedProject.name}>
+                                📁 {associatedProject.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.actionDateContainer}>
+                          <span className={`${styles.actionDate} ${overdue ? styles.overdue : ''}`}>
+                            {formatDate(item.deadline)}
+                          </span>
+                          {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Recent Notes */}
+          <section className={styles.cardSection}>
+            <div className={styles.sectionHeader}>
+              <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Catatan 📝' : 'Catatan Terakhir Diedit 📝'}</h2>
+              <Link href="/notes" className={styles.viewAll}>Buka Notes</Link>
+            </div>
+            <div className={styles.notesGrid}>
+              {filteredRecentNotes.length === 0 ? (
+                <div className={styles.emptyNotesState}>
+                  <span className={styles.emptyIcon}>✍️</span>
+                  <p>{searchQuery.trim() !== '' ? 'Tidak ada hasil pencarian.' : 'Belum ada notes dibuat.'}</p>
+                  <Link href="/notes" className={styles.createLink}>Buat note pertama</Link>
+                </div>
+              ) : (
+                filteredRecentNotes.map((note) => (
+                  <Link href={`/notes?id=${note.id}`} key={note.id} className={styles.noteCard}>
+                    <div className={styles.noteFolderTag}>{note.folder}</div>
+                    <h3 className={styles.noteTitle}>{note.title || 'Untitled Note'}</h3>
+                    <div 
+                      className={styles.noteSnippet}
+                      dangerouslySetInnerHTML={{ 
+                        __html: note.content 
+                          ? note.content.replace(/<[^>]*>/g, ' ').substring(0, 100) + '...'
+                          : 'No content yet...'
+                      }}
+                    />
+                    <div className={styles.noteFooter}>
+                      <span className={styles.noteDate}>Update: {formatDate(note.updated_at)}</span>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
       </div>
 
       {/* Edit Action Item Modal */}
@@ -945,3 +1081,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -2,10 +2,34 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import styles from './Sidebar.module.css';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [badgeType, setBadgeType] = useState<'ongoing' | 'upcoming' | null>(null);
+
+  useEffect(() => {
+    async function checkBadge() {
+      try {
+        const res = await fetch('/api/daily-plan?date=today&badge=true');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.badge) {
+            setBadgeType(data.type);
+          } else {
+            setBadgeType(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking daily plan badge:', error);
+      }
+    }
+
+    checkBadge();
+    const interval = setInterval(checkBadge, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems = [
     {
@@ -17,6 +41,20 @@ export default function Sidebar() {
           <rect x="14" y="3" width="7" height="5" />
           <rect x="14" y="12" width="7" height="9" />
           <rect x="3" y="16" width="7" height="5" />
+        </svg>
+      )
+    },
+    {
+      name: 'Daily Plan',
+      href: '/daily-plan',
+      hasBadge: true,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+          <path d="M9 16l2 2 4-4" />
         </svg>
       )
     },
@@ -111,6 +149,7 @@ export default function Sidebar() {
       <nav className={styles.nav}>
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const hasActiveBadge = item.hasBadge && badgeType !== null;
           return (
             <Link
               key={item.name}
@@ -119,6 +158,9 @@ export default function Sidebar() {
             >
               <span className={styles.icon}>{item.icon}</span>
               <span className={styles.name}>{item.name}</span>
+              {hasActiveBadge && (
+                <span className={`${styles.badge} ${styles[badgeType]}`} />
+              )}
             </Link>
           );
         })}

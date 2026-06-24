@@ -90,7 +90,7 @@
 /* Metrics Row */
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -985,6 +985,263 @@
 .noteFolderTag {
   font-family: var(--font-fira-code), monospace;
   font-weight: 600;
+}
+
+/* Quick Actions Section */
+.quickActionsSection {
+  margin-bottom: 24px;
+}
+
+.sectionSmallTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .quickActionsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .quickActionsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quickActionCard {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  text-align: left;
+}
+
+.quickActionCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.quickActionIcon {
+  font-size: 22px;
+  width: 38px;
+  height: 38px;
+  background-color: var(--primary-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quickActionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quickActionText strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.quickActionText span {
+  font-size: 11px;
+  color: var(--muted-text);
+}
+
+/* 2-Column Grid Groups */
+.columnGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Today's Plan Mini list */
+.miniPlanList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.miniPlanRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.miniPlanRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.miniPlanTime {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+  font-family: var(--font-fira-code), monospace;
+  white-space: nowrap;
+  width: 90px;
+  padding-top: 2px;
+}
+
+.miniPlanBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+}
+
+.miniPlanTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.miniPlanTags {
+  display: flex;
+  gap: 6px;
+}
+
+.miniTypeBadge, .miniStatusBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.miniTypeBadge.task {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #B45309;
+}
+
+.miniTypeBadge.meeting {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #1D4ED8;
+}
+
+.miniTypeBadge.focus {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.miniStatusBadge.open {
+  background-color: rgba(107, 114, 128, 0.1);
+  color: #4B5563;
+}
+
+.miniStatusBadge.in_progress {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #B45309;
+}
+
+.miniStatusBadge.done {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.miniStatusBadge.pending {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #1D4ED8;
+}
+
+.miniStatusBadge.skipped {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #B91C1C;
+}
+
+/* Active Projects Progress Section */
+.projectsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.projectProgressCard {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.projectProgressCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.projectProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.projectProgressHeader h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.progressValue {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary-hover);
+}
+
+.currentStageLabel {
+  font-size: 11px;
+  color: var(--muted-text);
+  margin-bottom: 8px;
+}
+
+.progressBarWrapper {
+  width: 100%;
+  height: 6px;
+  background-color: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressBarFill {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 3px;
+  transition: width 0.4s ease-out;
+}
+
+.projectProgressDesc {
+  font-size: 11px;
+  color: var(--muted-text);
+  line-height: 1.4;
 }
 
 

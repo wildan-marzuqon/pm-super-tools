@@ -47,6 +47,7 @@ model ActionItem {
   note     Note?            @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
   project  Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category ProjectCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  dailyPlanEntries DailyPlanEntry[]
 
   @@map("action_items")
 }
@@ -208,4 +209,21 @@ model ProjectRisk {
   project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_risks")
+}
+
+model DailyPlanEntry {
+  id           String      @id @default(cuid())
+  date         String      // "2026-06-24"
+  startTime    String      // "09:00"
+  endTime      String      // "10:00"
+  type         String      @default("task")  // "task" | "meeting" | "focus"
+  title        String
+  notes        String?     @db.Text
+  status       String      @default("open")  // task: open/in_progress/done | meeting: pending/done/skipped
+  actionItemId String?     @map("action_item_id")
+  actionItem   ActionItem? @relation(fields: [actionItemId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())   @map("created_at")
+  updatedAt    DateTime    @updatedAt        @map("updated_at")
+
+  @@map("daily_plan_entries")
 }

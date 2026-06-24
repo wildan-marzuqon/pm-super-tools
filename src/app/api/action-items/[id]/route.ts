@@ -42,6 +42,19 @@ export async function PUT(
       }
     });
 
+    // Sync status change to DailyPlanEntry
+    if (status !== undefined) {
+      await prisma.dailyPlanEntry.updateMany({
+        where: {
+          actionItemId: id,
+          type: 'task'
+        },
+        data: {
+          status: status
+        }
+      });
+    }
+
     return Response.json({
       id: updatedItem.id,
       title: updatedItem.title,

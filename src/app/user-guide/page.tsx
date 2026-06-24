@@ -5,6 +5,7 @@ import styles from './page.module.css';
 
 export default function UserGuidePage() {
   return (
+    <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
     <div className={`${styles.container} animate-fade-in`}>
       <header className={styles.header}>
         <h1 className={styles.title}>📖 User Guide — SuperPM</h1>
@@ -363,6 +364,7 @@ export default function UserGuidePage() {
           ))}
         </div>
       </section>
+    </div>
     </div>
   );
 }

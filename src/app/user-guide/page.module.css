@@ -1,0 +1,353 @@
+/* User Guide Page Styles */
+.container {
+  padding: 2rem 2.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 0.4rem;
+}
+
+.subtitle {
+  color: var(--muted-text);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Overview cards */
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.overviewCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.overviewCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.overviewIcon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.overviewTitle {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.overviewDesc {
+  font-size: 0.78rem;
+  color: var(--muted-text);
+  line-height: 1.4;
+}
+
+/* Flow Diagram */
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.flowDiagram {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 2.5rem;
+}
+
+.flowStep {
+  display: flex;
+  gap: 1.2rem;
+  align-items: flex-start;
+  position: relative;
+}
+
+.flowStep:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 1.45rem;
+  top: 3.2rem;
+  width: 2px;
+  height: calc(100% + 0px);
+  background: linear-gradient(to bottom, var(--primary), transparent);
+  z-index: 0;
+}
+
+.flowNum {
+  width: 2.9rem;
+  height: 2.9rem;
+  min-width: 2.9rem;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.flowContent {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.3rem;
+  flex: 1;
+  margin-bottom: 1.2rem;
+}
+
+.flowContent h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.flowContent p {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted-text);
+  line-height: 1.6;
+}
+
+.flowTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.flowTag {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 6px;
+  padding: 2px 9px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.flowTagGreen {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.flowTagOrange {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* Tips Section */
+.tipsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.tipCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+}
+
+.tipHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.tipIcon {
+  font-size: 1.4rem;
+}
+
+.tipTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.tipCard ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted-text);
+  font-size: 0.84rem;
+  line-height: 1.8;
+}
+
+.tipCard li {
+  margin-bottom: 0.1rem;
+}
+
+/* Jira Sync section */
+.syncTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.87rem;
+}
+
+.syncTable th {
+  text-align: left;
+  padding: 0.65rem 1rem;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.syncTable td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--muted-text);
+  vertical-align: middle;
+}
+
+.syncTable tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badgePull {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgePush {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badgeWA {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+/* Shortcut Section */
+.shortcutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 2.5rem;
+}
+
+.shortcutItem {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.shortcutEmoji {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.shortcutText strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+
+.shortcutText span {
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  line-height: 1.4;
+}
+
+/* Status legend */
+.statusLegend {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+
+.statusDot {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.83rem;
+  color: var(--muted-text);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotOpen { background: #6366F1; }
+.dotProgress { background: #F59E0B; }
+.dotDone { background: #10B981; }
+
+.section {
+  margin-bottom: 2.5rem;
+}
+
+.infoBox {
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  font-size: 0.87rem;
+  color: var(--muted-text);
+  line-height: 1.7;
+  margin-top: 1rem;
+}
+
+.infoBox strong {
+  color: var(--text);
+}

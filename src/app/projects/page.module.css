@@ -564,3 +564,50 @@
   transform: translateY(-1px);
 }
 
+/* Form layouts inside modal */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.formGroup label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: all var(--transition-fast);
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: var(--card-bg);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.helpText {
+  font-size: 11px;
+  color: var(--muted-text);
+  margin-top: 2px;
+  text-align: left;
+}
+

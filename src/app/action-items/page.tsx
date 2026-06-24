@@ -102,7 +102,8 @@ export default function ActionItemsPage() {
   const handleSyncJira = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch('/api/jira/sync', { method: 'POST' });
+      const url = projectFilter !== 'all' ? `/api/jira/sync?projectId=${projectFilter}` : '/api/jira/sync';
+      const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         await alert(

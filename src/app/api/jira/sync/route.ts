@@ -12,12 +12,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Get all projects that have a Jira Project Key
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId');
+
+    // 1. Get projects that have a Jira Project Key
     const mappedProjects = await prisma.project.findMany({
       where: {
         AND: [
           { jiraProjectKey: { not: null } },
-          { jiraProjectKey: { not: "" } }
+          { jiraProjectKey: { not: "" } },
+          projectId ? { id: projectId } : {}
         ]
       }
     });
@@ -119,24 +123,58 @@ export async function POST(request: NextRequest) {
       console.error('Error updating JiraIssue cache table:', dbErr);
     }
 
-    // 5. Update local ActionItems based on pulled Jira issue statuses
+    // 5. Update local ActionItems based on pulled Jira issue statuses (or create if not exist)
     let pulledCount = 0;
     const closedStatusNames = ['done', 'closed', 'resolved', 'complete', 'completed', 'selesai'];
     
     for (const issue of fetchedIssues) {
       const isDone = closedStatusNames.includes(issue.status.toLowerCase());
       
-      // Update local action items linked to this Jira issue
-      const updated = await prisma.actionItem.updateMany({
-        where: { jiraKey: issue.key },
-        data: {
-          completed: isDone,
-          jiraSyncedAt: new Date()
-        }
+      const existingItem = await prisma.actionItem.findFirst({
+        where: { jiraKey: issue.key }
       });
-      
-      if (updated.count > 0) {
-        pulledCount += updated.count;
+
+      if (existingItem) {
+        await prisma.actionItem.update({
+          where: { id: existingItem.id },
+          data: {
+            completed: isDone,
+            jiraSyncedAt: new Date()
+          }
+        });
+        pulledCount++;
+      } else {
+        // Create new ActionItem locally!
+        const issueProjectKey = issue.key.split('-')[0];
+        const matchingProject = mappedProjects.find(
+          p => p.jiraProjectKey?.toUpperCase() === issueProjectKey.toUpperCase()
+        );
+        
+        if (matchingProject) {
+          let deadlineStr = "";
+          if (issue.dueDate) {
+            try {
+              deadlineStr = new Date(issue.dueDate).toISOString().split('T')[0];
+            } catch (e) {
+              console.error('Invalid due date format from Jira:', issue.dueDate);
+            }
+          }
+          
+          await prisma.actionItem.create({
+            data: {
+              title: issue.summary,
+              description: `Ditarik dari Jira (${issue.key})`,
+              deadline: deadlineStr,
+              pic: issue.assignee || 'Unassigned',
+              completed: isDone,
+              projectId: matchingProject.id,
+              jiraKey: issue.key,
+              jiraSyncedAt: new Date(),
+              sourceType: "jira"
+            }
+          });
+          pulledCount++;
+        }
       }
     }
 

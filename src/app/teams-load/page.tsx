@@ -27,6 +27,7 @@ export default function TeamsLoadPage() {
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [jiraUrl, setJiraUrl] = useState('');
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -60,9 +61,13 @@ export default function TeamsLoadPage() {
   // Fetch initial Jira issues
   const fetchIssues = async () => {
     try {
-      const res = await fetch('/api/jira-issues');
-      if (res.ok) {
-        const data = await res.json();
+      const [issuesRes, settingsRes] = await Promise.all([
+        fetch('/api/jira-issues'),
+        fetch('/api/wa-copilot/settings')
+      ]);
+
+      if (issuesRes.ok) {
+        const data = await issuesRes.json();
         setIssues(data);
         
         // Extract unique assignees
@@ -73,12 +78,16 @@ export default function TeamsLoadPage() {
 
         // Set default filter if assignee is available
         if (assignees.length > 0 && selectedAssignee === 'all') {
-          // Keep it to 'all' or default to first assignee
           setSelectedAssignee(assignees[0]);
         }
       }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        setJiraUrl(settingsData.jiraUrl || '');
+      }
     } catch (error) {
-      console.error('Error fetching Jira issues:', error);
+      console.error('Error fetching Jira issues data:', error);
     } finally {
       setLoading(false);
     }
@@ -681,17 +690,32 @@ export default function TeamsLoadPage() {
                   <tr key={issue.id}>
                     <td className={styles.fixedCol}>
                       <a 
-                        href={`https://cakra.atlassian.net/browse/${issue.key}`} 
+                        href={jiraUrl ? `${jiraUrl.replace(/\/+$/, '')}/browse/${issue.key}` : '#'} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className={styles.issueKeyLink}
+                        onClick={(e) => !jiraUrl && e.preventDefault()}
                       >
                         <span className={styles.issueKey}>{issue.key}</span>
                       </a>
                     </td>
                     <td className={styles.taskCol}>
-                      <div className={styles.taskTitle} title={issue.summary}>
-                        {issue.summary}
+                      <div className={styles.taskTitle} title={issue.summary} style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{
+                          backgroundColor: 'var(--primary-light, #FEF3C7)',
+                          color: '#B45309',
+                          border: '1px solid rgba(245, 158, 11, 0.2)',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          marginRight: '8px',
+                          fontFamily: 'monospace',
+                          flexShrink: 0
+                        }}>
+                          {issue.key.split('-')[0]}
+                        </span>
+                        <span>{issue.summary}</span>
                       </div>
                     </td>
                     <td>

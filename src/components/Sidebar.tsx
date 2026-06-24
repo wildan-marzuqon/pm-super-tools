@@ -66,6 +66,17 @@ export default function Sidebar() {
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       )
+    },
+    {
+      name: 'WA Copilot',
+      href: '/wa-copilot',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="M12 7v6" />
+          <path d="M9 10h6" />
+        </svg>
+      )
     }
   ];
 

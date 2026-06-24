@@ -32,6 +32,12 @@ model ActionItem {
   categoryId   String?  @map("category_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  // WhatsApp Copilot specific fields
+  sourceType    String    @default("manual") @map("source_type")
+  waChatName    String?   @map("wa_chat_name")
+  waChatLink    String?   @map("wa_chat_link")
+  waExtractedAt DateTime? @map("wa_extracted_at")
+
   note     Note?            @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
   project  Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category ProjectCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -53,6 +59,8 @@ model Project {
   actions              ActionItem[]
   artifacts            Artifact[]
   categories           ProjectCategory[]
+  decisions            Decision[]
+  risks                ProjectRisk[]
 
   @@map("projects")
 }
@@ -108,4 +116,83 @@ model JiraIssue {
   createdAt        DateTime  @default(now()) @map("created_at")
 
   @@map("jira_issues")
+}
+
+model SystemSetting {
+  id           String   @id @default("default")
+  tgBotName    String?  @map("tg_bot_name")
+  tgBotToken   String?  @map("tg_bot_token")
+  tgBotPin     String   @default("1234") @map("tg_bot_pin")
+  geminiApiKey String?  @map("gemini_api_key")
+  appUrl       String?  @map("app_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model TelegramSession {
+  chatId       String   @id @map("chat_id")
+  username     String?
+  isAuthorized Boolean  @default(false) @map("is_authorized")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("telegram_sessions")
+}
+
+model WAPendingFile {
+  chatId       String   @id @map("chat_id")
+  fileName     String   @map("file_name")
+  fileContent  String   @db.Text @map("file_content")
+  dates        String[]
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("wa_pending_files")
+}
+
+model WACopilotDraft {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  description String   @default("") @db.Text
+  pic         String   @default("")
+  deadline    String   @default("")
+  rawChat     String   @db.Text @map("raw_chat")
+  status      String   @default("pending")
+  projectId   String?  @map("project_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("wa_copilot_drafts")
+}
+
+model Decision {
+  id          String   @id @default(uuid())
+  summary     String   @db.Text
+  decidedBy   String?  @map("decided_by")
+  projectId   String?  @map("project_id")
+  waChatName  String?  @map("wa_chat_name")
+  waChatLink  String?  @map("wa_chat_link")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("decisions")
+}
+
+model ProjectRisk {
+  id          String    @id @default(uuid())
+  issue       String    @db.Text
+  impact      String?   @db.Text
+  status      String    @default("active") // "active", "resolved"
+  severity    String    @default("medium") // "low", "medium", "high"
+  projectId   String?   @map("project_id")
+  waChatName  String?   @map("wa_chat_name")
+  waChatLink  String?   @map("wa_chat_link")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_risks")
 }

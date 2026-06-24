@@ -1,0 +1,350 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background);
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--muted-text);
+}
+
+.tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted-text);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--foreground);
+}
+
+.activeTab {
+  color: #B45309;
+  border-bottom-color: var(--primary);
+  font-weight: 700;
+}
+
+/* Settings Form Styles */
+.settingsForm {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 28px;
+  max-width: 680px;
+  box-shadow: var(--shadow-md);
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.formInput {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: border-color var(--transition-fast);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: var(--card-bg);
+}
+
+.formHelp {
+  display: block;
+  font-size: 12px;
+  color: var(--muted-text);
+  margin-top: 6px;
+}
+
+.saveButton {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+}
+
+.saveButton:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Alert Boxes */
+.alert {
+  padding: 16px;
+  border-radius: var(--border-radius-md);
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alertSuccess {
+  background-color: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+}
+
+.alertError {
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+}
+
+/* Draft List Styles */
+.draftList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 900px;
+}
+
+.draftCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.draftCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.draftHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.typeBadge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.badge_action_item {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+}
+
+.badge_decision {
+  background-color: #ECFDF5;
+  color: #065F46;
+}
+
+.badge_blocker {
+  background-color: #FEF2F2;
+  color: #991B1B;
+}
+
+.draftDate {
+  font-size: 12px;
+  color: var(--muted-text);
+}
+
+.draftBody {
+  margin-bottom: 20px;
+}
+
+.draftTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.draftDesc {
+  font-size: 14px;
+  color: var(--muted-text);
+  line-height: 1.5;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.draftMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--background);
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  color: var(--foreground);
+  font-weight: 600;
+  border: 1px solid var(--card-border);
+}
+
+.metaLabel {
+  color: var(--muted-text);
+  font-weight: 500;
+}
+
+/* Card Actions */
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.btnSecondary {
+  background-color: var(--background);
+  border-color: var(--card-border);
+  color: var(--muted-text);
+}
+
+.btnSecondary:hover {
+  background-color: var(--card-border);
+  color: var(--foreground);
+}
+
+.btnDanger {
+  background-color: #FFF5F5;
+  border-color: #FED7D7;
+  color: #C53030;
+}
+
+.btnDanger:hover {
+  background-color: #FED7D7;
+}
+
+.btnPrimary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btnPrimary:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Inline Editor Styles */
+.editorForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editorRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .editorRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Loading/Empty States */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--muted-text);
+}
+
+.emptyState {
+  background: var(--card-bg);
+  border: 2px dashed var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 48px;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: var(--muted-text);
+  line-height: 1.5;
+}

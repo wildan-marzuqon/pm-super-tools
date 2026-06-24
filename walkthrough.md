@@ -1,61 +1,40 @@
 # Walkthrough — Daily Plan Page & Dashboard Rework 📅⚡
 
-Perubahan ini menambahkan halaman **Daily Plan** baru untuk pengelolaan agenda harian (Task, Meeting, Focus Block) yang terintegrasi dengan Action Items, melengkapi menu Sidebar dengan dot badge indikator, serta mendesain ulang layout **Dashboard** utama dengan visualisasi progress bar proyek dan ringkasan agenda.
+Dokumentasi ini mencakup penambahan fitur **Daily Plan** baru, perbaikan bug offset tanggal (timezone), perombakan layout halaman menjadi split-screen dengan Sidebar Kalender, inline quick add, compact 1-line cards, serta pembaruan Dashboard utama.
 
 ---
 
-## 1. Perubahan Utama yang Dilakukan:
+## 1. Perbaikan & Fitur yang Diimplementasikan:
 
-### A. Skema Database & Sinkronisasi (`prisma/schema.prisma`)
-- Menambahkan model `DailyPlanEntry` untuk melacak entri agenda harian:
-  - `date`: format tanggal `"YYYY-MM-DD"`.
-  - `startTime` & `endTime`: format waktu `"HH:MM"`.
-  - `type`: tipe entri (`"task"` | `"meeting"` | `"focus"`).
-  - `status`: untuk tipe `task` (`"open"`, `"in_progress"`, `"done"`) dan tipe `meeting/focus` (`"pending"`, `"done"`, `"skipped"`).
-  - `actionItemId`: relasi opsional ke `ActionItem` (dengan opsi `onDelete: SetNull`).
-- Menambahkan relasi `dailyPlanEntries` ke dalam model `ActionItem`.
-- Menjalankan sinkronisasi skema ke database Neon PostgreSQL (`npx prisma db push`) dan memperbarui client (`npx prisma generate`).
+### A. Solusi Bug Offset Tanggal (Timezone Bug Fix)
+- **Masalah**: Fungsi `getJakartaTodayStr()` sebelumnya menggunakan `.toISOString().split('T')[0]` setelah memanipulasi waktu UTC. Hal ini menyebabkan konversi balik ke UTC di mana jam awal hari (pagi hari di Jakarta) direpresentasikan sebagai hari sebelumnya di UTC, sehingga data tersimpan di tanggal kemarin dan tidak muncul di Dashboard hari ini.
+- **Solusi**: Mengganti kalkulasi offset manual dengan `Intl.DateTimeFormat` menggunakan locale `'sv-SE'` dan zona waktu `'Asia/Jakarta'`. Fungsi ini secara native menghasilkan format `"YYYY-MM-DD"` yang konsisten di server maupun client.
+- **Dampak**: Sinkronisasi antara data yang dimasukkan di halaman Daily Plan dengan data yang dipanggil di Dashboard berjalan dengan sempurna pada tanggal yang sama.
 
-### B. API Routes (`src/app/api/daily-plan`)
-- **`GET /api/daily-plan?date=YYYY-MM-DD`**:
-  - Mengambil daftar agenda harian berdasarkan tanggal, diurutkan kronologis berdasarkan `startTime`.
-  - Mendukung pengecekan badge di sidebar (`?date=today&badge=true`) yang memeriksa apakah ada agenda aktif untuk hari ini yang sedang berjalan (*ongoing*) atau akan mulai dalam 15 menit (*upcoming*).
-- **`POST /api/daily-plan`**:
-  - Membuat rencana harian baru.
-  - Jika bertipe `task` dan opsi `"Buat action item baru otomatis"` dicentang, sistem otomatis membuat `ActionItem` baru dengan default PIC `"Wildan"` dan menautkannya.
-- **`PUT /api/daily-plan/[id]`**:
-  - Mengubah detail rencana harian.
-  - **Sinkronisasi Status Otomatis**: Jika tipe entri adalah `task` dan status rencana diubah (`open`/`in_progress`/`done`), sistem otomatis menyinkronkan status tersebut ke `ActionItem` yang terhubung.
-- **`PUT /api/action-items/[id]` (Sync Tambahan)**:
-  - Ketika status `ActionItem` diubah langsung di halaman Action Items tracker, sistem otomatis menyinkronkan status tersebut ke semua entri `DailyPlanEntry` bertipe `task` yang terhubung.
-- **`DELETE /api/daily-plan/[id]`**:
-  - Menghapus rencana harian secara aman.
+### B. Split-Screen Layout & Sidebar Kalender
+- **Masalah**: Tampilan selector tanggal sebelumnya memakan ruang vertikal di atas, dan loading penuh halaman terasa lambat saat berpindah tanggal.
+- **Solusi**: 
+  - Membuat tata letak split-screen (dua kolom):
+    - **Kiri (Sidebar Kalender)**: Menampilkan panel daftar hari (rentang 3 minggu: 7 hari sebelum hingga 14 hari sesudah tanggal terpilih) yang dilengkapi dot indikator status kegiatan (abu-abu/orange/hijau).
+    - **Kanan (Timeline)**: Menampilkan timeline kegiatan compact untuk hari terpilih.
+  - **Pre-fetched Range**: Mengubah API dan client agar mem-fetch seluruh entri agenda dalam rentang 3 minggu tersebut dalam satu request API. Perpindahan tanggal di sidebar kini berjalan secara instan (0ms latency) karena data disaring langsung dari memory.
 
-### C. Halaman Daily Plan (`src/app/daily-plan`)
-- **Timeline Harian**: Menampilkan daftar agenda secara kronologis dengan garis timeline visual yang elegan.
-- **Current Time Indicator**: Garis horizontal merah dengan penunjuk waktu riil `"jam sekarang (09:32)"` yang otomatis tersisip secara dinamis di sela-sela entri agenda harian (hanya aktif jika tanggal yang dipilih adalah hari ini).
-- **In-App Banner Reminder** (Sticky di atas):
-  - 🔴 **Overdue**: Muncul jika ada rencana hari ini yang sudah lewat jam selesainya namun statusnya belum diselesaikan.
-  - 🟠 **Ongoing**: Muncul jika rencana sedang berlangsung.
-  - 🟡 **Upcoming**: Muncul jika rencana akan dimulai dalam waktu $\le 15$ menit.
-  - Banner dapat di-dismiss oleh pengguna (tombol &times;) dan mengevaluasi status secara otomatis setiap 60 detik.
-- **Read-Only Mode untuk Tanggal Lampau**: Jika pengguna melihat tanggal kemarin/lampau, tombol tambah rencana, edit, hapus, dan tombol aksi cepat status dinonaktifkan secara penuh.
-- **Modal Add/Edit**: Form premium dengan validasi, di mana pilihan waktu selesai otomatis diset +1 jam saat waktu mulai diubah, serta dropdown pencarian Action Item pending untuk kemudahan tautan.
+### C. Inline Quick Add & Compact 1-Row Cards
+- **Masalah**: Menambahkan rencana baru mengharuskan pengguna bolak-balik membuka modal popup, dan kartu rencana sebelumnya memakan banyak ruang vertikal.
+- **Solusi**:
+  - **Inline Quick Add**: Menambahkan form satu baris di bagian atas timeline. Pengguna cukup memilih jam mulai/selesai, tipe, mengetik judul, dan menekan Enter (atau klik tombol "Tambah") untuk menyimpan agenda baru secara instan.
+  - **Compact 1-Row Cards**: Menyusutkan tampilan entri agenda menjadi baris tunggal horizontal yang ringkas, menata informasi waktu, ikon tipe, judul, tautan Action Item, dropdown status, dan tombol hapus/edit dalam satu baris.
 
-### D. Sidebar Menu (`src/components/Sidebar.tsx`)
-- Menata ulang menu Sidebar dan menyisipkan **Daily Plan** di urutan ke-2 (setelah Dashboard).
-- Menambahkan dot badge berkedip (merah untuk *ongoing*, amber untuk *upcoming*) di samping nama menu "Daily Plan" berdasarkan polling API latar belakang setiap 60 detik.
-
-### E. Desain Baru Dashboard (`src/app/page.tsx`)
-- **5 Metric Cards**: Ditambah kartu statistik **"Rencana Hari Ini"** yang menampilkan progres kegiatan hari ini (misal: `2/5 selesai`).
-- **Akses Cepat (Quick Actions)**: Baris tombol pintasan cepat untuk membuat Rencana Harian, tambah Action Item, Note Baru, dan Sync Jira.
-- **Rencana Hari Ini (Mini Preview)**: Menampilkan 3 rencana teratas hari ini secara kronologis dengan indikator tipe dan status.
-- **Proyek Aktif (Stage progress)**: Menampilkan seluruh proyek yang berstatus aktif lengkap dengan visual progress bar persentase tahap pengerjaan proyek.
+### D. Loading States & Visual Feedback
+- **Masalah**: Kurangnya penanda visual ketika data sedang disimpan atau dihapus membuat antarmuka terasa tidak responsif.
+- **Solusi**:
+  - Menambahkan indikasi visual dinamis: tombol "Simpan" berubah menjadi "Menyimpan..." dan dinonaktifkan ketika form modal dikirim.
+  - Tombol Quick Add inline dinonaktifkan dan menunjukkan status loading (`...`).
+  - Baris kartu agenda yang sedang diperbarui statusnya atau sedang dihapus menunjukkan efek transparansi/disabled (`processingRow`) untuk mencegah double-submission.
 
 ---
 
 ## 2. Hasil Verifikasi dan Build:
 
-- **Build Sukses**: Kompilasi production Next.js (`npm run build`) berjalan dengan sukses tanpa error tipe data atau Turbopack.
-- **Bahasa Indonesia**: Seluruh antarmuka rencana harian, penunjuk waktu, modal, formulir, dan tombol aksi menggunakan Bahasa Indonesia yang ramah pengguna.
-- **Scrolling Lancar**: Sesuai dengan aturan layout workspace, kontainer halaman `/daily-plan` menggunakan CSS module dengan `height: 100%` dan `overflow-y: auto`.
+- **Build Sukses**: Kompilasi Next.js (`npm run build`) berjalan dengan sukses tanpa error TypeScript.
+- **Push ke GitHub**: Semua perubahan kode telah di-stage, di-commit, dan sukses di-push ke branch `main`.

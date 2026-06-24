@@ -22,7 +22,7 @@ interface DailyPlanEntry {
   type: 'task' | 'meeting' | 'focus';
   title: string;
   notes: string | null;
-  status: string; // task: open/in_progress/done | meeting/focus: pending/done/skipped
+  status: string;
   actionItemId: string | null;
   actionItem?: ActionItem | null;
 }
@@ -57,9 +57,42 @@ function getJakartaCurrentTimeStr(): string {
   return formatter.format(d);
 }
 
+// Get Monday of the current week (Jakarta)
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  return monday.toISOString().slice(0, 10);
+}
+
+// Get Sunday of the current week
+function getWeekEnd(dateStr: string): string {
+  const start = getWeekStart(dateStr);
+  const d = new Date(start + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+
+// Generate all dates between start and end inclusive
+function getDatesInRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const d = new Date(start + 'T00:00:00');
+  const endD = new Date(end + 'T00:00:00');
+  while (d <= endD) {
+    dates.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+type DateFilterMode = 'today' | 'week' | 'custom';
+
 export default function DailyPlanPage() {
+  const [filterMode, setFilterMode] = useState<DateFilterMode>('today');
+  const [customDate, setCustomDate] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [centerDate, setCenterDate] = useState<string>('');
   const [sidebarDates, setSidebarDates] = useState<string[]>([]);
   const [rangeEntries, setRangeEntries] = useState<DailyPlanEntry[]>([]);
   const [todayEntries, setTodayEntries] = useState<DailyPlanEntry[]>([]);
@@ -98,23 +131,23 @@ export default function DailyPlanPage() {
   const [quickType, setQuickType] = useState<'task' | 'meeting' | 'focus'>('task');
   const [quickStartTime, setQuickStartTime] = useState('09:00');
   const [quickEndTime, setQuickEndTime] = useState('10:00');
+  const [quickActionItemId, setQuickActionItemId] = useState('');
   const [quickCreateActionItem, setQuickCreateActionItem] = useState(false);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   // Loading state for inline actions
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  // Initialize selectedDate & centerDate on mount
+  // Initialize selectedDate on mount
   useEffect(() => {
     const today = getJakartaTodayStr();
     setSelectedDate(today);
-    setCenterDate(today);
-    
+    setCustomDate(today);
+
     const time = getJakartaCurrentTimeStr();
     setCurrentTimeStr(time);
     setCurrentMinutes(timeToMinutes(time));
 
-    // Tick every minute
     const interval = setInterval(() => {
       const t = getJakartaCurrentTimeStr();
       setCurrentTimeStr(t);
@@ -124,34 +157,36 @@ export default function DailyPlanPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Generate sidebar dates centered around centerDate
+  // Set default Quick Add start time
   useEffect(() => {
-    if (!centerDate) return;
+    const now = new Date();
+    const currentHStr = String(now.getHours()).padStart(2, '0');
+    setQuickStartTime(`${currentHStr}:00`);
+    const nextHStr = String((now.getHours() + 1) % 24).padStart(2, '0');
+    setQuickEndTime(`${nextHStr}:00`);
+  }, []);
 
-    const base = new Date(centerDate);
-    const dates: string[] = [];
-    // Generate 7 days before and 14 days after (3 weeks range)
-    for (let i = -7; i <= 14; i++) {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      dates.push(`${year}-${month}-${day}`);
-    }
-    setSidebarDates(dates);
-  }, [centerDate]);
-
-  // Adjust centerDate if selectedDate jumps out of range
+  // Generate sidebar dates based on filterMode
   useEffect(() => {
-    if (selectedDate && sidebarDates.length > 0) {
-      if (!sidebarDates.includes(selectedDate)) {
-        setCenterDate(selectedDate);
-      }
+    const today = getJakartaTodayStr();
+    if (filterMode === 'today') {
+      setSidebarDates([today]);
+      setSelectedDate(today);
+    } else if (filterMode === 'week') {
+      const start = getWeekStart(today);
+      const end = getWeekEnd(today);
+      const dates = getDatesInRange(start, end);
+      setSidebarDates(dates);
+      // Select today or first of week
+      setSelectedDate(dates.includes(today) ? today : dates[0]);
+    } else if (filterMode === 'custom') {
+      const target = customDate || today;
+      setSidebarDates([target]);
+      setSelectedDate(target);
     }
-  }, [selectedDate, sidebarDates]);
+  }, [filterMode, customDate]);
 
-  // Fetch entries for the entire range whenever sidebarDates changes
+  // Fetch entries whenever sidebar dates change
   useEffect(() => {
     if (sidebarDates.length > 0) {
       fetchRangeEntries();
@@ -163,7 +198,6 @@ export default function DailyPlanPage() {
     fetchActionItems();
     fetchTodayEntries();
 
-    // Refresh today's entries for banner reminder every 60s
     const interval = setInterval(fetchTodayEntries, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -172,15 +206,6 @@ export default function DailyPlanPage() {
   useEffect(() => {
     evaluateBanner();
   }, [todayEntries, currentMinutes, dismissedBannerId]);
-
-  // Set default Quick Add start time to current hour or next hour
-  useEffect(() => {
-    const now = new Date();
-    const currentHStr = String(now.getHours()).padStart(2, '0');
-    setQuickStartTime(`${currentHStr}:00`);
-    const nextHStr = String((now.getHours() + 1) % 24).padStart(2, '0');
-    setQuickEndTime(`${nextHStr}:00`);
-  }, []);
 
   const fetchRangeEntries = async () => {
     if (sidebarDates.length === 0) return;
@@ -232,9 +257,9 @@ export default function DailyPlanPage() {
 
     let activeBanner: typeof bannerInfo = null;
     const activeToday = todayEntries.filter(e => e.status !== 'done' && e.status !== 'skipped');
-    
+
     // 1. Overdue
-    const overdueItems = activeToday.filter(e => timeToMinutes(e.startTime) < currentMinutes);
+    const overdueItems = activeToday.filter(e => timeToMinutes(e.endTime) < currentMinutes);
     if (overdueItems.length > 0) {
       overdueItems.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
       const target = overdueItems[0];
@@ -322,6 +347,7 @@ export default function DailyPlanPage() {
       endTime: quickEndTime,
       type: quickType,
       title: quickTitle,
+      actionItemId: quickType === 'task' ? quickActionItemId || null : null,
       createActionItem: quickType === 'task' ? quickCreateActionItem : false
     };
 
@@ -334,8 +360,8 @@ export default function DailyPlanPage() {
 
       if (res.ok) {
         setQuickTitle('');
+        setQuickActionItemId('');
         setQuickCreateActionItem(false);
-        // Refresh local data range
         await fetchRangeEntries();
         fetchTodayEntries();
         fetchActionItems();
@@ -386,7 +412,7 @@ export default function DailyPlanPage() {
       type: formType,
       title: formTitle,
       notes: formNotes,
-      actionItemId: formType === 'task' ? formActionItemId : null,
+      actionItemId: formType === 'task' ? formActionItemId || null : null,
       createActionItem: formType === 'task' ? formCreateActionItem : false
     };
 
@@ -457,43 +483,82 @@ export default function DailyPlanPage() {
     }
   };
 
-  // Filter entries in memory for the currently selected date
+  // Filter entries for the currently selected date
   const filteredEntries = rangeEntries.filter(e => e.date === selectedDate);
 
   const getDayInfo = (dateStr: string) => {
-    const d = new Date(dateStr);
+    const d = new Date(dateStr + 'T00:00:00');
     const dayNum = d.getDate();
-    const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' }); // "Sen", "Sel"
-    const monthName = d.toLocaleDateString('id-ID', { month: 'short' }); // "Jun"
-    
-    // Check if day has entries in pre-fetched range
+    const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
+    const monthName = d.toLocaleDateString('id-ID', { month: 'short' });
+
     const hasPlans = rangeEntries.some(e => e.date === dateStr);
     const dayPlans = rangeEntries.filter(e => e.date === dateStr);
     const allDone = hasPlans && dayPlans.every(e => e.status === 'done');
-    
+
     return { dayNum, dayName, monthName, hasPlans, allDone };
   };
 
   const getFormattedSelectedDate = () => {
     if (!selectedDate) return '';
-    const d = new Date(selectedDate);
+    const d = new Date(selectedDate + 'T00:00:00');
     return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const getFilterLabel = () => {
+    const today = getJakartaTodayStr();
+    if (filterMode === 'today') return 'Hari Ini';
+    if (filterMode === 'week') {
+      const start = getWeekStart(today);
+      const end = getWeekEnd(today);
+      return `Minggu: ${new Date(start + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – ${new Date(end + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`;
+    }
+    if (filterMode === 'custom' && customDate) {
+      return new Date(customDate + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return 'Custom';
   };
 
   return (
     <div className={styles.splitPageContainer}>
-      {/* LEFT SIDEBAR: List of Days */}
+      {/* LEFT SIDEBAR: Filter + Date Selector */}
       <aside className={styles.dateSidebar}>
         <div className={styles.sidebarHeader}>
           <h3>📅 Jadwal</h3>
-          <input 
-            type="date"
-            className={styles.sidebarDatePicker}
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
+          {/* Filter Mode Tabs */}
+          <div className={styles.filterTabs}>
+            <button
+              className={`${styles.filterTab} ${filterMode === 'today' ? styles.filterTabActive : ''}`}
+              onClick={() => setFilterMode('today')}
+            >
+              Hari Ini
+            </button>
+            <button
+              className={`${styles.filterTab} ${filterMode === 'week' ? styles.filterTabActive : ''}`}
+              onClick={() => setFilterMode('week')}
+            >
+              Minggu Ini
+            </button>
+            <button
+              className={`${styles.filterTab} ${filterMode === 'custom' ? styles.filterTabActive : ''}`}
+              onClick={() => setFilterMode('custom')}
+            >
+              Custom
+            </button>
+          </div>
+
+          {/* Custom date picker — only visible when custom mode */}
+          {filterMode === 'custom' && (
+            <input
+              type="date"
+              className={styles.sidebarDatePicker}
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+            />
+          )}
         </div>
 
+        {/* Date list */}
         <div className={styles.dateList}>
           {sidebarDates.map((dStr) => {
             const isSelected = selectedDate === dStr;
@@ -516,8 +581,8 @@ export default function DailyPlanPage() {
                   {isToday && <span className={styles.todayIndicator}>HARI INI</span>}
                   {isPast && !isToday && <span className={styles.pastLabel}>RIWAYAT</span>}
                   {hasPlans && (
-                    <span 
-                      className={`${styles.statusDot} ${allDone ? styles.done : styles.active}`} 
+                    <span
+                      className={`${styles.statusDot} ${allDone ? styles.done : styles.active}`}
                       title={allDone ? 'Semua rencana selesai' : 'Ada rencana aktif'}
                     />
                   )}
@@ -534,8 +599,8 @@ export default function DailyPlanPage() {
         {bannerInfo && (
           <div className={`${styles.banner} ${styles[bannerInfo.type]}`}>
             <span>{bannerInfo.text}</span>
-            <button 
-              className={styles.bannerClose} 
+            <button
+              className={styles.bannerClose}
               onClick={() => setDismissedBannerId(bannerInfo.id)}
             >
               &times;
@@ -548,13 +613,13 @@ export default function DailyPlanPage() {
           <div className={styles.headerTitleArea}>
             <h2>{getFormattedSelectedDate()}</h2>
             <div className={styles.headerSubtitleArea}>
-              <p>Kelola jadwal, rapat, dan sesi fokus harian Anda.</p>
+              <p>{getFilterLabel()}</p>
               {isPastDate() && (
                 <span className={styles.readOnlyBadge}>Arsip / Read-Only</span>
               )}
             </div>
           </div>
-          
+
           {!isPastDate() && (
             <button className={styles.addButton} onClick={openAddModal}>
               + Tambah Detail Rencana
@@ -565,64 +630,92 @@ export default function DailyPlanPage() {
         {/* QUICK ADD INLINE ROW (Only if selected day is NOT past) */}
         {!isPastDate() && (
           <form onSubmit={handleQuickAddSubmit} className={styles.quickAddRow}>
-            <div className={styles.quickInputGroup}>
-              <input 
+            {/* Time inputs */}
+            <div className={styles.quickTimeGroup}>
+              <input
                 type="time"
                 required
                 className={styles.quickTimeInput}
                 value={quickStartTime}
                 onChange={(e) => handleQuickStartTimeChange(e.target.value)}
+                title="Waktu mulai"
               />
-              <span className={styles.timeDash}>-</span>
-              <input 
+              <span className={styles.timeDash}>→</span>
+              <input
                 type="time"
                 required
                 className={styles.quickTimeInput}
                 value={quickEndTime}
                 onChange={(e) => setQuickEndTime(e.target.value)}
+                title="Waktu selesai"
               />
             </div>
 
             <div className={styles.dividerVertical} />
 
-            <select
-              className={styles.quickSelect}
-              value={quickType}
-              onChange={(e) => setQuickType(e.target.value as any)}
-            >
-              <option value="task">🎯 Task</option>
-              <option value="meeting">🤝 Meeting</option>
-              <option value="focus">🧘 Focus</option>
-            </select>
+            {/* Type selector */}
+            <div className={styles.quickTypeGroup}>
+              {(['task', 'meeting', 'focus'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`${styles.quickTypeBtn} ${quickType === t ? styles.quickTypeActive : ''} ${styles[`quickType_${t}`]}`}
+                  onClick={() => setQuickType(t)}
+                >
+                  {t === 'task' && '🎯'}
+                  {t === 'meeting' && '🤝'}
+                  {t === 'focus' && '🧘'}
+                  <span>{t === 'task' ? 'Task' : t === 'meeting' ? 'Rapat' : 'Fokus'}</span>
+                </button>
+              ))}
+            </div>
 
             <div className={styles.dividerVertical} />
 
-            <input 
+            {/* Title input */}
+            <input
               type="text"
               required
-              placeholder="Ketik judul rencana baru lalu tekan Enter..."
+              placeholder="Judul rencana... (Enter untuk simpan)"
               className={styles.quickTitleInput}
               value={quickTitle}
               onChange={(e) => setQuickTitle(e.target.value)}
             />
 
+            {/* Action Item dropdown (for task type) */}
             {quickType === 'task' && (
-              <label className={styles.quickCheckboxLabel}>
-                <input 
-                  type="checkbox"
-                  checked={quickCreateActionItem}
-                  onChange={(e) => setQuickCreateActionItem(e.target.checked)}
-                />
-                +ActionItem
-              </label>
+              <>
+                <div className={styles.dividerVertical} />
+                <select
+                  className={styles.quickActionItemSelect}
+                  value={quickActionItemId}
+                  onChange={(e) => {
+                    setQuickActionItemId(e.target.value);
+                    if (e.target.value) setQuickCreateActionItem(false);
+                  }}
+                  disabled={quickCreateActionItem}
+                  title="Hubungkan ke Action Item"
+                >
+                  <option value="">🔗 Pilih AI (opsional)</option>
+                  {actionItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}{item.project ? ` (${item.project.name})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </>
             )}
 
-            <button 
-              type="submit" 
-              className={styles.quickSubmitBtn} 
+            <button
+              type="submit"
+              className={styles.quickSubmitBtn}
               disabled={isQuickAdding || !quickTitle.trim()}
             >
-              {isQuickAdding ? '...' : 'Tambah'}
+              {isQuickAdding ? (
+                <span className={styles.quickSpinner} />
+              ) : (
+                '+ Tambah'
+              )}
             </button>
           </form>
         )}
@@ -647,7 +740,6 @@ export default function DailyPlanPage() {
                 const isViewingToday = selectedDate === getJakartaTodayStr();
                 const sorted = [...filteredEntries].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
-                // Render current time indicator line
                 const renderTimeIndicator = () => {
                   timeIndicatorRendered = true;
                   return (
@@ -662,19 +754,20 @@ export default function DailyPlanPage() {
                   const entryStartMinutes = timeToMinutes(entry.startTime);
                   const isProcessing = actionLoadingId === entry.id;
 
-                  // Insert current time indicator if in correct chronological place
                   if (isViewingToday && !timeIndicatorRendered && entryStartMinutes > currentMinutes) {
                     renderedRows.push(renderTimeIndicator());
                   }
 
                   renderedRows.push(
-                    <div 
-                      key={entry.id} 
+                    <div
+                      key={entry.id}
                       className={`${styles.compactRow} ${isProcessing ? styles.processingRow : ''}`}
                     >
-                      {/* 1. Time range col */}
+                      {/* 1. Time range col — single line */}
                       <div className={styles.timeCol}>
-                        <span className={styles.timeLabel}>{entry.startTime} - {entry.endTime}</span>
+                        <span className={styles.timeLabel}>{entry.startTime}</span>
+                        <span className={styles.timeSeparator}>–</span>
+                        <span className={styles.timeLabel}>{entry.endTime}</span>
                       </div>
 
                       {/* 2. Type badge */}
@@ -698,12 +791,12 @@ export default function DailyPlanPage() {
                         </div>
 
                         {entry.type === 'task' && entry.actionItem && (
-                          <Link 
-                            href="/action-items" 
-                            target="_blank" 
+                          <Link
+                            href="/action-items"
+                            target="_blank"
                             className={styles.linkedActionLink}
                           >
-                            🔗 AI: {entry.actionItem.title} 
+                            🔗 AI: {entry.actionItem.title}
                             {entry.actionItem.project && ` (${entry.actionItem.project.name})`}
                           </Link>
                         )}
@@ -733,21 +826,21 @@ export default function DailyPlanPage() {
                         </select>
                       </div>
 
-                      {/* 5. Quick action buttons & Edit/Delete (Only if not past date) */}
+                      {/* 5. Quick action buttons (Only if not past date) */}
                       {!isPastDate() && (
                         <div className={styles.actionsCol}>
-                          <button 
-                            className={styles.rowIconBtn} 
+                          <button
+                            className={styles.rowIconBtn}
                             disabled={isProcessing}
-                            onClick={() => openEditModal(entry)} 
+                            onClick={() => openEditModal(entry)}
                             title="Edit agenda"
                           >
                             ✏️
                           </button>
-                          <button 
-                            className={`${styles.rowIconBtn} ${styles.delete}`} 
+                          <button
+                            className={`${styles.rowIconBtn} ${styles.delete}`}
                             disabled={isProcessing}
-                            onClick={() => handleDeleteEntry(entry.id)} 
+                            onClick={() => handleDeleteEntry(entry.id)}
                             title="Hapus agenda"
                           >
                             🗑️
@@ -758,7 +851,6 @@ export default function DailyPlanPage() {
                   );
                 });
 
-                // Fallback time indicator at the bottom
                 if (isViewingToday && !timeIndicatorRendered) {
                   renderedRows.push(renderTimeIndicator());
                 }
@@ -785,7 +877,7 @@ export default function DailyPlanPage() {
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Tipe</label>
-                  <select 
+                  <select
                     className={styles.select}
                     value={formType}
                     onChange={(e) => setFormType(e.target.value as any)}
@@ -798,7 +890,7 @@ export default function DailyPlanPage() {
 
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Judul Rencana</label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="Contoh: Sprint Review, Deep Work"
@@ -812,7 +904,7 @@ export default function DailyPlanPage() {
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Waktu Mulai</label>
-                  <input 
+                  <input
                     type="time"
                     required
                     className={styles.input}
@@ -823,7 +915,7 @@ export default function DailyPlanPage() {
 
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Waktu Selesai</label>
-                  <input 
+                  <input
                     type="time"
                     required
                     className={styles.input}
@@ -835,7 +927,7 @@ export default function DailyPlanPage() {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>Catatan Tambahan (Opsional)</label>
-                <textarea 
+                <textarea
                   className={styles.textarea}
                   placeholder="Detail agenda..."
                   value={formNotes}
@@ -866,7 +958,7 @@ export default function DailyPlanPage() {
                   </select>
 
                   <label className={styles.checkboxLabel}>
-                    <input 
+                    <input
                       type="checkbox"
                       checked={formCreateActionItem}
                       onChange={(e) => {
@@ -900,20 +992,22 @@ export default function DailyPlanPage() {
               )}
 
               <div className={styles.modalFooter}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className={`${styles.btn} ${styles.secondary}`}
                   onClick={() => setIsModalOpen(false)}
                   disabled={isFormSaving}
                 >
                   Batal
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className={`${styles.btn} ${styles.primary}`}
                   disabled={isFormSaving}
                 >
-                  {isFormSaving ? 'Menyimpan...' : 'Simpan'}
+                  {isFormSaving ? (
+                    <><span className={styles.btnSpinner} /> Menyimpan...</>
+                  ) : 'Simpan'}
                 </button>
               </div>
             </form>

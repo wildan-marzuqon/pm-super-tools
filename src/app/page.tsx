@@ -700,7 +700,7 @@ export default function Dashboard() {
               <h2>{searchQuery.trim() !== '' ? 'Hasil Cari Action Items ⚡' : 'Action Items Mendesak ⚡'}</h2>
               <Link href="/action-items" className={styles.viewAll}>Lihat semua</Link>
             </div>
-            <div className={styles.sectionCard}>
+            <div className={styles.sectionCard} style={{ padding: '12px', minHeight: 'auto' }}>
               {filteredUrgentActions.length === 0 ? (
                 <div className={styles.emptyState}>
                   <span className={styles.emptyIcon}>🎉</span>
@@ -708,57 +708,49 @@ export default function Dashboard() {
                   <Link href="/action-items" className={styles.createLink}>Buat Action Item baru</Link>
                 </div>
               ) : (
-                <div className={styles.actionList}>
+                <div className={styles.actionCardGrid}>
                   {filteredUrgentActions.map((item) => {
                     const associatedProject = projects.find((p) => p.id === item.project_id);
                     const overdue = isOverdue(item.deadline);
+                    const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
                     return (
-                      <div 
-                        key={item.id} 
-                        className={`${styles.actionItemRow} ${item.completed ? styles.actionItemRowDone : ''}`}
+                      <div
+                        key={item.id}
+                        className={`${styles.actionCard} ${item.completed ? styles.actionCardDone : ''} ${overdue ? styles.actionCardOverdue : ''}`}
                         onClick={() => handleStartEdit(item)}
-                        style={{ cursor: 'pointer' }}
                       >
-                        <div className={styles.actionMain}>
-                          <p className={styles.actionTitle}>{item.title}</p>
-                          <div className={styles.actionMeta}>
-                            {(() => {
-                              const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
-                              return (
-                                <span
-                                  style={{
-                                    ...badge.styles,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    border: '1px solid',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  {badge.text}
-                                </span>
-                              );
-                            })()}
-                            <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
-                            {item.category_name && (
-                              <span className={styles.categoryTagBadge} title={item.category_name}>
-                                🏷️ {item.category_name}
-                              </span>
-                            )}
-                            {associatedProject && (
-                              <span className={styles.projectTagBadge} title={associatedProject.name}>
-                                📁 {associatedProject.name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className={styles.actionDateContainer}>
-                          <span className={`${styles.actionDate} ${overdue ? styles.overdue : ''}`}>
-                            {formatDate(item.deadline)}
+                        {/* Header row: status badge + overdue label */}
+                        <div className={styles.actionCardHeader}>
+                          <span
+                            className={styles.actionCardStatus}
+                            style={{ backgroundColor: badge.styles.backgroundColor, color: badge.styles.color, borderColor: badge.styles.borderColor }}
+                          >
+                            {badge.text}
                           </span>
                           {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                        </div>
+
+                        {/* Title */}
+                        <p className={styles.actionCardTitle}>{item.title}</p>
+
+                        {/* Meta: project & category */}
+                        {(associatedProject || item.category_name) && (
+                          <div className={styles.actionCardTags}>
+                            {associatedProject && (
+                              <span className={styles.projectTagBadge}>📁 {associatedProject.name}</span>
+                            )}
+                            {item.category_name && (
+                              <span className={styles.categoryTagBadge}>🏷️ {item.category_name}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Footer: PIC + date */}
+                        <div className={styles.actionCardFooter}>
+                          <span className={styles.picTag}>PIC: {item.pic || 'Unassigned'}</span>
+                          <span className={`${styles.actionCardDate} ${overdue ? styles.overdueDateText : ''}`}>
+                            📅 {formatDate(item.deadline)}
+                          </span>
                         </div>
                       </div>
                     );

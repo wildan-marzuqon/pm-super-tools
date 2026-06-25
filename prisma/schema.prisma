@@ -214,8 +214,8 @@ model ProjectRisk {
 model DailyPlanEntry {
   id           String      @id @default(cuid())
   date         String      // "2026-06-24"
-  startTime    String      // "09:00"
-  endTime      String      // "10:00"
+  startTime    String?     // "09:00" — nullable for unscheduled entries
+  endTime      String?     // "10:00" — nullable for unscheduled entries
   type         String      @default("task")  // "task" | "meeting" | "focus"
   title        String
   notes        String?     @db.Text

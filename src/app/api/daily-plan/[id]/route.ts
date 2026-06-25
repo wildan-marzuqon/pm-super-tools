@@ -22,8 +22,9 @@ export async function PUT(
       where: { id },
       data: {
         date: date !== undefined ? date : undefined,
-        startTime: startTime !== undefined ? startTime : undefined,
-        endTime: endTime !== undefined ? endTime : undefined,
+        // Allow explicit null to clear a scheduled time
+        startTime: startTime !== undefined ? (startTime || null) : undefined,
+        endTime: endTime !== undefined ? (endTime || null) : undefined,
         type: type !== undefined ? type : undefined,
         title: title !== undefined ? title : undefined,
         notes: notes !== undefined ? notes : undefined,

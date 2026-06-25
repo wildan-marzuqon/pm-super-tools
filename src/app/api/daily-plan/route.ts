@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Helper to convert time "HH:MM" to minutes
-function timeToMinutes(t: string): number {
+// Helper to convert time "HH:MM" to minutes (handles null)
+function timeToMinutes(t: string | null): number {
+  if (!t) return 0;
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
@@ -53,8 +54,8 @@ export async function GET(request: NextRequest) {
       let type: 'ongoing' | 'upcoming' | null = null;
 
       for (const entry of entries) {
-        // Skip completed/skipped items
-        if (entry.status === 'done' || entry.status === 'skipped') {
+        // Skip completed/skipped items or entries without scheduled time
+        if (entry.status === 'done' || entry.status === 'skipped' || !entry.startTime || !entry.endTime) {
           continue;
         }
 
@@ -102,9 +103,7 @@ export async function GET(request: NextRequest) {
         ]
       });
       return Response.json(entries, {
-        headers: {
-          'Cache-Control': 'no-store, max-age=0'
-        }
+        headers: { 'Cache-Control': 'no-store, max-age=0' }
       });
     }
 
@@ -113,20 +112,14 @@ export async function GET(request: NextRequest) {
       where: { date: dateStr },
       include: {
         actionItem: {
-          include: {
-            project: true
-          }
+          include: { project: true }
         }
       },
-      orderBy: [
-        { startTime: 'asc' }
-      ]
+      orderBy: [{ startTime: 'asc' }]
     });
 
     return Response.json(entries, {
-      headers: {
-        'Cache-Control': 'no-store, max-age=0'
-      }
+      headers: { 'Cache-Control': 'no-store, max-age=0' }
     });
   } catch (error) {
     console.error('Error fetching daily plan entries:', error);
@@ -139,8 +132,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { date, startTime, endTime, type, title, notes, status, actionItemId, createActionItem } = body;
 
-    if (!date || !startTime || !endTime || !title) {
-      return Response.json({ error: 'Date, startTime, endTime, and title are required' }, { status: 400 });
+    // Only date and title are required — startTime/endTime can be null (unscheduled)
+    if (!date || !title) {
+      return Response.json({ error: 'Date and title are required' }, { status: 400 });
     }
 
     let linkedActionItemId = actionItemId || null;
@@ -152,7 +146,7 @@ export async function POST(request: Request) {
           title: title,
           description: notes || '',
           deadline: date,
-          pic: 'Wildan', // Default PIC per commitments
+          pic: 'Wildan',
           status: 'open',
           completed: false
         }
@@ -163,28 +157,25 @@ export async function POST(request: Request) {
     const newEntry = await prisma.dailyPlanEntry.create({
       data: {
         date,
-        startTime,
-        endTime,
-        type,
+        startTime: startTime || null,
+        endTime: endTime || null,
+        type: type || 'task',
         title,
         notes: notes || null,
         status: status || (type === 'task' ? 'open' : 'pending'),
         actionItemId: linkedActionItemId
       },
       include: {
-        actionItem: true
+        actionItem: { include: { project: true } }
       }
     });
 
     // Sync status if it is a task and already linked to action item
-    if (type === 'task' && linkedActionItemId && status) {
+    if ((type === 'task' || !type) && linkedActionItemId && status) {
       const completed = status === 'done';
       await prisma.actionItem.update({
         where: { id: linkedActionItemId },
-        data: {
-          status,
-          completed
-        }
+        data: { status, completed }
       });
     }
 

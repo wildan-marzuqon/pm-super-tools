@@ -988,3 +988,118 @@
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
+
+/* ─── UNSCHEDULED SECTION ─────────────────────────────────────────────────── */
+.unscheduledSection {
+  margin-bottom: 0;
+}
+
+.unscheduledLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6B7280;
+  padding: 8px 12px 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.unscheduledRow {
+  background: rgba(250, 250, 248, 0.8);
+  border-left: 3px solid #D1D5DB !important;
+}
+
+.unscheduledDivider {
+  height: 1px;
+  background: linear-gradient(to right, #E5E7EB, transparent);
+  margin: 6px 12px 10px;
+}
+
+/* ─── INLINE EDITING INPUTS ───────────────────────────────────────────────── */
+.inlineTimeInput {
+  width: 76px;
+  padding: 3px 5px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  color: var(--text-primary, #1f2937);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.inlineTimeInput:hover:not(:disabled) {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+
+.inlineTimeInput:focus {
+  outline: none;
+  border-color: var(--primary, #F59E0B);
+  background: white;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+}
+
+.inlineTimeInput:disabled {
+  color: #9CA3AF;
+  cursor: default;
+}
+
+.inlineTitleInput {
+  flex: 1;
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.inlineTitleInput:hover:not(:disabled) {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+
+.inlineTitleInput:focus {
+  outline: none;
+  border-color: var(--primary, #F59E0B);
+  background: white;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+}
+
+.inlineTitleInput:disabled {
+  color: #6B7280;
+  cursor: default;
+}
+
+/* typeBadge as a select (override for inline use) */
+.typeCol select.typeBadge {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.typeCol select.typeBadge:hover:not(:disabled) {
+  border-color: rgba(0,0,0,0.15);
+}
+
+.typeCol select.typeBadge:focus {
+  outline: none;
+  border-color: var(--primary, #F59E0B);
+}
+

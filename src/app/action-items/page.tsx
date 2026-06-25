@@ -51,6 +51,16 @@ export default function ActionItemsPage() {
   const [jiraUrl, setJiraUrl] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Daily Plan import modal state
+  const [showDailyPlanModal, setShowDailyPlanModal] = useState(false);
+  const [dailyPlanDate, setDailyPlanDate] = useState(() => {
+    const d = new Date();
+    const fmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
+    return fmt.format(d);
+  });
+  const [isImporting, setIsImporting] = useState(false);
+  const [importToast, setImportToast] = useState<string | null>(null);
+
   // Edit action item state
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
   const [editActionFields, setEditActionFields] = useState({
@@ -114,6 +124,31 @@ export default function ActionItemsPage() {
       console.error('Error fetching action items data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImportToDailyPlan = async () => {
+    if (selectedIds.length === 0) return;
+    setIsImporting(true);
+    try {
+      const res = await fetch('/api/daily-plan/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionItemIds: selectedIds, date: dailyPlanDate })
+      });
+      if (!res.ok) throw new Error('Failed to import');
+      const data = await res.json();
+      setShowDailyPlanModal(false);
+      setSelectedIds([]);
+      const [y, m, day] = dailyPlanDate.split('-');
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+      const label = `${day} ${months[parseInt(m) - 1]} ${y}`;
+      setImportToast(`\u2713 ${data.created} item berhasil dimasukkan ke Daily Plan ${label}`);
+      setTimeout(() => setImportToast(null), 4000);
+    } catch {
+      window.alert('Gagal memasukkan ke Daily Plan. Coba lagi.');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -488,11 +523,108 @@ export default function ActionItemsPage() {
           >
             {isSyncing ? '🔄 Menyinkronkan...' : `📤 Push ke Jira ${selectedIds.length > 0 ? `(${selectedIds.length})` : ''}`}
           </button>
+          {/* Import to Daily Plan button — shows count when selected */}
+          <button
+            onClick={() => setShowDailyPlanModal(true)}
+            disabled={selectedIds.length === 0}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: selectedIds.length === 0 ? '#E2E8F0' : '#065F46',
+              color: selectedIds.length === 0 ? '#94A3B8' : '#ECFDF5',
+              border: selectedIds.length === 0 ? '1px solid #CBD5E1' : '1px solid #047857',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title={selectedIds.length === 0 ? 'Pilih action item terlebih dahulu' : 'Masukkan item terpilih ke Daily Plan'}
+          >
+            {`📅 Masukkan ke Daily Plan${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
+          </button>
           <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
             + Action Item Baru
           </button>
         </div>
       </header>
+
+      {/* Toast notification */}
+      {importToast && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+          backgroundColor: '#065F46', color: '#ECFDF5',
+          padding: '12px 20px', borderRadius: '8px',
+          fontSize: '14px', fontWeight: 600,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+          display: 'flex', alignItems: 'center', gap: '8px'
+        }}>
+          {importToast}
+        </div>
+      )}
+
+      {/* Daily Plan import modal */}
+      {showDailyPlanModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9000,
+          backgroundColor: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setShowDailyPlanModal(false)}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '12px',
+            padding: '28px 32px', width: '360px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 700 }}>
+              📅 Masukkan ke Daily Plan
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#6B7280' }}>
+              {selectedIds.length} action item akan ditambahkan sebagai rencana tanpa jam (bisa diatur nanti).
+            </p>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#374151' }}>
+              Tanggal
+            </label>
+            <input
+              type="date"
+              value={dailyPlanDate}
+              onChange={e => setDailyPlanDate(e.target.value)}
+              style={{
+                width: '100%', padding: '8px 12px',
+                border: '1px solid #D1D5DB', borderRadius: '8px',
+                fontSize: '14px', fontFamily: 'inherit',
+                marginBottom: '20px', boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDailyPlanModal(false)}
+                style={{
+                  padding: '9px 18px', borderRadius: '8px',
+                  border: '1px solid #D1D5DB', backgroundColor: 'white',
+                  fontSize: '13px', fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleImportToDailyPlan}
+                disabled={isImporting}
+                style={{
+                  padding: '9px 18px', borderRadius: '8px',
+                  border: 'none', backgroundColor: '#065F46', color: 'white',
+                  fontSize: '13px', fontWeight: 600,
+                  cursor: isImporting ? 'not-allowed' : 'pointer',
+                  opacity: isImporting ? 0.7 : 1
+                }}
+              >
+                {isImporting ? '⏳ Memproses...' : 'Konfirmasi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Action Item Modal */}
       {showAddForm && (

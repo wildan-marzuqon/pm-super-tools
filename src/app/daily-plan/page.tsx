@@ -17,8 +17,8 @@ interface ActionItem {
 interface DailyPlanEntry {
   id: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  startTime: string | null;
+  endTime: string | null;
   type: 'task' | 'meeting' | 'focus';
   title: string;
   notes: string | null;
@@ -28,7 +28,8 @@ interface DailyPlanEntry {
 }
 
 // Helper to convert time "HH:MM" to minutes
-function timeToMinutes(t: string): number {
+function timeToMinutes(t: string | null | undefined): number {
+  if (!t) return 0;
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
@@ -111,22 +112,12 @@ export default function DailyPlanPage() {
   } | null>(null);
   const [dismissedBannerId, setDismissedBannerId] = useState<string | null>(null);
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Loading state for inline actions
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  // Form states
-  const [formTitle, setFormTitle] = useState('');
-  const [formNotes, setFormNotes] = useState('');
-  const [formType, setFormType] = useState<'task' | 'meeting' | 'focus'>('task');
-  const [formStartTime, setFormStartTime] = useState('09:00');
-  const [formEndTime, setFormEndTime] = useState('10:00');
-  const [formActionItemId, setFormActionItemId] = useState('');
-  const [formCreateActionItem, setFormCreateActionItem] = useState(false);
-  const [isFormSaving, setIsFormSaving] = useState(false);
+  // Inline edit local state — track in-progress title/time edits before blur-save
+  const [inlineEdits, setInlineEdits] = useState<Record<string, { title?: string; startTime?: string; endTime?: string }>>({});
 
-  // Quick Add Form states
   const [quickTitle, setQuickTitle] = useState('');
   const [quickType, setQuickType] = useState<'task' | 'meeting' | 'focus'>('task');
   const [quickStartTime, setQuickStartTime] = useState('09:00');
@@ -134,9 +125,6 @@ export default function DailyPlanPage() {
   const [quickActionItemId, setQuickActionItemId] = useState('');
   const [quickCreateActionItem, setQuickCreateActionItem] = useState(false);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
-
-  // Loading state for inline actions
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // Initialize selectedDate on mount
   useEffect(() => {
@@ -256,7 +244,7 @@ export default function DailyPlanPage() {
     }
 
     let activeBanner: typeof bannerInfo = null;
-    const activeToday = todayEntries.filter(e => e.status !== 'done' && e.status !== 'skipped');
+    const activeToday = todayEntries.filter(e => e.status !== 'done' && e.status !== 'skipped' && !!e.startTime && !!e.endTime);
 
     // 1. Overdue
     const overdueItems = activeToday.filter(e => timeToMinutes(e.endTime) < currentMinutes);
@@ -323,17 +311,36 @@ export default function DailyPlanPage() {
     setQuickEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   };
 
-  const handleStartTimeChange = (start: string) => {
-    setFormStartTime(start);
-    const [h, m] = start.split(':').map(Number);
-    const endH = (h + 1) % 24;
-    setFormEndTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-  };
 
   const isPastDate = (dateStr?: string) => {
     const target = dateStr || selectedDate;
     const today = getJakartaTodayStr();
     return target < today;
+  };
+
+  // Save a single field inline on blur/change
+  const saveField = async (id: string, field: string, value: string | null) => {
+    // Optimistic update local rangeEntries
+    setRangeEntries(prev =>
+      prev.map(e => e.id === id ? { ...e, [field]: value } : e)
+    );
+    try {
+      await fetch(`/api/daily-plan/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+      });
+      // Refresh today entries for banner
+      if (rangeEntries.find(e => e.id === id)?.date === getJakartaTodayStr()) {
+        fetchTodayEntries();
+      }
+      // If status/type changed, refresh action items too
+      if (field === 'status' || field === 'type') fetchActionItems();
+    } catch (err) {
+      console.error('Error saving field:', err);
+      // Revert on error
+      fetchRangeEntries();
+    }
   };
 
   const handleQuickAddSubmit = async (e: React.FormEvent) => {
@@ -370,78 +377,6 @@ export default function DailyPlanPage() {
       console.error('Error in quick add:', error);
     } finally {
       setIsQuickAdding(false);
-    }
-  };
-
-  const openAddModal = () => {
-    setModalMode('add');
-    setFormTitle('');
-    setFormNotes('');
-    setFormType('task');
-    const now = new Date();
-    const currentHStr = String(now.getHours()).padStart(2, '0');
-    setFormStartTime(`${currentHStr}:00`);
-    const nextHStr = String((now.getHours() + 1) % 24).padStart(2, '0');
-    setFormEndTime(`${nextHStr}:00`);
-    setFormActionItemId('');
-    setFormCreateActionItem(false);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (entry: DailyPlanEntry) => {
-    setModalMode('edit');
-    setEditingId(entry.id);
-    setFormTitle(entry.title);
-    setFormNotes(entry.notes || '');
-    setFormType(entry.type);
-    setFormStartTime(entry.startTime);
-    setFormEndTime(entry.endTime);
-    setFormActionItemId(entry.actionItemId || '');
-    setFormCreateActionItem(false);
-    setIsModalOpen(true);
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsFormSaving(true);
-
-    const payload = {
-      date: selectedDate,
-      startTime: formStartTime,
-      endTime: formEndTime,
-      type: formType,
-      title: formTitle,
-      notes: formNotes,
-      actionItemId: formType === 'task' ? formActionItemId || null : null,
-      createActionItem: formType === 'task' ? formCreateActionItem : false
-    };
-
-    try {
-      let res;
-      if (modalMode === 'add') {
-        res = await fetch('/api/daily-plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } else {
-        res = await fetch(`/api/daily-plan/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      if (res.ok) {
-        setIsModalOpen(false);
-        await fetchRangeEntries();
-        fetchTodayEntries();
-        fetchActionItems();
-      }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-    } finally {
-      setIsFormSaving(false);
     }
   };
 
@@ -620,10 +555,8 @@ export default function DailyPlanPage() {
             </div>
           </div>
 
-          {!isPastDate() && (
-            <button className={styles.addButton} onClick={openAddModal}>
-              + Tambah Detail Rencana
-            </button>
+          {!isPastDate() && false && (
+            <button className={styles.addButton} onClick={() => {}}>+ Tambah</button>
           )}
         </div>
 
@@ -728,292 +661,261 @@ export default function DailyPlanPage() {
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>📅</div>
               <h3>Belum ada agenda harian</h3>
-              <p>Tambahkan agenda rapat, sesi fokus, atau tugas harian menggunakan baris Quick Add di atas.</p>
+              <p>Tambahkan agenda menggunakan baris Quick Add di atas atau impor dari Action Items.</p>
             </div>
           ) : (
-            <div className={styles.timelineList}>
-              <div className={styles.timelineVisualLine} />
-
+            <>
+              {/* UNSCHEDULED section — entries without a time */}
               {(() => {
-                const renderedRows: React.JSX.Element[] = [];
-                let timeIndicatorRendered = false;
-                const isViewingToday = selectedDate === getJakartaTodayStr();
-                const sorted = [...filteredEntries].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
-
-                const renderTimeIndicator = () => {
-                  timeIndicatorRendered = true;
-                  return (
-                    <div key="time-indicator" className={styles.timeIndicatorLine}>
-                      <div className={styles.indicatorLabel}>jam sekarang ({currentTimeStr})</div>
-                      <div className={styles.indicatorLine} />
-                    </div>
-                  );
-                };
-
-                sorted.forEach((entry) => {
-                  const entryStartMinutes = timeToMinutes(entry.startTime);
-                  const isProcessing = actionLoadingId === entry.id;
-
-                  if (isViewingToday && !timeIndicatorRendered && entryStartMinutes > currentMinutes) {
-                    renderedRows.push(renderTimeIndicator());
-                  }
-
-                  renderedRows.push(
-                    <div
-                      key={entry.id}
-                      className={`${styles.compactRow} ${isProcessing ? styles.processingRow : ''}`}
-                    >
-                      {/* 1. Time range col — single line */}
-                      <div className={styles.timeCol}>
-                        <span className={styles.timeLabel}>{entry.startTime}</span>
-                        <span className={styles.timeSeparator}>–</span>
-                        <span className={styles.timeLabel}>{entry.endTime}</span>
-                      </div>
-
-                      {/* 2. Type badge */}
-                      <div className={styles.typeCol}>
-                        <span className={`${styles.typeBadge} ${styles[entry.type]}`}>
-                          {entry.type === 'task' && '🎯 Task'}
-                          {entry.type === 'meeting' && '🤝 Rapat'}
-                          {entry.type === 'focus' && '🧘 Fokus'}
-                        </span>
-                      </div>
-
-                      {/* 3. Title, notes snippet & links */}
-                      <div className={styles.titleCol}>
-                        <div className={styles.titleWrapper}>
-                          <span className={styles.entryTitle}>{entry.title}</span>
-                          {entry.notes && (
-                            <span className={styles.entryNotesSnippet} title={entry.notes}>
-                              — {entry.notes.length > 60 ? entry.notes.substring(0, 60) + '...' : entry.notes}
-                            </span>
-                          )}
-                        </div>
-
-                        {entry.type === 'task' && entry.actionItem && (
-                          <Link
-                            href="/action-items"
-                            target="_blank"
-                            className={styles.linkedActionLink}
-                          >
-                            🔗 AI: {entry.actionItem.title}
-                            {entry.actionItem.project && ` (${entry.actionItem.project.name})`}
-                          </Link>
-                        )}
-                      </div>
-
-                      {/* 4. Inline Status dropdown select */}
-                      <div className={styles.statusCol}>
-                        <select
-                          className={`${styles.statusSelect} ${styles[entry.status]}`}
-                          value={entry.status}
-                          disabled={isPastDate() || isProcessing}
-                          onChange={(e) => updateEntryStatus(entry.id, e.target.value)}
-                        >
-                          {entry.type === 'task' ? (
-                            <>
+                const unscheduled = filteredEntries.filter(e => !e.startTime);
+                if (unscheduled.length === 0) return null;
+                return (
+                  <div className={styles.unscheduledSection}>
+                    <div className={styles.unscheduledLabel}>📋 Belum Dijadwalkan</div>
+                    {unscheduled.map(entry => {
+                      const isProcessing = actionLoadingId === entry.id;
+                      const localTitle = inlineEdits[entry.id]?.title ?? entry.title;
+                      const localStart = inlineEdits[entry.id]?.startTime ?? '';
+                      const localEnd = inlineEdits[entry.id]?.endTime ?? '';
+                      return (
+                        <div key={entry.id} className={`${styles.compactRow} ${styles.unscheduledRow} ${isProcessing ? styles.processingRow : ''}`}>
+                          {/* Time inputs — empty, let user fill */}
+                          <div className={styles.timeCol}>
+                            <input
+                              type="time"
+                              className={styles.inlineTimeInput}
+                              value={localStart}
+                              placeholder="--:--"
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], startTime: e.target.value } }))}
+                              onBlur={e => { if (e.target.value) saveField(entry.id, 'startTime', e.target.value); }}
+                              title="Waktu mulai"
+                            />
+                            <span className={styles.timeSeparator}>–</span>
+                            <input
+                              type="time"
+                              className={styles.inlineTimeInput}
+                              value={localEnd}
+                              placeholder="--:--"
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], endTime: e.target.value } }))}
+                              onBlur={e => { if (e.target.value) saveField(entry.id, 'endTime', e.target.value); }}
+                              title="Waktu selesai"
+                            />
+                          </div>
+                          {/* Type select */}
+                          <div className={styles.typeCol}>
+                            <select
+                              className={`${styles.typeBadge} ${styles[entry.type]}`}
+                              value={entry.type}
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => saveField(entry.id, 'type', e.target.value)}
+                            >
+                              <option value="task">🎯 Task</option>
+                              <option value="meeting">🤝 Rapat</option>
+                              <option value="focus">🧘 Fokus</option>
+                            </select>
+                          </div>
+                          {/* Title inline */}
+                          <div className={styles.titleCol}>
+                            <input
+                              type="text"
+                              className={styles.inlineTitleInput}
+                              value={localTitle}
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], title: e.target.value } }))}
+                              onBlur={e => { if (e.target.value.trim() && e.target.value !== entry.title) saveField(entry.id, 'title', e.target.value.trim()); }}
+                              onKeyDown={e => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }}
+                            />
+                            {entry.actionItem && (
+                              <Link href="/action-items" target="_blank" className={styles.linkedActionLink}>
+                                🔗 AI: {entry.actionItem.title}{entry.actionItem.project && ` (${entry.actionItem.project.name})`}
+                              </Link>
+                            )}
+                          </div>
+                          {/* Status */}
+                          <div className={styles.statusCol}>
+                            <select
+                              className={`${styles.statusSelect} ${styles[entry.status]}`}
+                              value={entry.status}
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => saveField(entry.id, 'status', e.target.value)}
+                            >
                               <option value="open">⏳ Open</option>
                               <option value="in_progress">⚙️ In Progress</option>
                               <option value="done">✓ Selesai</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="pending">⏳ Pending</option>
-                              <option value="done">✓ Done</option>
-                              <option value="skipped">❌ Skipped</option>
-                            </>
+                            </select>
+                          </div>
+                          {/* Delete */}
+                          {!isPastDate() && (
+                            <div className={styles.actionsCol}>
+                              <button
+                                className={`${styles.rowIconBtn} ${styles.delete}`}
+                                disabled={isProcessing}
+                                onClick={() => handleDeleteEntry(entry.id)}
+                                title="Hapus"
+                              >🗑️</button>
+                            </div>
                           )}
-                        </select>
-                      </div>
-
-                      {/* 5. Quick action buttons (Only if not past date) */}
-                      {!isPastDate() && (
-                        <div className={styles.actionsCol}>
-                          <button
-                            className={styles.rowIconBtn}
-                            disabled={isProcessing}
-                            onClick={() => openEditModal(entry)}
-                            title="Edit agenda"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className={`${styles.rowIconBtn} ${styles.delete}`}
-                            disabled={isProcessing}
-                            onClick={() => handleDeleteEntry(entry.id)}
-                            title="Hapus agenda"
-                          >
-                            🗑️
-                          </button>
                         </div>
-                      )}
-                    </div>
-                  );
-                });
-
-                if (isViewingToday && !timeIndicatorRendered) {
-                  renderedRows.push(renderTimeIndicator());
-                }
-
-                return renderedRows;
+                      );
+                    })}
+                    <div className={styles.unscheduledDivider} />
+                  </div>
+                );
               })()}
-            </div>
+
+              {/* SCHEDULED timeline */}
+              <div className={styles.timelineList}>
+                <div className={styles.timelineVisualLine} />
+
+                {(() => {
+                  const renderedRows: React.JSX.Element[] = [];
+                  let timeIndicatorRendered = false;
+                  const isViewingToday = selectedDate === getJakartaTodayStr();
+                  const scheduled = filteredEntries.filter(e => !!e.startTime);
+                  const sorted = [...scheduled].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+                  const renderTimeIndicator = () => {
+                    timeIndicatorRendered = true;
+                    return (
+                      <div key="time-indicator" className={styles.timeIndicatorLine}>
+                        <div className={styles.indicatorLabel}>jam sekarang ({currentTimeStr})</div>
+                        <div className={styles.indicatorLine} />
+                      </div>
+                    );
+                  };
+
+                  sorted.forEach((entry) => {
+                    const entryStartMinutes = timeToMinutes(entry.startTime);
+                    const isProcessing = actionLoadingId === entry.id;
+                    const localTitle = inlineEdits[entry.id]?.title ?? entry.title;
+                    const localStart = inlineEdits[entry.id]?.startTime ?? (entry.startTime || '');
+                    const localEnd = inlineEdits[entry.id]?.endTime ?? (entry.endTime || '');
+
+                    if (isViewingToday && !timeIndicatorRendered && entryStartMinutes > currentMinutes) {
+                      renderedRows.push(renderTimeIndicator());
+                    }
+
+                    renderedRows.push(
+                      <div
+                        key={entry.id}
+                        className={`${styles.compactRow} ${isProcessing ? styles.processingRow : ''}`}
+                      >
+                        {/* 1. Time range — inline editable */}
+                        <div className={styles.timeCol}>
+                          <input
+                            type="time"
+                            className={styles.inlineTimeInput}
+                            value={localStart}
+                            disabled={isPastDate() || isProcessing}
+                            onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], startTime: e.target.value } }))}
+                            onBlur={e => { if (e.target.value) saveField(entry.id, 'startTime', e.target.value); }}
+                            title="Waktu mulai"
+                          />
+                          <span className={styles.timeSeparator}>–</span>
+                          <input
+                            type="time"
+                            className={styles.inlineTimeInput}
+                            value={localEnd}
+                            disabled={isPastDate() || isProcessing}
+                            onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], endTime: e.target.value } }))}
+                            onBlur={e => { if (e.target.value) saveField(entry.id, 'endTime', e.target.value); }}
+                            title="Waktu selesai"
+                          />
+                        </div>
+
+                        {/* 2. Type — inline select */}
+                        <div className={styles.typeCol}>
+                          <select
+                            className={`${styles.typeBadge} ${styles[entry.type]}`}
+                            value={entry.type}
+                            disabled={isPastDate() || isProcessing}
+                            onChange={e => saveField(entry.id, 'type', e.target.value)}
+                          >
+                            <option value="task">🎯 Task</option>
+                            <option value="meeting">🤝 Rapat</option>
+                            <option value="focus">🧘 Fokus</option>
+                          </select>
+                        </div>
+
+                        {/* 3. Title — inline input */}
+                        <div className={styles.titleCol}>
+                          <div className={styles.titleWrapper}>
+                            <input
+                              type="text"
+                              className={styles.inlineTitleInput}
+                              value={localTitle}
+                              disabled={isPastDate() || isProcessing}
+                              onChange={e => setInlineEdits(prev => ({ ...prev, [entry.id]: { ...prev[entry.id], title: e.target.value } }))}
+                              onBlur={e => { if (e.target.value.trim() && e.target.value !== entry.title) saveField(entry.id, 'title', e.target.value.trim()); }}
+                              onKeyDown={e => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }}
+                            />
+                          </div>
+                          {entry.type === 'task' && entry.actionItem && (
+                            <Link
+                              href="/action-items"
+                              target="_blank"
+                              className={styles.linkedActionLink}
+                            >
+                              🔗 AI: {entry.actionItem.title}
+                              {entry.actionItem.project && ` (${entry.actionItem.project.name})`}
+                            </Link>
+                          )}
+                        </div>
+
+                        {/* 4. Status select */}
+                        <div className={styles.statusCol}>
+                          <select
+                            className={`${styles.statusSelect} ${styles[entry.status]}`}
+                            value={entry.status}
+                            disabled={isPastDate() || isProcessing}
+                            onChange={e => saveField(entry.id, 'status', e.target.value)}
+                          >
+                            {entry.type === 'task' ? (
+                              <>
+                                <option value="open">⏳ Open</option>
+                                <option value="in_progress">⚙️ In Progress</option>
+                                <option value="done">✓ Selesai</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="pending">⏳ Pending</option>
+                                <option value="done">✓ Done</option>
+                                <option value="skipped">❌ Skipped</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+
+                        {/* 5. Delete (only non-past) */}
+                        {!isPastDate() && (
+                          <div className={styles.actionsCol}>
+                            <button
+                              className={`${styles.rowIconBtn} ${styles.delete}`}
+                              disabled={isProcessing}
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              title="Hapus agenda"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+
+                  if (isViewingToday && !timeIndicatorRendered) {
+                    renderedRows.push(renderTimeIndicator());
+                  }
+
+                  return renderedRows;
+                })()}
+              </div>
+            </>
           )}
         </div>
       </main>
-
-      {/* Edit Modal (Dialog) */}
-      {isModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeader}>
-              <h2>{modalMode === 'add' ? 'Tambah Rencana Baru' : 'Edit Rencana'}</h2>
-              <span className={styles.closeBtn} onClick={() => setIsModalOpen(false)}>
-                &times;
-              </span>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className={styles.modalForm}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Tipe</label>
-                  <select
-                    className={styles.select}
-                    value={formType}
-                    onChange={(e) => setFormType(e.target.value as any)}
-                  >
-                    <option value="task">🎯 Task (Tugas)</option>
-                    <option value="meeting">🤝 Meeting (Rapat)</option>
-                    <option value="focus">🧘 Focus Block</option>
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Judul Rencana</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Sprint Review, Deep Work"
-                    className={styles.input}
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Waktu Mulai</label>
-                  <input
-                    type="time"
-                    required
-                    className={styles.input}
-                    value={formStartTime}
-                    onChange={(e) => handleStartTimeChange(e.target.value)}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Waktu Selesai</label>
-                  <input
-                    type="time"
-                    required
-                    className={styles.input}
-                    value={formEndTime}
-                    onChange={(e) => setFormEndTime(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Catatan Tambahan (Opsional)</label>
-                <textarea
-                  className={styles.textarea}
-                  placeholder="Detail agenda..."
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                />
-              </div>
-
-              {formType === 'task' && modalMode === 'add' && (
-                <div className={styles.formGroup} style={{ borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem' }}>
-                  <label className={styles.label}>Hubungkan ke Action Item</label>
-                  <select
-                    className={styles.select}
-                    value={formActionItemId}
-                    onChange={(e) => {
-                      setFormActionItemId(e.target.value);
-                      if (e.target.value !== '') {
-                        setFormCreateActionItem(false);
-                      }
-                    }}
-                    disabled={formCreateActionItem}
-                  >
-                    <option value="">-- Pilih Action Item (Opsional) --</option>
-                    {actionItems.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.title} {item.project ? `(${item.project.name})` : ''}
-                      </option>
-                    ))}
-                  </select>
-
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={formCreateActionItem}
-                      onChange={(e) => {
-                        setFormCreateActionItem(e.target.checked);
-                        if (e.target.checked) {
-                          setFormActionItemId('');
-                        }
-                      }}
-                    />
-                    Buat Action Item baru otomatis dari rencana ini
-                  </label>
-                </div>
-              )}
-
-              {formType === 'task' && modalMode === 'edit' && (
-                <div className={styles.formGroup} style={{ borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem' }}>
-                  <label className={styles.label}>Hubungkan ke Action Item</label>
-                  <select
-                    className={styles.select}
-                    value={formActionItemId}
-                    onChange={(e) => setFormActionItemId(e.target.value)}
-                  >
-                    <option value="">-- Pilih Action Item (Opsional) --</option>
-                    {actionItems.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.title} {item.project ? `(${item.project.name})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className={styles.modalFooter}>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.secondary}`}
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isFormSaving}
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className={`${styles.btn} ${styles.primary}`}
-                  disabled={isFormSaving}
-                >
-                  {isFormSaving ? (
-                    <><span className={styles.btnSpinner} /> Menyimpan...</>
-                  ) : 'Simpan'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

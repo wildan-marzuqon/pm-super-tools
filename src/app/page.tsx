@@ -470,57 +470,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Header */}
+      {/* Header + Search inline */}
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>💡 PM Workspace</h1>
           <p className={styles.subtitle}>Satu tempat terorganisir untuk memantau rencana harian, proyek, action items, dan catatan Anda.</p>
         </div>
-      </header>
-
-      {/* Quick Actions Row */}
-      <section className={styles.quickActionsSection}>
-        <h3 className={styles.sectionSmallTitle}>Akses Cepat</h3>
-        <div className={styles.quickActionsGrid}>
-          <Link href="/daily-plan" className={styles.quickActionCard}>
-            <span className={styles.quickActionIcon}>📅</span>
-            <div className={styles.quickActionText}>
-              <strong>Rencana Harian</strong>
-              <span>Atur jadwal hari ini</span>
-            </div>
-          </Link>
-          <button onClick={() => setShowAddForm(true)} className={styles.quickActionCard}>
-            <span className={styles.quickActionIcon}>📋</span>
-            <div className={styles.quickActionText}>
-              <strong>+ Action Item</strong>
-              <span>Tugas baru yang pending</span>
-            </div>
-          </button>
-          <Link href="/notes" className={styles.quickActionCard}>
-            <span className={styles.quickActionIcon}>📝</span>
-            <div className={styles.quickActionText}>
-              <strong>+ Catatan Baru</strong>
-              <span>Tulis ide & rapat</span>
-            </div>
-          </Link>
-          <Link href="/action-items" className={styles.quickActionCard}>
-            <span className={styles.quickActionIcon}>🔄</span>
-            <div className={styles.quickActionText}>
-              <strong>Sync Jira</strong>
-              <span>Tarik/dorong data Jira</span>
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      {/* Global Search Bar */}
-      <div className={styles.searchBarContainer}>
-        <div className={styles.searchBarWrapper}>
+        {/* Inline compact search */}
+        <div className={styles.searchBarInline}>
           <span className={styles.searchIcon}>🔍</span>
           <input
             type="text"
             className={styles.globalSearchInput}
-            placeholder="Cari proyek, action items, atau catatan di workspace..."
+            placeholder="Cari..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -530,7 +492,7 @@ export default function Dashboard() {
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Metrics Row (5 Cards) */}
       <section className={styles.metricsGrid}>

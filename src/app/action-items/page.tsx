@@ -875,103 +875,99 @@ export default function ActionItemsPage() {
 
       {/* Filters Toolbar */}
       <section className={styles.filterToolbar}>
-        <div className={styles.filterRow}>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Status:</span>
-            <div className={styles.btnGroup} style={{ flexWrap: 'wrap' }}>
-              {statusesList.map((st) => {
-                const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
-                const emoji = isDone ? '✓' : st.toLowerCase().includes('progress') ? '⚙️' : st.toLowerCase().includes('pending') ? '⏳' : '📂';
-                return (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st.toLowerCase())}
-                    className={`${styles.filterBtn} ${statusFilter === st.toLowerCase() ? styles.activeFilter : ''}`}
-                  >
-                    {emoji} {st}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.activeFilter : ''}`}
-              >
-                Semua
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Project:</span>
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className={styles.filterSelect}
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Status:</span>
+          <div className={styles.btnGroup} style={{ flexWrap: 'wrap' }}>
+            {statusesList.map((st) => {
+              const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+              const emoji = isDone ? '✓' : st.toLowerCase().includes('progress') ? '⚙️' : st.toLowerCase().includes('pending') ? '⏳' : '📂';
+              return (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st.toLowerCase())}
+                  className={`${styles.filterBtn} ${statusFilter === st.toLowerCase() ? styles.activeFilter : ''}`}
+                >
+                  {emoji} {st}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.activeFilter : ''}`}
             >
-              <option value="all">Semua Proyek</option>
-              {projects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>PIC:</span>
-            <select
-              value={selectedPicFilter}
-              onChange={(e) => setSelectedPicFilter(e.target.value)}
-              className={styles.filterSelect}
-            >
-              <option value="all">Semua PIC</option>
-              {picList.map((pic) => (
-                <option key={pic} value={pic}>
-                  {pic}
-                </option>
-              ))}
-            </select>
+              Semua
+            </button>
           </div>
         </div>
 
-        <div className={styles.filterRow}>
-          <div className={styles.filterGroup} style={{ flexGrow: 1 }}>
-            <span className={styles.filterLabel}>Cari:</span>
-            <input
-              type="text"
-              placeholder="Cari tugas atau PIC..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.filterSearchInput}
-            />
-          </div>
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Project:</span>
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className={styles.filterSelect}
+          >
+            <option value="all">Semua Proyek</option>
+            {projects.map((proj) => (
+              <option key={proj.id} value={proj.id}>
+                {proj.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>Rentang Tanggal:</span>
-            <div className={styles.dateRangeGroup}>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className={styles.filterDateInput}
-              />
-              <span className={styles.dateSeparator}>s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className={styles.filterDateInput}
-              />
-              {(startDate || endDate) && (
-                <button 
-                  className={styles.clearDateBtn} 
-                  onClick={() => { setStartDate(''); setEndDate(''); }}
-                  title="Reset Filter Tanggal"
-                >
-                  ×
-                </button>
-              )}
-            </div>
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>PIC:</span>
+          <select
+            value={selectedPicFilter}
+            onChange={(e) => setSelectedPicFilter(e.target.value)}
+            className={styles.filterSelect}
+          >
+            <option value="all">Semua PIC</option>
+            {picList.map((pic) => (
+              <option key={pic} value={pic}>
+                {pic}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filterGroup} style={{ flexGrow: 1, minWidth: '150px' }}>
+          <span className={styles.filterLabel}>Cari:</span>
+          <input
+            type="text"
+            placeholder="Cari tugas atau PIC..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.filterSearchInput}
+          />
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Rentang Tanggal:</span>
+          <div className={styles.dateRangeGroup}>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={styles.filterDateInput}
+            />
+            <span className={styles.dateSeparator}>s/d</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={styles.filterDateInput}
+            />
+            {(startDate || endDate) && (
+              <button 
+                className={styles.clearDateBtn} 
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                title="Reset Filter Tanggal"
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
       </section>

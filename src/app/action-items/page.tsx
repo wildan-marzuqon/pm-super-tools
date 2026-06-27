@@ -128,6 +128,7 @@ export default function ActionItemsPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [selectedPicFilter, setSelectedPicFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -137,7 +138,7 @@ export default function ActionItemsPage() {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds([]);
-  }, [statusFilter, projectFilter, searchQuery, startDate, endDate]);
+  }, [statusFilter, projectFilter, selectedPicFilter, searchQuery, startDate, endDate]);
 
   // Form State for creating action item
   const [showAddForm, setShowAddForm] = useState(false);
@@ -171,6 +172,10 @@ export default function ActionItemsPage() {
         setJiraUrl(settingsData.jiraUrl || '');
         if (settingsData.actionItemStatuses && settingsData.actionItemStatuses.length > 0) {
           setStatusesList(settingsData.actionItemStatuses);
+          setNewAction(prev => ({
+            ...prev,
+            status: settingsData.actionItemStatuses[0].toLowerCase()
+          }));
           const hasPending = settingsData.actionItemStatuses.some((s: string) => s.toLowerCase() === 'pending');
           if (!hasPending) {
             setStatusFilter(settingsData.actionItemStatuses[0].toLowerCase());
@@ -457,6 +462,11 @@ export default function ActionItemsPage() {
     return deadline < today;
   };
 
+  // Dynamic unique PICs list
+  const picList = Array.from(
+    new Set(actionItems.map(item => item.pic).filter(Boolean))
+  ).sort();
+
   // Filter logic
   const filteredItems = actionItems.filter((item) => {
     const isDoneStatus = (statusName: string) => {
@@ -473,6 +483,10 @@ export default function ActionItemsPage() {
 
     const matchesProject =
       projectFilter === 'all' || item.project_id === projectFilter;
+
+    const matchesPic =
+      selectedPicFilter === 'all' ||
+      (item.pic && item.pic.toLowerCase() === selectedPicFilter.toLowerCase());
 
     const matchesSearch =
       searchQuery.trim() === '' ||
@@ -496,7 +510,7 @@ export default function ActionItemsPage() {
       return true;
     })();
 
-    return matchesStatus && matchesProject && matchesSearch && matchesDateRange;
+    return matchesStatus && matchesProject && matchesPic && matchesSearch && matchesDateRange;
   });
 
   const getStatusRank = (statusName: string) => {
@@ -898,6 +912,22 @@ export default function ActionItemsPage() {
               {projects.map((proj) => (
                 <option key={proj.id} value={proj.id}>
                   {proj.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>PIC:</span>
+            <select
+              value={selectedPicFilter}
+              onChange={(e) => setSelectedPicFilter(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">Semua PIC</option>
+              {picList.map((pic) => (
+                <option key={pic} value={pic}>
+                  {pic}
                 </option>
               ))}
             </select>

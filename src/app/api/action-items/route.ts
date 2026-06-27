@@ -71,7 +71,13 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const status = body.status || (body.completed ? 'done' : 'open');
+    const settings = await prisma.systemSetting.findUnique({
+      where: { id: 'default' }
+    });
+    const statusesList = settings?.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"];
+    const defaultStatus = statusesList[0]?.toLowerCase() || 'open';
+
+    const status = body.status || (body.completed ? 'done' : defaultStatus);
     const completed = status === 'done';
 
     const newItem = await prisma.actionItem.create({

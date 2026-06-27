@@ -128,6 +128,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           const data = await res.json();
           if (data.actionItemStatuses && data.actionItemStatuses.length > 0) {
             setStatusesList(data.actionItemStatuses);
+            setNewAction(prev => ({
+              ...prev,
+              status: data.actionItemStatuses[0].toLowerCase()
+            }));
           }
         }
       } catch (error) {
@@ -297,7 +301,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       });
 
       if (res.ok) {
-        setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', categoryId: '', status: 'open' });
+        setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', categoryId: '', status: statusesList[0]?.toLowerCase() || 'open' });
         setShowAddActionForm(false);
         fetchProjectDetail();
       }

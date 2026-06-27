@@ -3,12 +3,8 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // 1. Get cached Jira issues
-    const jiraIssues = await prisma.jiraIssue.findMany({
-      orderBy: { key: 'asc' }
-    });
-
-    // 2. Extract unique assignees from Jira issues
+    // 1. Get cached Jira issues assignees to build the valid name list
+    const jiraIssues = await prisma.jiraIssue.findMany({});
     const jiraAssignees = new Set<string>();
     jiraIssues.forEach(issue => {
       const name = (issue.assignee || '').trim().toLowerCase();
@@ -17,24 +13,23 @@ export async function GET() {
       }
     });
 
-    // 3. Get manual action items (not synced from Jira to avoid duplication)
-    const manualActionItems = await prisma.actionItem.findMany({
-      where: {
-        OR: [
-          { jiraKey: null },
-          { jiraKey: "" }
-        ]
-      },
+    // 2. Fetch all ActionItems (our single source of truth)
+    const actionItems = await prisma.actionItem.findMany({
       orderBy: { createdAt: 'desc' }
     });
 
-    // 4. Filter manual action items where PIC matches one of Jira assignees
-    const filteredManualIssues = manualActionItems
+    // 3. Filter ActionItems:
+    // - If it is a Jira issue (has jiraKey), keep it.
+    // - If it is manual (no jiraKey), only keep it if PIC matches one of the Jira assignees.
+    const filteredIssues = actionItems
       .filter(item => {
+        const isJira = !!item.jiraKey;
+        if (isJira) return true;
+
         const picName = (item.pic || '').trim().toLowerCase();
         return picName && picName !== 'unassigned' && jiraAssignees.has(picName);
       })
-      .map((item) => {
+      .map(item => {
         const key = item.jiraKey || `AI-${item.id.slice(0, 4).toUpperCase()}`;
         return {
           id: item.id,
@@ -51,15 +46,9 @@ export async function GET() {
         };
       });
 
-    // 5. Combine and return
-    const combined = [
-      ...jiraIssues,
-      ...filteredManualIssues
-    ];
-
-    return NextResponse.json(combined);
+    return NextResponse.json(filteredIssues);
   } catch (error) {
-    console.error('Error fetching combined Jira and manual issues:', error);
+    console.error('Error fetching combined action items for team load:', error);
     return NextResponse.json({ error: 'Failed to fetch issues' }, { status: 500 });
   }
 }

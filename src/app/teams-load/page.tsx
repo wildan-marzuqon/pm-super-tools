@@ -51,6 +51,9 @@ export default function TeamsLoadPage() {
       dragItem.current = null;
       dragOverItem.current = null;
       setActiveIssues(copyListItems);
+
+      const orderedKeys = copyListItems.map(item => item.key);
+      saveOrder(selectedAssignee, orderedKeys);
     }
   };
 
@@ -417,6 +420,27 @@ export default function TeamsLoadPage() {
     return count || 1; // avoid divide by zero
   };
 
+  // Load saved order from localStorage
+  const getSavedOrder = (assignee: string): string[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(`teams-load-order-${assignee.toLowerCase()}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  // Save order to localStorage
+  const saveOrder = (assignee: string, orderedKeys: string[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(`teams-load-order-${assignee.toLowerCase()}`, JSON.stringify(orderedKeys));
+    } catch (e) {
+      console.error('Failed to save order to localStorage:', e);
+    }
+  };
+
   // Sync and filter/sort issues to activeIssues state
   useEffect(() => {
     const statusOrder = ['open', 'in progress', 'testing', 'backlog'];
@@ -452,17 +476,40 @@ export default function TeamsLoadPage() {
       return start <= rangeEnd && due >= rangeStart;
     });
 
-    // Prioritize tasks with estimate > 0, empty estimate at the bottom
-    filtered.sort((a, b) => {
-      const hasEstimateA = a.originalEstimate > 0 ? 1 : 0;
-      const hasEstimateB = b.originalEstimate > 0 ? 1 : 0;
-      if (hasEstimateA !== hasEstimateB) {
-        return hasEstimateB - hasEstimateA;
-      }
-      const rankA = getStatusRank(a.status);
-      const rankB = getStatusRank(b.status);
-      return rankA - rankB;
-    });
+    const savedOrder = getSavedOrder(selectedAssignee);
+    if (savedOrder.length > 0) {
+      filtered.sort((a, b) => {
+        const idxA = savedOrder.indexOf(a.key);
+        const idxB = savedOrder.indexOf(b.key);
+        
+        if (idxA !== -1 && idxB !== -1) {
+          return idxA - idxB;
+        }
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        
+        const hasEstimateA = a.originalEstimate > 0 ? 1 : 0;
+        const hasEstimateB = b.originalEstimate > 0 ? 1 : 0;
+        if (hasEstimateA !== hasEstimateB) {
+          return hasEstimateB - hasEstimateA;
+        }
+        const rankA = getStatusRank(a.status);
+        const rankB = getStatusRank(b.status);
+        return rankA - rankB;
+      });
+    } else {
+      // Prioritize tasks with estimate > 0, empty estimate at the bottom
+      filtered.sort((a, b) => {
+        const hasEstimateA = a.originalEstimate > 0 ? 1 : 0;
+        const hasEstimateB = b.originalEstimate > 0 ? 1 : 0;
+        if (hasEstimateA !== hasEstimateB) {
+          return hasEstimateB - hasEstimateA;
+        }
+        const rankA = getStatusRank(a.status);
+        const rankB = getStatusRank(b.status);
+        return rankA - rankB;
+      });
+    }
 
     setActiveIssues(filtered);
   }, [issues, selectedAssignee, startDateStr, endDateStr]);

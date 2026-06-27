@@ -225,7 +225,8 @@ export async function createJiraIssue(
   summary: string,
   description: string,
   deadline?: string,
-  assigneeName?: string
+  assigneeName?: string,
+  originalEstimate?: number
 ): Promise<{ key: string; self: string }> {
   const config = await getJiraConfig();
   if (!config) {
@@ -257,6 +258,11 @@ export async function createJiraIssue(
   if (accountId) {
     body.fields.assignee = { accountId };
   }
+  if (originalEstimate) {
+    body.fields.timetracking = {
+      originalEstimate: `${originalEstimate}s`
+    };
+  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -285,7 +291,8 @@ export async function updateJiraIssue(
   summary: string,
   description: string,
   deadline?: string,
-  assigneeName?: string
+  assigneeName?: string,
+  originalEstimate?: number
 ): Promise<void> {
   const config = await getJiraConfig();
   if (!config) {
@@ -315,6 +322,12 @@ export async function updateJiraIssue(
     body.fields.assignee = { accountId };
   } else if (assigneeName && (assigneeName.toLowerCase() === 'unassigned' || assigneeName.toLowerCase() === '')) {
     body.fields.assignee = { accountId: null };
+  }
+
+  if (originalEstimate !== undefined) {
+    body.fields.timetracking = {
+      originalEstimate: `${originalEstimate}s`
+    };
   }
 
   const response = await fetch(url, {

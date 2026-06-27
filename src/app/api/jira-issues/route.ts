@@ -3,13 +3,64 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const issues = await prisma.jiraIssue.findMany({
+    // 1. Get cached Jira issues
+    const jiraIssues = await prisma.jiraIssue.findMany({
       orderBy: { key: 'asc' }
     });
-    return NextResponse.json(issues);
+
+    // 2. Extract unique assignees from Jira issues
+    const jiraAssignees = new Set<string>();
+    jiraIssues.forEach(issue => {
+      const name = (issue.assignee || '').trim().toLowerCase();
+      if (name && name !== 'unassigned') {
+        jiraAssignees.add(name);
+      }
+    });
+
+    // 3. Get manual action items (not synced from Jira to avoid duplication)
+    const manualActionItems = await prisma.actionItem.findMany({
+      where: {
+        OR: [
+          { jiraKey: null },
+          { jiraKey: "" }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // 4. Filter manual action items where PIC matches one of Jira assignees
+    const filteredManualIssues = manualActionItems
+      .filter(item => {
+        const picName = (item.pic || '').trim().toLowerCase();
+        return picName && picName !== 'unassigned' && jiraAssignees.has(picName);
+      })
+      .map((item) => {
+        const key = item.jiraKey || `AI-${item.id.slice(0, 4).toUpperCase()}`;
+        return {
+          id: item.id,
+          key,
+          issueType: 'Task',
+          summary: item.title,
+          assignee: item.pic || 'Unassigned',
+          priority: 'Medium',
+          status: item.status,
+          startDate: item.startDate ? new Date(item.startDate) : null,
+          dueDate: item.deadline ? new Date(item.deadline) : null,
+          originalEstimate: Number(item.originalEstimate) || 0,
+          createdAt: item.createdAt
+        };
+      });
+
+    // 5. Combine and return
+    const combined = [
+      ...jiraIssues,
+      ...filteredManualIssues
+    ];
+
+    return NextResponse.json(combined);
   } catch (error) {
-    console.error('Error fetching Jira issues:', error);
-    return NextResponse.json({ error: 'Failed to fetch Jira issues' }, { status: 500 });
+    console.error('Error fetching combined Jira and manual issues:', error);
+    return NextResponse.json({ error: 'Failed to fetch issues' }, { status: 500 });
   }
 }
 

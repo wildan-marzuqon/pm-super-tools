@@ -120,7 +120,14 @@ export async function POST(request: NextRequest) {
           try {
             const desc = item.description || 'Dibuat dari SuperPM Action Item';
             const deadlineArg = item.deadline || undefined;
-            const jiraResult = await createJiraIssue(projKey, item.title, desc, deadlineArg, item.pic || undefined);
+            const jiraResult = await createJiraIssue(
+              projKey,
+              item.title,
+              desc,
+              deadlineArg,
+              item.pic || undefined,
+              item.originalEstimate || 0
+            );
             
             // If the task was already completed or in progress locally, transition it in Jira too
             const isDone = item.completed || isStatusDone(item.status);
@@ -171,7 +178,14 @@ export async function POST(request: NextRequest) {
         if (hasChanges || direction === 'push') {
           try {
             const desc = item.description || 'Diperbarui dari SuperPM';
-            await updateJiraIssue(item.jiraKey!, item.title, desc, item.deadline || undefined, item.pic || undefined);
+            await updateJiraIssue(
+              item.jiraKey!,
+              item.title,
+              desc,
+              item.deadline || undefined,
+              item.pic || undefined,
+              item.originalEstimate || 0
+            );
 
             let targetJiraStatus = 'To Do';
             if (isStatusProgress(item.status)) {
@@ -278,6 +292,7 @@ export async function POST(request: NextRequest) {
                 deadline: deadlineStr,
                 status: localStatus,
                 completed: isDone,
+                originalEstimate: issue.originalEstimate || 0,
                 jiraSyncedAt: new Date(),
                 updatedAt: new Date() // Sync local updated timestamp to match sync time
               }
@@ -309,6 +324,7 @@ export async function POST(request: NextRequest) {
                 pic: issue.assignee || 'Unassigned',
                 status: localStatus,
                 completed: isDone,
+                originalEstimate: issue.originalEstimate || 0,
                 projectId: matchingProject.id,
                 jiraKey: issue.key,
                 jiraSyncedAt: new Date(),

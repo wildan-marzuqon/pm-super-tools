@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
         category_name: item.category?.name || null,
         jiraKey: item.jiraKey || null,
         jiraSyncedAt: item.jiraSyncedAt || null,
+        originalEstimate: item.originalEstimate || 0,
         created_at: item.createdAt
       };
     });
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
         pic: body.pic || '',
         completed,
         status,
+        originalEstimate: body.originalEstimate !== undefined ? parseInt(body.originalEstimate, 10) || 0 : 0,
         sourceNoteId: body.source_note_id || null,
         projectId: body.project_id || null,
         categoryId: body.category_id || null,
@@ -114,6 +116,7 @@ export async function POST(request: Request) {
       category_name: createdItem.category?.name || null,
       jiraKey: createdItem.jiraKey || null,
       jiraSyncedAt: createdItem.jiraSyncedAt || null,
+      originalEstimate: createdItem.originalEstimate || 0,
       created_at: createdItem.createdAt
     }, { status: 201 });
   } catch (error) {

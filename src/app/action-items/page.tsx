@@ -26,6 +26,7 @@ interface ActionItem {
   source_note_id?: string;
   jiraKey?: string | null;
   jiraSyncedAt?: string | null;
+  originalEstimate?: number;
   created_at: string;
 }
 
@@ -117,7 +118,8 @@ export default function ActionItemsPage() {
     projectId: '',
     categoryId: '',
     completed: false,
-    status: 'open'
+    status: 'open',
+    originalEstimate: 0
   });
 
   // Dropdown state for task completion
@@ -147,7 +149,8 @@ export default function ActionItemsPage() {
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
-    status: 'open'
+    status: 'open',
+    originalEstimate: 0
   });
 
   const fetchData = async () => {
@@ -265,7 +268,7 @@ export default function ActionItemsPage() {
     if (!newAction.title.trim() || isCreatingAction) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
+    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open', originalEstimate: 0 });
     setShowAddForm(false);
     setIsCreatingAction(true);
 
@@ -281,7 +284,8 @@ export default function ActionItemsPage() {
           pic: formData.pic,
           project_id: formData.projectId || undefined,
           category_id: formData.categoryId || undefined,
-          status: formData.status
+          status: formData.status,
+          originalEstimate: formData.originalEstimate
         })
       });
 
@@ -307,7 +311,8 @@ export default function ActionItemsPage() {
       projectId: item.project_id || '',
       categoryId: item.category_id || '',
       completed: item.completed,
-      status: getResolvedStatus(item, statusesList)
+      status: getResolvedStatus(item, statusesList),
+      originalEstimate: item.originalEstimate || 0
     });
   };
 
@@ -316,16 +321,16 @@ export default function ActionItemsPage() {
     if (!editingAction) return;
 
     const mergedFields = {
-      title: editActionFields.title,
-      description: editActionFields.description,
-      deadline: editActionFields.deadline,
-      startDate: editActionFields.startDate,
-      pic: editActionFields.pic,
-      projectId: editActionFields.projectId,
-      categoryId: editActionFields.categoryId,
-      completed: editActionFields.completed,
-      status: editActionFields.status,
-      ...fieldsToUpdate
+      title: fieldsToUpdate.title !== undefined ? fieldsToUpdate.title : editActionFields.title,
+      description: fieldsToUpdate.description !== undefined ? fieldsToUpdate.description : editActionFields.description,
+      deadline: fieldsToUpdate.deadline !== undefined ? fieldsToUpdate.deadline : editActionFields.deadline,
+      startDate: fieldsToUpdate.startDate !== undefined ? fieldsToUpdate.startDate : editActionFields.startDate,
+      pic: fieldsToUpdate.pic !== undefined ? fieldsToUpdate.pic : editActionFields.pic,
+      projectId: fieldsToUpdate.projectId !== undefined ? fieldsToUpdate.projectId : editActionFields.projectId,
+      categoryId: fieldsToUpdate.categoryId !== undefined ? fieldsToUpdate.categoryId : editActionFields.categoryId,
+      completed: fieldsToUpdate.completed !== undefined ? fieldsToUpdate.completed : editActionFields.completed,
+      status: fieldsToUpdate.status !== undefined ? fieldsToUpdate.status : editActionFields.status,
+      originalEstimate: fieldsToUpdate.originalEstimate !== undefined ? fieldsToUpdate.originalEstimate : editActionFields.originalEstimate
     };
 
     // Optimistic: update local state immediately
@@ -343,7 +348,8 @@ export default function ActionItemsPage() {
               project_id: mergedFields.projectId || item.project_id,
               category_id: mergedFields.categoryId || item.category_id,
               completed: mergedFields.completed,
-              status: mergedFields.status
+              status: mergedFields.status,
+              originalEstimate: mergedFields.originalEstimate
             }
           : item
       )
@@ -362,7 +368,8 @@ export default function ActionItemsPage() {
           project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
           category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
           completed: mergedFields.completed,
-          status: mergedFields.status
+          status: mergedFields.status,
+          originalEstimate: mergedFields.originalEstimate
         })
       });
     } catch (error) {
@@ -756,30 +763,48 @@ export default function ActionItemsPage() {
                     />
                   </div>
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Status</label>
-                  <select
-                    value={newAction.status}
-                    onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      backgroundColor: 'white'
-                    }}
-                  >
-                    {statusesList.map(st => {
-                      const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
-                      const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
-                      return (
-                        <option key={st} value={st.toLowerCase()}>
-                          {prefix}{st}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Status</label>
+                    <select
+                      value={newAction.status}
+                      onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        backgroundColor: 'white',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {statusesList.map(st => {
+                        const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                        const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                        return (
+                          <option key={st} value={st.toLowerCase()}>
+                            {prefix}{st}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Estimasi Waktu (Jam)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={newAction.originalEstimate ? newAction.originalEstimate / 3600 : ''}
+                      onChange={(e) => {
+                        const hours = parseFloat(e.target.value) || 0;
+                        setNewAction({ ...newAction, originalEstimate: hours * 3600 });
+                      }}
+                      placeholder="misal: 8 atau 12.5"
+                    />
+                  </div>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Kaitkan ke Project</label>
@@ -1004,6 +1029,22 @@ export default function ActionItemsPage() {
                       {item.description && <p className={styles.itemDesc}>{item.description}</p>}
                       <div className={styles.itemMeta}>
                         <span className={styles.picBadge}>PIC: {item.pic}</span>
+                        {item.originalEstimate ? (
+                          <span style={{
+                            backgroundColor: 'var(--primary-light, #FEF3C7)',
+                            color: '#B45309',
+                            border: '1px solid rgba(245, 158, 11, 0.2)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            ⏱️ {(item.originalEstimate / 3600).toFixed(1)}h
+                          </span>
+                        ) : null}
                         {item.category_name && (
                           <span className={styles.categoryTagBadge} title={item.category_name}>
                             🏷️ {item.category_name}
@@ -1246,36 +1287,55 @@ export default function ActionItemsPage() {
                     </div>
                   )}
                 </div>
-                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
-                  <label>Status</label>
-                  <select
-                    value={editActionFields.status.toLowerCase()}
-                    onChange={(e) => {
-                      const nextStatus = e.target.value;
-                      const isDone = nextStatus.toLowerCase() === 'done' || nextStatus.toLowerCase() === 'selesai' ||
-                                     (statusesList.length > 0 && statusesList[statusesList.length - 1].toLowerCase() === nextStatus.toLowerCase());
-                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: isDone });
-                      handleAutoSaveAction({ status: nextStatus, completed: isDone });
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '14px',
-                      outline: 'none',
-                      backgroundColor: 'white'
-                    }}
-                  >
-                    {statusesList.map(st => {
-                      const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
-                      const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
-                      return (
-                        <option key={st} value={st.toLowerCase()}>
-                          {prefix}{st}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Status</label>
+                    <select
+                      value={editActionFields.status.toLowerCase()}
+                      onChange={(e) => {
+                        const nextStatus = e.target.value;
+                        const isDone = nextStatus.toLowerCase() === 'done' || nextStatus.toLowerCase() === 'selesai' ||
+                                       (statusesList.length > 0 && statusesList[statusesList.length - 1].toLowerCase() === nextStatus.toLowerCase());
+                        setEditActionFields({ ...editActionFields, status: nextStatus, completed: isDone });
+                        handleAutoSaveAction({ status: nextStatus, completed: isDone });
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        backgroundColor: 'white',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {statusesList.map(st => {
+                        const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                        const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                        return (
+                          <option key={st} value={st.toLowerCase()}>
+                            {prefix}{st}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Estimasi Waktu (Jam)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={editActionFields.originalEstimate ? editActionFields.originalEstimate / 3600 : ''}
+                      onChange={(e) => {
+                        const hours = parseFloat(e.target.value) || 0;
+                        setEditActionFields({ ...editActionFields, originalEstimate: hours * 3600 });
+                      }}
+                      onBlur={() => handleAutoSaveAction({ originalEstimate: editActionFields.originalEstimate })}
+                      placeholder="misal: 8 atau 12.5"
+                    />
+                  </div>
                 </div>
               </div>
               <div className={styles.modalFooter}>

@@ -37,6 +37,7 @@ export async function PUT(
         projectId: body.project_id !== undefined ? body.project_id : undefined,
         categoryId: body.category_id !== undefined ? body.category_id : undefined,
         sourceNoteId: body.source_note_id !== undefined ? body.source_note_id : undefined,
+        originalEstimate: body.originalEstimate !== undefined ? (parseInt(body.originalEstimate, 10) || 0) : undefined,
       },
       include: {
         category: true
@@ -71,6 +72,7 @@ export async function PUT(
       category_name: updatedItem.category?.name || null,
       jiraKey: updatedItem.jiraKey || null,
       jiraSyncedAt: updatedItem.jiraSyncedAt || null,
+      originalEstimate: updatedItem.originalEstimate || 0,
       created_at: updatedItem.createdAt
     });
   } catch (error) {

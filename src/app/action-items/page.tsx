@@ -151,7 +151,7 @@ export default function ActionItemsPage() {
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
-    status: 'open',
+    status: statusesList[0]?.toLowerCase() || 'open',
     originalEstimate: 0
   });
 
@@ -274,7 +274,7 @@ export default function ActionItemsPage() {
     if (!newAction.title.trim() || isCreatingAction) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open', originalEstimate: 0 });
+    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: statusesList[0]?.toLowerCase() || 'open', originalEstimate: 0 });
     setShowAddForm(false);
     setIsCreatingAction(true);
 

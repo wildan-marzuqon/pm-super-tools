@@ -593,3 +593,15 @@
   border-color: var(--primary) !important;
   background-color: var(--primary-subtle) !important;
 }
+
+.draggableRow {
+  cursor: grab;
+  user-select: none;
+  transition: background-color var(--transition-fast, 0.2s);
+}
+
+.draggableRow:active {
+  cursor: grabbing;
+  opacity: 0.6;
+  background-color: var(--primary-light, #FEF3C7) !important;
+}

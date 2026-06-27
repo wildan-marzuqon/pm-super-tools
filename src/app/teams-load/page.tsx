@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { useModalDialog } from '@/components/ModalProvider';
@@ -21,6 +21,7 @@ interface JiraIssue {
 export default function TeamsLoadPage() {
   const { alert } = useModalDialog();
   const [issues, setIssues] = useState<JiraIssue[]>([]);
+  const [activeIssues, setActiveIssues] = useState<JiraIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -28,6 +29,30 @@ export default function TeamsLoadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [jiraUrl, setJiraUrl] = useState('');
+
+  // Drag and drop refs
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleRowDragStart = (index: number) => {
+    dragItem.current = index;
+  };
+
+  const handleRowDragEnter = (index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleRowDragEnd = () => {
+    if (dragItem.current !== null && dragOverItem.current !== null) {
+      const copyListItems = [...activeIssues];
+      const dragItemContent = copyListItems[dragItem.current];
+      copyListItems.splice(dragItem.current, 1);
+      copyListItems.splice(dragOverItem.current, 0, dragItemContent);
+      dragItem.current = null;
+      dragOverItem.current = null;
+      setActiveIssues(copyListItems);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -392,49 +417,58 @@ export default function TeamsLoadPage() {
     return count || 1; // avoid divide by zero
   };
 
-  // Filter issues by assignee and date range overlap
-  const filteredIssues = issues.filter(issue => {
-    // 0. Filter out done tasks
-    if (issue.status.toLowerCase() === 'done') {
-      return false;
-    }
+  // Sync and filter/sort issues to activeIssues state
+  useEffect(() => {
+    const statusOrder = ['open', 'in progress', 'testing', 'backlog'];
+    const getStatusRank = (statusName: string) => {
+      const norm = statusName.toLowerCase();
+      const idx = statusOrder.indexOf(norm);
+      return idx === -1 ? 999 : idx;
+    };
 
-    // 1. Assignee Filter
-    if (selectedAssignee !== 'all' && issue.assignee.toLowerCase() !== selectedAssignee.toLowerCase()) {
-      return false;
-    }
+    const filtered = issues.filter(issue => {
+      // 0. Filter out done tasks
+      if (issue.status.toLowerCase() === 'done') {
+        return false;
+      }
 
-    // 2. Date Overlap Filter
-    const start = issue.startDate ? new Date(issue.startDate) : null;
-    const due = issue.dueDate ? new Date(issue.dueDate) : null;
-    if (!start || !due) return true; // Keep if no dates
+      // 1. Assignee Filter
+      if (selectedAssignee !== 'all' && issue.assignee.toLowerCase() !== selectedAssignee.toLowerCase()) {
+        return false;
+      }
 
-    if (!startDateStr || !endDateStr) return true;
+      // 2. Date Overlap Filter
+      const start = issue.startDate ? new Date(issue.startDate) : null;
+      const due = issue.dueDate ? new Date(issue.dueDate) : null;
+      if (!start || !due) return true; // Keep if no dates
 
-    const rangeStart = new Date(startDateStr);
-    const rangeEnd = new Date(endDateStr);
-    rangeStart.setHours(0, 0, 0, 0);
-    rangeEnd.setHours(23, 59, 59, 999);
+      if (!startDateStr || !endDateStr) return true;
 
-    return start <= rangeEnd && due >= rangeStart;
-  });
+      const rangeStart = new Date(startDateStr);
+      const rangeEnd = new Date(endDateStr);
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd.setHours(23, 59, 59, 999);
 
-  // Sort issues by order: open, in progress, testing, backlog
-  const statusOrder = ['open', 'in progress', 'testing', 'backlog'];
-  const getStatusRank = (statusName: string) => {
-    const norm = statusName.toLowerCase();
-    const idx = statusOrder.indexOf(norm);
-    return idx === -1 ? 999 : idx;
-  };
+      return start <= rangeEnd && due >= rangeStart;
+    });
 
-  filteredIssues.sort((a, b) => {
-    const rankA = getStatusRank(a.status);
-    const rankB = getStatusRank(b.status);
-    return rankA - rankB;
-  });
+    // Prioritize tasks with estimate > 0, empty estimate at the bottom
+    filtered.sort((a, b) => {
+      const hasEstimateA = a.originalEstimate > 0 ? 1 : 0;
+      const hasEstimateB = b.originalEstimate > 0 ? 1 : 0;
+      if (hasEstimateA !== hasEstimateB) {
+        return hasEstimateB - hasEstimateA;
+      }
+      const rankA = getStatusRank(a.status);
+      const rankB = getStatusRank(b.status);
+      return rankA - rankB;
+    });
+
+    setActiveIssues(filtered);
+  }, [issues, selectedAssignee, startDateStr, endDateStr]);
 
   // Calculate daily load for each task
-  const taskDailyLoads = filteredIssues.map(issue => {
+  const taskDailyLoads = activeIssues.map(issue => {
     const start = issue.startDate ? new Date(issue.startDate) : null;
     const due = issue.dueDate ? new Date(issue.dueDate) : null;
     
@@ -562,7 +596,7 @@ export default function TeamsLoadPage() {
         </div>
         <div className={styles.statBox}>
           <span className={styles.statLabel}>Total Tasks</span>
-          <span className={styles.statVal}>{filteredIssues.length}</span>
+          <span className={styles.statVal}>{activeIssues.length}</span>
         </div>
       </section>
 
@@ -723,8 +757,16 @@ export default function TeamsLoadPage() {
                 </tr>
               </thead>
               <tbody>
-                {taskDailyLoads.map(({ issue, totalHours, dailyHours, isActiveOnDate }) => (
-                  <tr key={issue.id}>
+                {taskDailyLoads.map(({ issue, totalHours, dailyHours, isActiveOnDate }, idx) => (
+                  <tr
+                    key={issue.id}
+                    draggable
+                    onDragStart={() => handleRowDragStart(idx)}
+                    onDragEnter={() => handleRowDragEnter(idx)}
+                    onDragEnd={handleRowDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                    className={styles.draggableRow}
+                  >
                     <td className={styles.fixedCol}>
                       <a 
                         href={jiraUrl ? `${jiraUrl.replace(/\/+$/, '')}/browse/${issue.key}` : '#'} 

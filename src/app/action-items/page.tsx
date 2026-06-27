@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { useModalDialog } from '@/components/ModalProvider';
+import * as XLSX from 'xlsx';
 
 interface Project {
   id: string;
@@ -446,6 +447,53 @@ export default function ActionItemsPage() {
     }
   };
 
+  const handleExportXLSX = () => {
+    if (sortedItems.length === 0) {
+      alert('Tidak ada data untuk diexport!', 'Gagal Export', 'error');
+      return;
+    }
+
+    try {
+      // 1. Prepare data mapping
+      const dataToExport = sortedItems.map((item, idx) => ({
+        'No': idx + 1,
+        'Judul Tugas': item.title,
+        'Deskripsi': item.description || '',
+        'PIC': item.pic || '-',
+        'Start Date': item.startDate ? formatDate(item.startDate) : '-',
+        'Deadline': item.deadline ? formatDate(item.deadline) : '-',
+        'Estimasi (Jam)': item.originalEstimate ? item.originalEstimate / 3600 : 0,
+        'Status': item.status.toUpperCase(),
+        'Jira Key': item.jiraKey || '-',
+        'Kategori': item.category_name || '-',
+        'Selesai': item.completed ? 'Ya' : 'Tidak'
+      }));
+
+      // 2. Create worksheet and workbook
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+      // Autofit columns helper
+      const maxLens = Object.keys(dataToExport[0]).map(key => {
+        let maxLen = key.length;
+        dataToExport.forEach(row => {
+          const val = String(row[key as keyof typeof row] || '');
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        return { wch: Math.min(maxLen + 2, 50) }; // cap column width at 50 chars
+      });
+      worksheet['!cols'] = maxLens;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Action Items Report');
+
+      // 3. Trigger download
+      XLSX.writeFile(workbook, `Action_Items_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err: any) {
+      console.error('Error exporting XLSX:', err);
+      alert(`Gagal mengeksport data: ${err.message || 'Error'}`, 'Error Export', 'error');
+    }
+  };
+
   // Helper formatting date
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
@@ -648,6 +696,26 @@ export default function ActionItemsPage() {
             title={selectedIds.length === 0 ? 'Pilih action item terlebih dahulu' : 'Masukkan item terpilih ke Daily Plan'}
           >
             {`📅 Masukkan ke Daily Plan${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
+          </button>
+          <button
+            onClick={handleExportXLSX}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#10B981',
+              color: '#F8FAFC',
+              border: '1px solid #059669',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            title="Export list action item terfilter ke Excel (.xlsx)"
+          >
+            📊 Export XLSX
           </button>
           <button className={styles.addBtn} onClick={() => setShowAddForm(true)}>
             + Action Item Baru

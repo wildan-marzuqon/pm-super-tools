@@ -394,6 +394,11 @@ export default function TeamsLoadPage() {
 
   // Filter issues by assignee and date range overlap
   const filteredIssues = issues.filter(issue => {
+    // 0. Filter out done tasks
+    if (issue.status.toLowerCase() === 'done') {
+      return false;
+    }
+
     // 1. Assignee Filter
     if (selectedAssignee !== 'all' && issue.assignee.toLowerCase() !== selectedAssignee.toLowerCase()) {
       return false;
@@ -412,6 +417,20 @@ export default function TeamsLoadPage() {
     rangeEnd.setHours(23, 59, 59, 999);
 
     return start <= rangeEnd && due >= rangeStart;
+  });
+
+  // Sort issues by order: open, in progress, testing, backlog
+  const statusOrder = ['open', 'in progress', 'testing', 'backlog'];
+  const getStatusRank = (statusName: string) => {
+    const norm = statusName.toLowerCase();
+    const idx = statusOrder.indexOf(norm);
+    return idx === -1 ? 999 : idx;
+  };
+
+  filteredIssues.sort((a, b) => {
+    const rankA = getStatusRank(a.status);
+    const rankB = getStatusRank(b.status);
+    return rankA - rankB;
   });
 
   // Calculate daily load for each task

@@ -132,6 +132,7 @@ function NotesContent() {
   const [popoverFields, setPopoverFields] = useState({
     title: '',
     pic: '',
+    startDate: '',
     deadline: '',
     projectId: '',
     categoryId: '',
@@ -586,6 +587,7 @@ function NotesContent() {
     setPopoverFields({
       title: floatButtonPos.nodeText,
       pic: 'Wildan',
+      startDate: new Date().toISOString().split('T')[0],
       deadline: new Date().toISOString().split('T')[0],
       projectId: projects[0]?.id || '',
       categoryId: '',
@@ -611,6 +613,7 @@ function NotesContent() {
         body: JSON.stringify({
           title: popoverFields.title,
           description: popoverFields.description,
+          startDate: popoverFields.startDate,
           deadline: popoverFields.deadline,
           pic: popoverFields.pic,
           completed: false,
@@ -956,6 +959,16 @@ function NotesContent() {
                           value={popoverFields.pic}
                           onChange={(e) => setPopoverFields({ ...popoverFields, pic: e.target.value })}
                           placeholder="Nama PIC..."
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.popoverRow}>
+                      <div className={styles.popoverField}>
+                        <label>Start Date</label>
+                        <input
+                          type="date"
+                          value={popoverFields.startDate}
+                          onChange={(e) => setPopoverFields({ ...popoverFields, startDate: e.target.value })}
                         />
                       </div>
                       <div className={styles.popoverField}>

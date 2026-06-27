@@ -22,6 +22,7 @@ interface ActionItem {
   title: string;
   description: string;
   deadline: string;
+  startDate?: string;
   pic: string;
   completed: boolean;
   status: string;
@@ -53,17 +54,59 @@ interface DailyPlanEntry {
   actionItemId: string | null;
 }
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'open':
-      return { text: '⏳ Open', styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' } };
-    case 'in_progress':
-      return { text: '⚙️ In Progress', styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' } };
-    case 'done':
-      return { text: '✓ Selesai', styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' } };
-    default:
-      return { text: 'Open', styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' } };
+const getStatusLabelDynamic = (status: string, statusesList: string[]) => {
+  const norm = (status || '').toLowerCase();
+  const matched = statusesList.find(s => s.toLowerCase() === norm);
+  const displayName = matched || status || 'Open';
+  
+  if (norm.includes('done') || norm.includes('selesai') || norm.includes('complete') || norm.includes('success')) {
+    return {
+      text: `✓ ${displayName}`,
+      styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' }
+    };
+  } else if (norm.includes('progress') || norm.includes('run') || norm.includes('dev') || norm.includes('working')) {
+    return {
+      text: `⚙️ ${displayName}`,
+      styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' }
+    };
+  } else if (norm.includes('open') || norm.includes('todo') || norm.includes('to do')) {
+    return {
+      text: `📂 ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' }
+    };
+  } else if (norm.includes('pending') || norm.includes('wait') || norm.includes('hold')) {
+    return {
+      text: `⏳ ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' }
+    };
+  } else if (norm.includes('test') || norm.includes('review') || norm.includes('qa')) {
+    return {
+      text: `🧪 ${displayName}`,
+      styles: { backgroundColor: '#F5F3FF', color: '#7C3AED', borderColor: '#DDD6FE' }
+    };
+  } else if (norm.includes('backlog') || norm.includes('idea')) {
+    return {
+      text: `📦 ${displayName}`,
+      styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+    };
   }
+  
+  return {
+    text: displayName,
+    styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+  };
+};
+
+const getResolvedStatus = (item: ActionItem, statuses: string[]) => {
+  if (item.completed) {
+    const foundDone = statuses.find(s => {
+      const norm = s.toLowerCase();
+      return norm === 'done' || norm === 'selesai';
+    });
+    if (foundDone) return foundDone;
+    return statuses[statuses.length - 1] || 'Selesai';
+  }
+  return item.status || statuses[0] || 'Open';
 };
 
 export default function Dashboard() {
@@ -81,10 +124,12 @@ export default function Dashboard() {
 
   // Edit/Detail Action Modal State
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
+  const [statusesList, setStatusesList] = useState<string[]>(['Pending', 'Open', 'In Progress', 'Selesai']);
   const [editActionFields, setEditActionFields] = useState({
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
@@ -101,6 +146,7 @@ export default function Dashboard() {
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
@@ -119,11 +165,12 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [projRes, actionRes, notesRes, dailyPlanRes] = await Promise.all([
+        const [projRes, actionRes, notesRes, dailyPlanRes, settingsRes] = await Promise.all([
           fetch('/api/projects'),
           fetch('/api/action-items'),
           fetch('/api/notes'),
-          fetch('/api/daily-plan?date=today')
+          fetch('/api/daily-plan?date=today'),
+          fetch('/api/wa-copilot/settings')
         ]);
 
         if (projRes.ok && actionRes.ok && notesRes.ok && dailyPlanRes.ok) {
@@ -136,6 +183,14 @@ export default function Dashboard() {
           setActionItems(items);
           setNotes(nts);
           setDailyPlanToday(planToday);
+        }
+
+        if (settingsRes && settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          if (settingsData.actionItemStatuses && settingsData.actionItemStatuses.length > 0) {
+            setStatusesList(settingsData.actionItemStatuses);
+            setNewAction(prev => ({ ...prev, status: settingsData.actionItemStatuses[0] }));
+          }
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -153,11 +208,12 @@ export default function Dashboard() {
       title: item.title,
       description: item.description || '',
       deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      startDate: item.startDate ? item.startDate.substring(0, 10) : '',
       pic: item.pic || '',
       projectId: item.project_id || '',
       categoryId: item.category_id || '',
       completed: item.completed,
-      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
+      status: getResolvedStatus(item, statusesList)
     });
   };
 
@@ -168,6 +224,7 @@ export default function Dashboard() {
       title: editActionFields.title,
       description: editActionFields.description,
       deadline: editActionFields.deadline,
+      startDate: editActionFields.startDate,
       pic: editActionFields.pic,
       projectId: editActionFields.projectId,
       categoryId: editActionFields.categoryId,
@@ -186,6 +243,7 @@ export default function Dashboard() {
               title: mergedFields.title,
               description: mergedFields.description,
               deadline: mergedFields.deadline,
+              startDate: mergedFields.startDate,
               pic: mergedFields.pic,
               project_id: mergedFields.projectId || item.project_id,
               category_id: mergedFields.categoryId || item.category_id,
@@ -204,6 +262,7 @@ export default function Dashboard() {
           title: mergedFields.title,
           description: mergedFields.description,
           deadline: mergedFields.deadline,
+          startDate: mergedFields.startDate,
           pic: mergedFields.pic,
           project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
           category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
@@ -236,7 +295,7 @@ export default function Dashboard() {
         ...prev,
         projectId: assocProj ? assocProj.id : '',
         categoryId: '',
-        status: 'open'
+        status: statusesList[0] || 'open'
       }));
       setShowAddForm(true);
     }
@@ -263,7 +322,7 @@ export default function Dashboard() {
     if (!newAction.title) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
+    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: statusesList[0] || 'open' });
     setShowAddForm(false);
 
     try {
@@ -274,6 +333,7 @@ export default function Dashboard() {
           title: formData.title,
           description: formData.description,
           deadline: formData.deadline,
+          startDate: formData.startDate,
           pic: formData.pic,
           completed: formData.status === 'done',
           status: formData.status,
@@ -283,17 +343,7 @@ export default function Dashboard() {
       });
       if (res.ok) {
         const created = await res.json();
-        // Optimistic: insert the newly created item into state directly
-        setActionItems(prev => {
-          const updated = [created, ...prev];
-          // Re-sort: items with deadline come first (nearest first), then no-deadline
-          return updated.sort((a, b) => {
-            if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-            if (a.deadline) return -1;
-            if (b.deadline) return 1;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-        });
+        setActionItems(prev => [created, ...prev]);
       }
     } catch (error) {
       console.error('Error creating action item:', error);
@@ -665,15 +715,25 @@ export default function Dashboard() {
                 <div className={styles.compactRowList}>
                   {filteredUrgentActions.map((item) => {
                     const overdue = isOverdue(item.deadline);
-                    const effectiveStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'));
+                    const resolvedStatus = getResolvedStatus(item, statusesList);
+                    const badge = getStatusLabelDynamic(resolvedStatus, statusesList);
                     return (
                       <div
                         key={item.id}
                         className={`${styles.compactItemRow} ${overdue ? styles.compactItemOverdue : ''} ${item.completed ? styles.compactItemDone : ''}`}
                         onClick={() => handleStartEdit(item)}
                       >
-                        <span className={`${styles.compactStatus} ${styles[`status_${effectiveStatus}`]}`}>
-                          {effectiveStatus === 'open' ? 'Open' : effectiveStatus === 'in_progress' ? 'On' : '✓'}
+                        <span
+                          className={styles.compactStatus}
+                          style={{
+                            backgroundColor: badge.styles.backgroundColor,
+                            color: badge.styles.color,
+                            borderColor: badge.styles.borderColor,
+                            borderWidth: '1px',
+                            borderStyle: 'solid'
+                          }}
+                        >
+                          {badge.text}
                         </span>
                         <span className={styles.compactTitle}>{item.title}</span>
                         {overdue && <span className={styles.compactOverdueDot} title="Overdue">!</span>}
@@ -763,6 +823,18 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className={styles.formGroup}>
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={editActionFields.startDate}
+                      onChange={(e) => {
+                        const nextSD = e.target.value;
+                        setEditActionFields({ ...editActionFields, startDate: nextSD });
+                        handleAutoSaveAction({ startDate: nextSD });
+                      }}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
                     <label>Deadline</label>
                     <input
                       type="date"
@@ -821,8 +893,10 @@ export default function Dashboard() {
                     value={editActionFields.status}
                     onChange={(e) => {
                       const nextStatus = e.target.value;
-                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
-                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                      const norm = nextStatus.toLowerCase();
+                      const isDone = norm === 'done' || norm === 'selesai' || norm === 'complete' || norm === 'success';
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: isDone });
+                      handleAutoSaveAction({ status: nextStatus, completed: isDone });
                     }}
                     style={{
                       padding: '8px 12px',
@@ -833,9 +907,14 @@ export default function Dashboard() {
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="open">⏳ Open</option>
-                    <option value="in_progress">⚙️ In Progress</option>
-                    <option value="done">✓ Selesai</option>
+                    {statusesList.map((st) => {
+                      const badge = getStatusLabelDynamic(st, statusesList);
+                      return (
+                        <option key={st} value={st}>
+                          {badge.text}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -917,6 +996,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className={styles.formGroup}>
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={newAction.startDate}
+                      onChange={(e) => setNewAction({ ...newAction, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
                     <label>Deadline</label>
                     <input
                       type="date"
@@ -939,9 +1026,14 @@ export default function Dashboard() {
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="open">⏳ Open</option>
-                    <option value="in_progress">⚙️ In Progress</option>
-                    <option value="done">✓ Selesai</option>
+                    {statusesList.map((st) => {
+                      const badge = getStatusLabelDynamic(st, statusesList);
+                      return (
+                        <option key={st} value={st}>
+                          {badge.text}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className={styles.formGroup}>

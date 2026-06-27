@@ -25,6 +25,7 @@ model ActionItem {
   title        String
   description  String   @default("") @db.Text
   deadline     String   @default("")
+  startDate    String   @default("") @map("start_date")
   pic          String   @default("")
   completed    Boolean  @default(false)
   sourceNoteId String?  @map("source_note_id")
@@ -127,17 +128,18 @@ model JiraIssue {
 }
 
 model SystemSetting {
-  id           String   @id @default("default")
-  tgBotName    String?  @map("tg_bot_name")
-  tgBotToken   String?  @map("tg_bot_token")
-  tgBotPin     String   @default("1234") @map("tg_bot_pin")
-  geminiApiKey String?  @map("gemini_api_key")
-  appUrl       String?  @map("app_url")
-  jiraUrl      String?  @map("jira_url")
-  jiraEmail    String?  @map("jira_email")
-  jiraToken    String?  @map("jira_token")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default("default")
+  tgBotName          String?  @map("tg_bot_name")
+  tgBotToken         String?  @map("tg_bot_token")
+  tgBotPin           String   @default("1234") @map("tg_bot_pin")
+  geminiApiKey       String?  @map("gemini_api_key")
+  appUrl             String?  @map("app_url")
+  jiraUrl            String?  @map("jira_url")
+  jiraEmail          String?  @map("jira_email")
+  jiraToken          String?  @map("jira_token")
+  actionItemStatuses String[] @default(["Pending", "Open", "In Progress", "Selesai"]) @map("action_item_statuses")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
 }

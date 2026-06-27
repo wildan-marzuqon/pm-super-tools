@@ -16,6 +16,7 @@ interface ActionItem {
   title: string;
   description: string;
   deadline: string;
+  startDate?: string;
   pic: string;
   completed: boolean;
   status: string;
@@ -28,17 +29,59 @@ interface ActionItem {
   created_at: string;
 }
 
-const getStatusStyles = (status: string) => {
-  switch (status) {
-    case 'open':
-      return { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' };
-    case 'in_progress':
-      return { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' };
-    case 'done':
-      return { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' };
-    default:
-      return { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' };
+const getStatusLabelDynamic = (status: string, statusesList: string[]) => {
+  const norm = (status || '').toLowerCase();
+  const matched = statusesList.find(s => s.toLowerCase() === norm);
+  const displayName = matched || status || 'Open';
+  
+  if (norm.includes('done') || norm.includes('selesai') || norm.includes('complete') || norm.includes('success')) {
+    return {
+      text: `✓ ${displayName}`,
+      styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' }
+    };
+  } else if (norm.includes('progress') || norm.includes('run') || norm.includes('dev') || norm.includes('working')) {
+    return {
+      text: `⚙️ ${displayName}`,
+      styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' }
+    };
+  } else if (norm.includes('open') || norm.includes('todo') || norm.includes('to do')) {
+    return {
+      text: `📂 ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' }
+    };
+  } else if (norm.includes('pending') || norm.includes('wait') || norm.includes('hold')) {
+    return {
+      text: `⏳ ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' }
+    };
+  } else if (norm.includes('test') || norm.includes('review') || norm.includes('qa')) {
+    return {
+      text: `🧪 ${displayName}`,
+      styles: { backgroundColor: '#F5F3FF', color: '#7C3AED', borderColor: '#DDD6FE' }
+    };
+  } else if (norm.includes('backlog') || norm.includes('idea')) {
+    return {
+      text: `📦 ${displayName}`,
+      styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+    };
   }
+  
+  return {
+    text: displayName,
+    styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+  };
+};
+
+const getResolvedStatus = (item: ActionItem, statuses: string[]) => {
+  if (item.completed) {
+    const foundDone = statuses.find(s => {
+      const norm = s.toLowerCase();
+      return norm === 'done' || norm === 'selesai';
+    });
+    if (foundDone) return foundDone;
+    return statuses[statuses.length - 1] || 'Selesai';
+  }
+  return item.status || statuses[0] || 'Open';
 };
 
 export default function ActionItemsPage() {
@@ -61,12 +104,15 @@ export default function ActionItemsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importToast, setImportToast] = useState<string | null>(null);
 
+  const [statusesList, setStatusesList] = useState<string[]>(['Pending', 'Open', 'In Progress', 'Selesai']);
+
   // Edit action item state
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
   const [editActionFields, setEditActionFields] = useState({
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
@@ -78,7 +124,7 @@ export default function ActionItemsPage() {
   const [showCompleteDropdown, setShowCompleteDropdown] = useState(false);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'in_progress' | 'done' | 'pending'>('pending');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -97,6 +143,7 @@ export default function ActionItemsPage() {
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     projectId: '',
     categoryId: '',
@@ -119,6 +166,13 @@ export default function ActionItemsPage() {
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         setJiraUrl(settingsData.jiraUrl || '');
+        if (settingsData.actionItemStatuses && settingsData.actionItemStatuses.length > 0) {
+          setStatusesList(settingsData.actionItemStatuses);
+          const hasPending = settingsData.actionItemStatuses.some((s: string) => s.toLowerCase() === 'pending');
+          if (!hasPending) {
+            setStatusFilter(settingsData.actionItemStatuses[0].toLowerCase());
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching action items data:', error);
@@ -211,7 +265,7 @@ export default function ActionItemsPage() {
     if (!newAction.title.trim() || isCreatingAction) return;
 
     const formData = { ...newAction };
-    setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
+    setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', projectId: '', categoryId: '', status: 'open' });
     setShowAddForm(false);
     setIsCreatingAction(true);
 
@@ -223,6 +277,7 @@ export default function ActionItemsPage() {
           title: formData.title,
           description: formData.description,
           deadline: formData.deadline,
+          startDate: formData.startDate,
           pic: formData.pic,
           project_id: formData.projectId || undefined,
           category_id: formData.categoryId || undefined,
@@ -232,16 +287,7 @@ export default function ActionItemsPage() {
 
       if (res.ok) {
         const created = await res.json();
-        // Optimistic: insert into state directly, re-sort
-        setActionItems(prev => {
-          const updated = [created, ...prev];
-          return updated.sort((a, b) => {
-            if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-            if (a.deadline) return -1;
-            if (b.deadline) return 1;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-        });
+        setActionItems(prev => [created, ...prev]);
       }
     } catch (error) {
       console.error('Error creating action item:', error);
@@ -256,11 +302,12 @@ export default function ActionItemsPage() {
       title: item.title,
       description: item.description || '',
       deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      startDate: item.startDate ? item.startDate.substring(0, 10) : '',
       pic: item.pic || '',
       projectId: item.project_id || '',
       categoryId: item.category_id || '',
       completed: item.completed,
-      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
+      status: getResolvedStatus(item, statusesList)
     });
   };
 
@@ -272,6 +319,7 @@ export default function ActionItemsPage() {
       title: editActionFields.title,
       description: editActionFields.description,
       deadline: editActionFields.deadline,
+      startDate: editActionFields.startDate,
       pic: editActionFields.pic,
       projectId: editActionFields.projectId,
       categoryId: editActionFields.categoryId,
@@ -290,6 +338,7 @@ export default function ActionItemsPage() {
               title: mergedFields.title,
               description: mergedFields.description,
               deadline: mergedFields.deadline,
+              startDate: mergedFields.startDate,
               pic: mergedFields.pic,
               project_id: mergedFields.projectId || item.project_id,
               category_id: mergedFields.categoryId || item.category_id,
@@ -308,6 +357,7 @@ export default function ActionItemsPage() {
           title: mergedFields.title,
           description: mergedFields.description,
           deadline: mergedFields.deadline,
+          startDate: mergedFields.startDate,
           pic: mergedFields.pic,
           project_id: mergedFields.projectId === '' ? null : mergedFields.projectId,
           category_id: mergedFields.categoryId === '' ? null : mergedFields.categoryId,
@@ -402,12 +452,17 @@ export default function ActionItemsPage() {
 
   // Filter logic
   const filteredItems = actionItems.filter((item) => {
+    const isDoneStatus = (statusName: string) => {
+      const norm = (statusName || '').toLowerCase();
+      if (norm === 'done' || norm === 'selesai') return true;
+      if (statusesList.length > 0 && statusesList[statusesList.length - 1].toLowerCase() === norm) return true;
+      return false;
+    };
+
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'pending' && item.status !== 'done') ||
-      (statusFilter === 'open' && item.status === 'open') ||
-      (statusFilter === 'in_progress' && item.status === 'in_progress') ||
-      (statusFilter === 'done' && item.status === 'done');
+      (statusFilter === 'pending' && !isDoneStatus(item.status)) ||
+      item.status.toLowerCase() === statusFilter.toLowerCase();
 
     const matchesProject =
       projectFilter === 'all' || item.project_id === projectFilter;
@@ -437,11 +492,39 @@ export default function ActionItemsPage() {
     return matchesStatus && matchesProject && matchesSearch && matchesDateRange;
   });
 
+  const getStatusRank = (statusName: string) => {
+    const norm = (statusName || '').toLowerCase();
+    const idx = statusesList.findIndex(s => s.toLowerCase() === norm);
+    return idx === -1 ? 999 : idx;
+  };
+
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    // 1. Deadline presence
+    const hasDeadlineA = !!a.deadline && a.deadline.trim() !== '';
+    const hasDeadlineB = !!b.deadline && b.deadline.trim() !== '';
+    if (hasDeadlineA !== hasDeadlineB) {
+      return hasDeadlineA ? -1 : 1;
+    }
+
+    // 2. Status rank
+    const rankA = getStatusRank(a.status);
+    const rankB = getStatusRank(b.status);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+
+    // 3. Deadline value or created date
+    if (hasDeadlineA && hasDeadlineB) {
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   // Pagination logic
   const pageSize = 10;
-  const totalItems = filteredItems.length;
+  const totalItems = sortedItems.length;
   const totalPages = Math.ceil(totalItems / pageSize);
-  const displayedItems = filteredItems.slice(
+  const displayedItems = sortedItems.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -657,6 +740,14 @@ export default function ActionItemsPage() {
                     />
                   </div>
                   <div className={styles.formGroup}>
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={newAction.startDate}
+                      onChange={(e) => setNewAction({ ...newAction, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
                     <label>Deadline</label>
                     <input
                       type="date"
@@ -679,9 +770,15 @@ export default function ActionItemsPage() {
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="open">⏳ Open</option>
-                    <option value="in_progress">⚙️ In Progress</option>
-                    <option value="done">✓ Selesai</option>
+                    {statusesList.map(st => {
+                      const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                      const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                      return (
+                        <option key={st} value={st.toLowerCase()}>
+                          {prefix}{st}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className={styles.formGroup}>
@@ -743,30 +840,19 @@ export default function ActionItemsPage() {
           <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>Status:</span>
             <div className={styles.btnGroup} style={{ flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setStatusFilter('pending')}
-                className={`${styles.filterBtn} ${statusFilter === 'pending' ? styles.activeFilter : ''}`}
-              >
-                ⏳ Pending
-              </button>
-              <button
-                onClick={() => setStatusFilter('open')}
-                className={`${styles.filterBtn} ${statusFilter === 'open' ? styles.activeFilter : ''}`}
-              >
-                📂 Open
-              </button>
-              <button
-                onClick={() => setStatusFilter('in_progress')}
-                className={`${styles.filterBtn} ${statusFilter === 'in_progress' ? styles.activeFilter : ''}`}
-              >
-                ⚙️ In Progress
-              </button>
-              <button
-                onClick={() => setStatusFilter('done')}
-                className={`${styles.filterBtn} ${statusFilter === 'done' ? styles.activeFilter : ''}`}
-              >
-                ✓ Selesai
-              </button>
+              {statusesList.map((st) => {
+                const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                const emoji = isDone ? '✓' : st.toLowerCase().includes('progress') ? '⚙️' : st.toLowerCase().includes('pending') ? '⏳' : '📂';
+                return (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st.toLowerCase())}
+                    className={`${styles.filterBtn} ${statusFilter === st.toLowerCase() ? styles.activeFilter : ''}`}
+                  >
+                    {emoji} {st}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => setStatusFilter('all')}
                 className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.activeFilter : ''}`}
@@ -886,8 +972,7 @@ export default function ActionItemsPage() {
             <div className={styles.itemsList}>
               {displayedItems.map((item) => {
                 const assocProject = projects.find((p) => p.id === item.project_id);
-                const overdue = isOverdue(item.deadline, item.completed);
-                const resolvedStatus = item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'));
+                    const resolvedStatus = getResolvedStatus(item, statusesList);
                 
                 return (
                   <div
@@ -977,10 +1062,10 @@ export default function ActionItemsPage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <select
-                        value={resolvedStatus}
+                        value={resolvedStatus.toLowerCase()}
                         onChange={(e) => handleUpdateStatus(item.id, e.target.value)}
                         style={{
-                          ...getStatusStyles(resolvedStatus),
+                          ...getStatusLabelDynamic(resolvedStatus, statusesList).styles,
                           padding: '6px 10px',
                           borderRadius: '6px',
                           fontSize: '12px',
@@ -991,18 +1076,29 @@ export default function ActionItemsPage() {
                           transition: 'all 0.2s',
                         }}
                       >
-                        <option value="open">⏳ Open</option>
-                        <option value="in_progress">⚙️ In Progress</option>
-                        <option value="done">✓ Selesai</option>
+                        {statusesList.map(st => {
+                          const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                          const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                          return (
+                            <option key={st} value={st.toLowerCase()}>
+                              {prefix}{st}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
 
-                    <div className={styles.itemDateCol}>
-                      <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
-                        {formatDate(item.deadline)}
-                      </span>
-                      {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
-                    </div>
+                    {(() => {
+                      const overdue = isOverdue(item.deadline, item.completed);
+                      return (
+                        <div className={styles.itemDateCol}>
+                          <span className={`${styles.itemDate} ${overdue ? styles.overdue : ''}`}>
+                            {formatDate(item.deadline)}
+                          </span>
+                          {overdue && <span className={styles.overdueBadge}>OVERDUE</span>}
+                        </div>
+                      );
+                    })()}
 
                     <div className={styles.itemActions}>
                       <button 
@@ -1086,6 +1182,18 @@ export default function ActionItemsPage() {
                     />
                   </div>
                   <div className={styles.formGroup}>
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={editActionFields.startDate}
+                      onChange={(e) => {
+                        const nextSD = e.target.value;
+                        setEditActionFields({ ...editActionFields, startDate: nextSD });
+                        handleAutoSaveAction({ startDate: nextSD });
+                      }}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
                     <label>Deadline</label>
                     <input
                       type="date"
@@ -1141,11 +1249,13 @@ export default function ActionItemsPage() {
                 <div className={styles.formGroup} style={{ marginTop: '12px' }}>
                   <label>Status</label>
                   <select
-                    value={editActionFields.status}
+                    value={editActionFields.status.toLowerCase()}
                     onChange={(e) => {
                       const nextStatus = e.target.value;
-                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
-                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                      const isDone = nextStatus.toLowerCase() === 'done' || nextStatus.toLowerCase() === 'selesai' ||
+                                     (statusesList.length > 0 && statusesList[statusesList.length - 1].toLowerCase() === nextStatus.toLowerCase());
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: isDone });
+                      handleAutoSaveAction({ status: nextStatus, completed: isDone });
                     }}
                     style={{
                       padding: '8px 12px',
@@ -1156,9 +1266,15 @@ export default function ActionItemsPage() {
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="open">⏳ Open</option>
-                    <option value="in_progress">⚙️ In Progress</option>
-                    <option value="done">✓ Selesai</option>
+                    {statusesList.map(st => {
+                      const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                      const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                      return (
+                        <option key={st} value={st.toLowerCase()}>
+                          {prefix}{st}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>

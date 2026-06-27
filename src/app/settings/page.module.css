@@ -169,3 +169,93 @@
     transform: translateY(0);
   }
 }
+
+/* Drag and Drop Statuses styles */
+.statusesListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  background-color: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.statusDragItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  cursor: grab;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.statusDragItem:active {
+  cursor: grabbing;
+  opacity: 0.6;
+  border-color: var(--primary);
+  background-color: #FEF3C7;
+}
+
+.statusDragContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dragHandle {
+  color: var(--muted-text);
+  font-size: 16px;
+  cursor: grab;
+}
+
+.statusNameBadge {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.deleteStatusBtn {
+  background: none;
+  border: none;
+  color: #EF4444;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color var(--transition-fast);
+}
+
+.deleteStatusBtn:hover {
+  background-color: #FEE2E2;
+}
+
+.addStatusContainer {
+  display: flex;
+  gap: 10px;
+}
+
+.addStatusBtn {
+  background-color: #F59E0B;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.addStatusBtn:hover {
+  background-color: #D97706;
+}

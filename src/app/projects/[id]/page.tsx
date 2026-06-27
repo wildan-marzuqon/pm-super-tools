@@ -18,6 +18,7 @@ interface ActionItem {
   title: string;
   description: string;
   deadline: string;
+  startDate?: string;
   pic: string;
   completed: boolean;
   status?: string;
@@ -54,17 +55,59 @@ interface ProjectDetail {
   created_at: string;
 }
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'open':
-      return { text: '⏳ Open', styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' } };
-    case 'in_progress':
-      return { text: '⚙️ In Progress', styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' } };
-    case 'done':
-      return { text: '✓ Selesai', styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' } };
-    default:
-      return { text: 'Open', styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' } };
+const getStatusLabelDynamic = (status: string, statusesList: string[]) => {
+  const norm = (status || '').toLowerCase();
+  const matched = statusesList.find(s => s.toLowerCase() === norm);
+  const displayName = matched || status || 'Open';
+  
+  if (norm.includes('done') || norm.includes('selesai') || norm.includes('complete') || norm.includes('success')) {
+    return {
+      text: `✓ ${displayName}`,
+      styles: { backgroundColor: '#ECFDF5', color: '#059669', borderColor: '#A7F3D0' }
+    };
+  } else if (norm.includes('progress') || norm.includes('run') || norm.includes('dev') || norm.includes('working')) {
+    return {
+      text: `⚙️ ${displayName}`,
+      styles: { backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#BFDBFE' }
+    };
+  } else if (norm.includes('open') || norm.includes('todo') || norm.includes('to do')) {
+    return {
+      text: `📂 ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#FEF3C7' }
+    };
+  } else if (norm.includes('pending') || norm.includes('wait') || norm.includes('hold')) {
+    return {
+      text: `⏳ ${displayName}`,
+      styles: { backgroundColor: '#FFFBEB', color: '#B45309', borderColor: '#FDE68A' }
+    };
+  } else if (norm.includes('test') || norm.includes('review') || norm.includes('qa')) {
+    return {
+      text: `🧪 ${displayName}`,
+      styles: { backgroundColor: '#F5F3FF', color: '#7C3AED', borderColor: '#DDD6FE' }
+    };
+  } else if (norm.includes('backlog') || norm.includes('idea')) {
+    return {
+      text: `📦 ${displayName}`,
+      styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+    };
   }
+  
+  return {
+    text: displayName,
+    styles: { backgroundColor: '#F3F4F6', color: '#4B5563', borderColor: '#E5E7EB' }
+  };
+};
+
+const getResolvedStatus = (item: ActionItem, statuses: string[]) => {
+  if (item.completed) {
+    const foundDone = statuses.find(s => {
+      const norm = s.toLowerCase();
+      return norm === 'done' || norm === 'selesai';
+    });
+    if (foundDone) return foundDone;
+    return statuses[statuses.length - 1] || 'Selesai';
+  }
+  return item.status || statuses[0] || 'Open';
 };
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,6 +118,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'actions' | 'artifacts' | 'settings'>('overview');
+  const [statusesList, setStatusesList] = useState<string[]>(['Pending', 'Open', 'In Progress', 'Selesai']);
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const res = await fetch('/api/wa-copilot/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.actionItemStatuses && data.actionItemStatuses.length > 0) {
+            setStatusesList(data.actionItemStatuses);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load action item statuses:', error);
+      }
+    };
+    fetchStatuses();
+  }, []);
 
   // Search & Sort states for action items
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +155,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     categoryId: '',
     completed: false,
@@ -117,6 +179,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     title: '',
     description: '',
     deadline: '',
+    startDate: '',
     pic: 'Wildan',
     categoryId: '',
     status: 'open'
@@ -225,6 +288,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           title: newAction.title,
           description: newAction.description,
           deadline: newAction.deadline,
+          startDate: newAction.startDate,
           pic: newAction.pic,
           project_id: project.id,
           category_id: newAction.categoryId || null,
@@ -233,7 +297,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       });
 
       if (res.ok) {
-        setNewAction({ title: '', description: '', deadline: '', pic: 'Wildan', categoryId: '', status: 'open' });
+        setNewAction({ title: '', description: '', deadline: '', startDate: '', pic: 'Wildan', categoryId: '', status: 'open' });
         setShowAddActionForm(false);
         fetchProjectDetail();
       }
@@ -251,10 +315,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       title: item.title,
       description: item.description || '',
       deadline: item.deadline ? item.deadline.substring(0, 10) : '',
+      startDate: item.startDate ? item.startDate.substring(0, 10) : '',
       pic: item.pic || '',
       categoryId: item.category_id || '',
       completed: item.completed,
-      status: item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open'))
+      status: getResolvedStatus(item, statusesList)
     });
   };
 
@@ -273,6 +338,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         title: editActionFields.title,
         description: editActionFields.description,
         deadline: editActionFields.deadline,
+        startDate: editActionFields.startDate,
         pic: editActionFields.pic,
         category_id: editActionFields.categoryId || null,
         completed: editActionFields.completed,
@@ -287,6 +353,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           title: mergedFields.title,
           description: mergedFields.description,
           deadline: mergedFields.deadline,
+          startDate: mergedFields.startDate,
           pic: mergedFields.pic,
           category_id: mergedFields.category_id === '' ? null : mergedFields.category_id,
           completed: mergedFields.completed,
@@ -995,6 +1062,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           />
                         </div>
                         <div className={styles.formGroup}>
+                          <label>Start Date</label>
+                          <input
+                            type="date"
+                            value={newAction.startDate}
+                            onChange={(e) => setNewAction({ ...newAction, startDate: e.target.value })}
+                          />
+                        </div>
+                        <div className={styles.formGroup}>
                           <label>Deadline</label>
                           <input
                             type="date"
@@ -1006,7 +1081,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       <div className={styles.formGroup}>
                         <label>Status</label>
                         <select
-                          value={newAction.status}
+                          value={newAction.status.toLowerCase()}
                           onChange={(e) => setNewAction({ ...newAction, status: e.target.value })}
                           style={{
                             padding: '8px 12px',
@@ -1017,9 +1092,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             backgroundColor: 'white'
                           }}
                         >
-                          <option value="open">⏳ Open</option>
-                          <option value="in_progress">⚙️ In Progress</option>
-                          <option value="done">✓ Selesai</option>
+                          {statusesList.map(st => {
+                            const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                            const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                            return (
+                              <option key={st} value={st.toLowerCase()}>
+                                {prefix}{st}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                       <div className={styles.formGroup}>
@@ -1153,7 +1234,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             {item.description && <p className={styles.itemDesc}>{item.description}</p>}
                             <div className={styles.itemMeta}>
                               {(() => {
-                                const badge = getStatusLabel(item.completed ? 'done' : (item.status === 'done' ? 'open' : (item.status || 'open')));
+                                const resolvedStatus = getResolvedStatus(item, statusesList);
+                                const badge = getStatusLabelDynamic(resolvedStatus, statusesList);
                                 return (
                                   <span
                                     style={{
@@ -1657,6 +1739,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     />
                   </div>
                   <div className={styles.formGroup}>
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={editActionFields.startDate}
+                      onChange={(e) => {
+                        const nextSD = e.target.value;
+                        setEditActionFields({ ...editActionFields, startDate: nextSD });
+                        handleAutoSaveAction({ startDate: nextSD });
+                      }}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
                     <label>Deadline</label>
                     <input
                       type="date"
@@ -1690,11 +1784,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className={styles.formGroup} style={{ marginTop: '12px' }}>
                   <label>Status</label>
                   <select
-                    value={editActionFields.status}
+                    value={editActionFields.status.toLowerCase()}
                     onChange={(e) => {
                       const nextStatus = e.target.value;
-                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: nextStatus === 'done' });
-                      handleAutoSaveAction({ status: nextStatus, completed: nextStatus === 'done' });
+                      const isDone = nextStatus.toLowerCase() === 'done' || nextStatus.toLowerCase() === 'selesai' ||
+                                     (statusesList.length > 0 && statusesList[statusesList.length - 1].toLowerCase() === nextStatus.toLowerCase());
+                      setEditActionFields({ ...editActionFields, status: nextStatus, completed: isDone });
+                      handleAutoSaveAction({ status: nextStatus, completed: isDone });
                     }}
                     style={{
                       padding: '8px 12px',
@@ -1705,9 +1801,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="open">⏳ Open</option>
-                    <option value="in_progress">⚙️ In Progress</option>
-                    <option value="done">✓ Selesai</option>
+                    {statusesList.map(st => {
+                      const isDone = st.toLowerCase() === 'done' || st.toLowerCase() === 'selesai';
+                      const prefix = isDone ? '✓ ' : st.toLowerCase().includes('progress') ? '⚙️ ' : st.toLowerCase().includes('pending') ? '⏳ ' : '📂 ';
+                      return (
+                        <option key={st} value={st.toLowerCase()}>
+                          {prefix}{st}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>

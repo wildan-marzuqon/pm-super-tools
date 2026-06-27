@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useModalDialog } from '@/components/ModalProvider';
 import styles from './page.module.css';
 
@@ -13,13 +13,19 @@ interface SystemSetting {
   jiraUrl: string;
   jiraEmail: string;
   jiraToken: string;
+  actionItemStatuses?: string[];
 }
 
 function SettingsContent() {
   const { alert } = useModalDialog();
-  const [activeTab, setActiveTab] = useState<'telegram' | 'jira'>('telegram');
+  const [activeTab, setActiveTab] = useState<'telegram' | 'jira' | 'statuses'>('telegram');
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [newStatusInput, setNewStatusInput] = useState('');
+
+  // Drag and drop refs
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
 
   // Settings State
   const [settings, setSettings] = useState<SystemSetting>({
@@ -30,7 +36,8 @@ function SettingsContent() {
     appUrl: '',
     jiraUrl: '',
     jiraEmail: '',
-    jiraToken: ''
+    jiraToken: '',
+    actionItemStatuses: []
   });
 
   const [settingsFeedback, setSettingsFeedback] = useState<{
@@ -53,7 +60,8 @@ function SettingsContent() {
           appUrl: data.appUrl || '',
           jiraUrl: data.jiraUrl || '',
           jiraEmail: data.jiraEmail || '',
-          jiraToken: data.jiraToken || ''
+          jiraToken: data.jiraToken || '',
+          actionItemStatuses: data.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"]
         });
       }
     } catch (error) {
@@ -66,6 +74,58 @@ function SettingsContent() {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // Drag and Drop Handlers
+  const handleDragStart = (index: number) => {
+    dragItem.current = index;
+  };
+
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = () => {
+    if (dragItem.current !== null && dragOverItem.current !== null) {
+      const copyListItems = [...(settings.actionItemStatuses || [])];
+      const dragItemContent = copyListItems[dragItem.current];
+      copyListItems.splice(dragItem.current, 1);
+      copyListItems.splice(dragOverItem.current, 0, dragItemContent);
+      dragItem.current = null;
+      dragOverItem.current = null;
+      setSettings(prev => ({
+        ...prev,
+        actionItemStatuses: copyListItems
+      }));
+    }
+  };
+
+  const handleAddStatus = () => {
+    const trimmed = newStatusInput.trim();
+    if (!trimmed) return;
+    const currentList = settings.actionItemStatuses || [];
+    if (currentList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      alert('Status tersebut sudah ada!');
+      return;
+    }
+    setSettings(prev => ({
+      ...prev,
+      actionItemStatuses: [...currentList, trimmed]
+    }));
+    setNewStatusInput('');
+  };
+
+  const handleDeleteStatus = (index: number) => {
+    const currentList = settings.actionItemStatuses || [];
+    if (currentList.length <= 1) {
+      alert('Minimal harus ada 1 status!');
+      return;
+    }
+    const updated = currentList.filter((_, i) => i !== index);
+    setSettings(prev => ({
+      ...prev,
+      actionItemStatuses: updated
+    }));
+  };
 
   // Handle saving settings
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -122,7 +182,7 @@ function SettingsContent() {
     <div className={`${styles.container} animate-fade-in`}>
       <header className={styles.header}>
         <h1 className={styles.title}>⚙️ Pengaturan Aplikasi</h1>
-        <p className={styles.subtitle}>Konfigurasi bot Telegram, model AI Gemini, dan kredensial Jira Cloud Anda secara terpusat.</p>
+        <p className={styles.subtitle}>Konfigurasi bot Telegram, model AI Gemini, status action item, dan kredensial Jira Cloud Anda secara terpusat.</p>
       </header>
 
       <div className={styles.tabs}>
@@ -132,6 +192,13 @@ function SettingsContent() {
           className={`${styles.tab} ${activeTab === 'telegram' ? styles.activeTab : ''}`}
         >
           🤖 Telegram & AI
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('statuses')}
+          className={`${styles.tab} ${activeTab === 'statuses' ? styles.activeTab : ''}`}
+        >
+          📋 Status Action Item
         </button>
         <button
           type="button"
@@ -153,7 +220,7 @@ function SettingsContent() {
           </div>
         )}
 
-        {activeTab === 'telegram' ? (
+        {activeTab === 'telegram' && (
           <div className={styles.tabContent}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Username Bot Telegram</label>
@@ -222,7 +289,71 @@ function SettingsContent() {
               </span>
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'statuses' && (
+          <div className={styles.tabContent}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Daftar Status Action Item (Geser untuk Mengatur Urutan)</label>
+              
+              <div className={styles.statusesListContainer}>
+                {(settings.actionItemStatuses || []).map((status, index) => (
+                  <div
+                    key={status}
+                    className={styles.statusDragItem}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnter={() => handleDragEnter(index)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                  >
+                    <div className={styles.statusDragContent}>
+                      <span className={styles.dragHandle}>☰</span>
+                      <span className={styles.statusNameBadge}>{status}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStatus(index)}
+                      className={styles.deleteStatusBtn}
+                      title="Hapus Status"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className={styles.addStatusContainer} style={{ marginTop: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Tambahkan status baru (misal: Testing, Backlog)..."
+                  className={styles.formInput}
+                  value={newStatusInput}
+                  onChange={(e) => setNewStatusInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddStatus();
+                    }
+                  }}
+                  style={{ flexGrow: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddStatus}
+                  className={styles.addStatusBtn}
+                >
+                  + Tambah
+                </button>
+              </div>
+              <span className={styles.formHelp}>
+                Urutan di atas menentukan urutan prioritas di halaman Action Items (paling atas adalah prioritas utama). Status yang cocok dengan "done" atau "selesai" (atau status terakhir) akan dianggap menyelesaikan tugas.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'jira' && (
           <div className={styles.tabContent}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>URL Jira Cloud</label>

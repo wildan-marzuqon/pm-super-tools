@@ -7,19 +7,26 @@ export async function GET() {
       where: { id: 'default' }
     });
 
-    return Response.json(
-      setting || {
-        id: 'default',
-        tgBotName: '',
-        tgBotToken: '',
-        tgBotPin: '1234',
-        geminiApiKey: '',
-        appUrl: 'https://pm-super-tools.vercel.app',
-        jiraUrl: '',
-        jiraEmail: '',
-        jiraToken: ''
-      }
-    );
+    const defaultStatuses = ["Pending", "Open", "In Progress", "Selesai"];
+    const responseData = setting ? {
+      ...setting,
+      actionItemStatuses: setting.actionItemStatuses && setting.actionItemStatuses.length > 0
+        ? setting.actionItemStatuses
+        : defaultStatuses
+    } : {
+      id: 'default',
+      tgBotName: '',
+      tgBotToken: '',
+      tgBotPin: '1234',
+      geminiApiKey: '',
+      appUrl: 'https://pm-super-tools.vercel.app',
+      jiraUrl: '',
+      jiraEmail: '',
+      jiraToken: '',
+      actionItemStatuses: defaultStatuses
+    };
+
+    return Response.json(responseData);
   } catch (error) {
     console.error('Error fetching settings:', error);
     return Response.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -42,7 +49,8 @@ export async function POST(request: Request) {
         appUrl: finalAppUrl,
         jiraUrl: body.jiraUrl || '',
         jiraEmail: body.jiraEmail || '',
-        jiraToken: body.jiraToken || ''
+        jiraToken: body.jiraToken || '',
+        actionItemStatuses: body.actionItemStatuses || undefined
       },
       create: {
         id: 'default',
@@ -53,7 +61,8 @@ export async function POST(request: Request) {
         appUrl: finalAppUrl,
         jiraUrl: body.jiraUrl || '',
         jiraEmail: body.jiraEmail || '',
-        jiraToken: body.jiraToken || ''
+        jiraToken: body.jiraToken || '',
+        actionItemStatuses: body.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"]
       }
     });
 

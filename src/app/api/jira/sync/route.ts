@@ -2,6 +2,55 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getJiraConfig, fetchJiraIssues, createJiraIssue, updateJiraIssue, transitionJiraIssue } from '@/lib/jira-client';
 
+const mapJiraStatusToLocal = (jiraStatus: string, statusesList: string[]) => {
+  const normJira = (jiraStatus || '').toLowerCase();
+
+  // 1. If it's a closed/done status
+  const isDoneJira = ['done', 'closed', 'resolved', 'complete', 'completed', 'selesai', 'success'].includes(normJira);
+  if (isDoneJira) {
+    const matchedDone = statusesList.find(s => {
+      const norm = s.toLowerCase();
+      return norm.includes('done') || norm.includes('selesai') || norm.includes('complete') || norm.includes('success');
+    });
+    if (matchedDone) return matchedDone;
+    return statusesList[statusesList.length - 1] || 'Selesai';
+  }
+
+  // 2. If it's an in-progress status
+  const isInProgressJira = ['in progress', 'progress', 'sedang dikerjakan', 'working', 'dev'].includes(normJira);
+  if (isInProgressJira) {
+    const matchedProgress = statusesList.find(s => {
+      const norm = s.toLowerCase();
+      return norm.includes('progress') || norm.includes('working') || norm.includes('dev') || norm.includes('run');
+    });
+    if (matchedProgress) return matchedProgress;
+  }
+
+  // 3. Try to find an exact case-insensitive match in statusesList
+  const exactMatch = statusesList.find(s => s.toLowerCase() === normJira);
+  if (exactMatch) return exactMatch;
+
+  // 4. Try to find a match that represents "To Do" or "Open"
+  const matchedToDo = statusesList.find(s => {
+    const norm = s.toLowerCase();
+    return norm.includes('todo') || norm.includes('to do') || norm.includes('open') || norm.includes('pending');
+  });
+  if (matchedToDo) return matchedToDo;
+
+  // 5. Fallback to the first status in the list
+  return statusesList[0] || 'TO DO';
+};
+
+const isStatusDone = (status: string) => {
+  const norm = (status || '').toLowerCase();
+  return norm.includes('done') || norm.includes('selesai') || norm.includes('complete') || norm.includes('success');
+};
+
+const isStatusProgress = (status: string) => {
+  const norm = (status || '').toLowerCase();
+  return norm.includes('progress') || norm.includes('working') || norm.includes('dev') || norm.includes('run');
+};
+
 export async function POST(request: NextRequest) {
   try {
     const config = await getJiraConfig();
@@ -11,6 +60,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const settings = await prisma.systemSetting.findUnique({
+      where: { id: 'default' }
+    });
+    const statusesList = settings?.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"];
 
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
@@ -69,13 +123,15 @@ export async function POST(request: NextRequest) {
             const jiraResult = await createJiraIssue(projKey, item.title, desc, deadlineArg, item.pic || undefined);
             
             // If the task was already completed or in progress locally, transition it in Jira too
-            if (item.status === 'in_progress') {
+            const isDone = item.completed || isStatusDone(item.status);
+            const isProgress = isStatusProgress(item.status);
+            if (isProgress) {
               try {
                 await transitionJiraIssue(jiraResult.key, 'In Progress');
               } catch (transitionErr) {
                 console.error(`Failed to transition new Jira issue ${jiraResult.key} to In Progress:`, transitionErr);
               }
-            } else if (item.status === 'done' || item.completed) {
+            } else if (isDone) {
               try {
                 await transitionJiraIssue(jiraResult.key, 'Done');
               } catch (transitionErr) {
@@ -118,9 +174,9 @@ export async function POST(request: NextRequest) {
             await updateJiraIssue(item.jiraKey!, item.title, desc, item.deadline || undefined, item.pic || undefined);
 
             let targetJiraStatus = 'To Do';
-            if (item.status === 'in_progress') {
+            if (isStatusProgress(item.status)) {
               targetJiraStatus = 'In Progress';
-            } else if (item.status === 'done' || item.completed) {
+            } else if (item.completed || isStatusDone(item.status)) {
               targetJiraStatus = 'Done';
             }
             await transitionJiraIssue(item.jiraKey!, targetJiraStatus);
@@ -178,8 +234,6 @@ export async function POST(request: NextRequest) {
       }
 
       // B2. Overwrite local ActionItems or create new ones
-      const closedStatusNames = ['done', 'closed', 'resolved', 'complete', 'completed', 'selesai'];
-
       for (const issue of fetchedIssues) {
         const existingItem = await prisma.actionItem.findFirst({
           where: { jiraKey: issue.key }
@@ -194,13 +248,8 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        let localStatus = 'open';
-        const statusLower = issue.status.toLowerCase();
-        if (['in progress', 'progress', 'sedang dikerjakan'].includes(statusLower)) {
-          localStatus = 'in_progress';
-        } else if (closedStatusNames.includes(statusLower)) {
-          localStatus = 'done';
-        }
+        const localStatus = mapJiraStatusToLocal(issue.status, statusesList);
+        const isDone = isStatusDone(localStatus);
 
         if (existingItem) {
           const localUpdated = existingItem.updatedAt;
@@ -218,7 +267,7 @@ export async function POST(request: NextRequest) {
                 pic: issue.assignee || 'Unassigned',
                 deadline: deadlineStr,
                 status: localStatus,
-                completed: localStatus === 'done',
+                completed: isDone,
                 jiraSyncedAt: new Date(),
                 updatedAt: new Date() // Sync local updated timestamp to match sync time
               }
@@ -248,7 +297,7 @@ export async function POST(request: NextRequest) {
                 deadline: deadlineStr,
                 pic: issue.assignee || 'Unassigned',
                 status: localStatus,
-                completed: localStatus === 'done',
+                completed: isDone,
                 projectId: matchingProject.id,
                 jiraKey: issue.key,
                 jiraSyncedAt: new Date(),

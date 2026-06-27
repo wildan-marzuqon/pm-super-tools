@@ -8,11 +8,21 @@ export async function GET() {
     });
 
     const defaultStatuses = ["Pending", "Open", "In Progress", "Selesai"];
+    const defaultJiraStatuses = ["To Do", "In Progress", "Done"];
     const responseData = setting ? {
       ...setting,
       actionItemStatuses: setting.actionItemStatuses && setting.actionItemStatuses.length > 0
         ? setting.actionItemStatuses
-        : defaultStatuses
+        : defaultStatuses,
+      jiraSyncStatuses: setting.jiraSyncStatuses && setting.jiraSyncStatuses.length > 0
+        ? setting.jiraSyncStatuses
+        : defaultJiraStatuses,
+      jiraSyncDaysBack: setting.jiraSyncDaysBack !== undefined && setting.jiraSyncDaysBack !== null
+        ? setting.jiraSyncDaysBack
+        : 30,
+      jiraSyncMaxResults: setting.jiraSyncMaxResults !== undefined && setting.jiraSyncMaxResults !== null
+        ? setting.jiraSyncMaxResults
+        : 500
     } : {
       id: 'default',
       tgBotName: '',
@@ -23,7 +33,10 @@ export async function GET() {
       jiraUrl: '',
       jiraEmail: '',
       jiraToken: '',
-      actionItemStatuses: defaultStatuses
+      actionItemStatuses: defaultStatuses,
+      jiraSyncStatuses: defaultJiraStatuses,
+      jiraSyncDaysBack: 30,
+      jiraSyncMaxResults: 500
     };
 
     return Response.json(responseData);
@@ -50,7 +63,10 @@ export async function POST(request: Request) {
         jiraUrl: body.jiraUrl || '',
         jiraEmail: body.jiraEmail || '',
         jiraToken: body.jiraToken || '',
-        actionItemStatuses: body.actionItemStatuses || undefined
+        actionItemStatuses: body.actionItemStatuses || undefined,
+        jiraSyncStatuses: body.jiraSyncStatuses || undefined,
+        jiraSyncDaysBack: body.jiraSyncDaysBack !== undefined ? Number(body.jiraSyncDaysBack) : undefined,
+        jiraSyncMaxResults: body.jiraSyncMaxResults !== undefined ? Number(body.jiraSyncMaxResults) : undefined
       },
       create: {
         id: 'default',
@@ -62,7 +78,10 @@ export async function POST(request: Request) {
         jiraUrl: body.jiraUrl || '',
         jiraEmail: body.jiraEmail || '',
         jiraToken: body.jiraToken || '',
-        actionItemStatuses: body.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"]
+        actionItemStatuses: body.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"],
+        jiraSyncStatuses: body.jiraSyncStatuses || ["To Do", "In Progress", "Done"],
+        jiraSyncDaysBack: body.jiraSyncDaysBack !== undefined ? Number(body.jiraSyncDaysBack) : 30,
+        jiraSyncMaxResults: body.jiraSyncMaxResults !== undefined ? Number(body.jiraSyncMaxResults) : 500
       }
     });
 

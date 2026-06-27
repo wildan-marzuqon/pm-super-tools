@@ -138,6 +138,9 @@ model SystemSetting {
   jiraEmail          String?  @map("jira_email")
   jiraToken          String?  @map("jira_token")
   actionItemStatuses String[] @default(["Pending", "Open", "In Progress", "Selesai"]) @map("action_item_statuses")
+  jiraSyncStatuses   String[] @default(["To Do", "In Progress", "Done"]) @map("jira_sync_statuses")
+  jiraSyncDaysBack   Int      @default(30) @map("jira_sync_days_back")
+  jiraSyncMaxResults Int      @default(500) @map("jira_sync_max_results")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

@@ -259,3 +259,8 @@
 .addStatusBtn:hover {
   background-color: #D97706;
 }
+
+.formRow {
+  display: flex;
+  gap: 16px;
+}

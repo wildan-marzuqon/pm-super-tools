@@ -109,7 +109,34 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
     return [];
   }
 
-  const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')})`;
+  // Load sync configurations from system settings
+  const setting = await prisma.systemSetting.findUnique({
+    where: { id: 'default' }
+  });
+
+  const statusesToSync = setting?.jiraSyncStatuses && setting.jiraSyncStatuses.length > 0
+    ? setting.jiraSyncStatuses
+    : [];
+
+  const daysBack = setting?.jiraSyncDaysBack !== undefined && setting.jiraSyncDaysBack !== null
+    ? setting.jiraSyncDaysBack
+    : 30;
+
+  const maxResults = setting?.jiraSyncMaxResults !== undefined && setting.jiraSyncMaxResults !== null
+    ? setting.jiraSyncMaxResults
+    : 500;
+
+  // Construct JQL query
+  let jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')})`;
+
+  if (statusesToSync.length > 0) {
+    jql += ` AND status in (${statusesToSync.map(s => `"${s}"`).join(',')})`;
+  }
+
+  if (daysBack > 0) {
+    jql += ` AND updated >= "-${daysBack}d"`;
+  }
+
   const url = `${config.jiraUrl}/rest/api/3/search/jql`;
 
   const response = await fetch(url, {
@@ -117,7 +144,7 @@ export async function fetchJiraIssues(projectKeys: string[]): Promise<any[]> {
     headers: getAuthHeaders(config),
     body: JSON.stringify({
       jql,
-      maxResults: 100,
+      maxResults,
       fields: [
         'key',
         'issuetype',

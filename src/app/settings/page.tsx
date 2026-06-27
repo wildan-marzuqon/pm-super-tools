@@ -14,6 +14,9 @@ interface SystemSetting {
   jiraEmail: string;
   jiraToken: string;
   actionItemStatuses?: string[];
+  jiraSyncStatuses?: string[];
+  jiraSyncDaysBack?: number;
+  jiraSyncMaxResults?: number;
 }
 
 function SettingsContent() {
@@ -37,7 +40,10 @@ function SettingsContent() {
     jiraUrl: '',
     jiraEmail: '',
     jiraToken: '',
-    actionItemStatuses: []
+    actionItemStatuses: [],
+    jiraSyncStatuses: ['To Do', 'In Progress', 'Done'],
+    jiraSyncDaysBack: 30,
+    jiraSyncMaxResults: 500
   });
 
   const [settingsFeedback, setSettingsFeedback] = useState<{
@@ -61,7 +67,10 @@ function SettingsContent() {
           jiraUrl: data.jiraUrl || '',
           jiraEmail: data.jiraEmail || '',
           jiraToken: data.jiraToken || '',
-          actionItemStatuses: data.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"]
+          actionItemStatuses: data.actionItemStatuses || ["Pending", "Open", "In Progress", "Selesai"],
+          jiraSyncStatuses: data.jiraSyncStatuses || ["To Do", "In Progress", "Done"],
+          jiraSyncDaysBack: data.jiraSyncDaysBack !== undefined && data.jiraSyncDaysBack !== null ? Number(data.jiraSyncDaysBack) : 30,
+          jiraSyncMaxResults: data.jiraSyncMaxResults !== undefined && data.jiraSyncMaxResults !== null ? Number(data.jiraSyncMaxResults) : 500
         });
       }
     } catch (error) {
@@ -399,6 +408,52 @@ function SettingsContent() {
                   Atlassian API Tokens
                 </a>.
               </span>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Status Isu Jira yang Ingin Diambil (Pull)</label>
+              <input
+                type="text"
+                placeholder="Contoh: To Do, In Progress, Done"
+                className={styles.formInput}
+                value={settings.jiraSyncStatuses ? settings.jiraSyncStatuses.join(', ') : ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSettings(prev => ({
+                    ...prev,
+                    jiraSyncStatuses: val.split(',').map(s => s.trim()).filter(Boolean)
+                  }));
+                }}
+              />
+              <span className={styles.formHelp}>Pisahkan dengan koma (contoh: <code>To Do, In Progress, Done, Backlog</code>). Jika kosong, semua status akan ditarik.</span>
+            </div>
+
+            <div className={styles.formRow}>
+              <div className={styles.formGroup} style={{ flex: 1 }}>
+                <label className={styles.formLabel}>Rentang Waktu Update (Hari)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Contoh: 30"
+                  className={styles.formInput}
+                  value={settings.jiraSyncDaysBack ?? 30}
+                  onChange={e => setSettings({ ...settings, jiraSyncDaysBack: e.target.value === '' ? 30 : Number(e.target.value) })}
+                />
+                <span className={styles.formHelp}>Tarik isu yang diperbarui dalam X hari terakhir (masukkan 0 untuk menarik semua). Default: 30.</span>
+              </div>
+
+              <div className={styles.formGroup} style={{ flex: 1 }}>
+                <label className={styles.formLabel}>Maksimal Isu yang Ditarik</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Contoh: 500"
+                  className={styles.formInput}
+                  value={settings.jiraSyncMaxResults ?? 500}
+                  onChange={e => setSettings({ ...settings, jiraSyncMaxResults: e.target.value === '' ? 500 : Number(e.target.value) })}
+                />
+                <span className={styles.formHelp}>Jumlah maksimal isu yang ditarik per sinkronisasi. Default: 500.</span>
+              </div>
             </div>
           </div>
         )}

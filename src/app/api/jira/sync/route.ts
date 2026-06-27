@@ -248,6 +248,15 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        let startDateStr = "";
+        if (issue.startDate) {
+          try {
+            startDateStr = new Date(issue.startDate).toISOString().split('T')[0];
+          } catch (e) {
+            console.error('Invalid start date format from Jira:', issue.startDate);
+          }
+        }
+
         const localStatus = mapJiraStatusToLocal(issue.status, statusesList);
         const isDone = isStatusDone(localStatus);
 
@@ -265,6 +274,7 @@ export async function POST(request: NextRequest) {
                 title: issue.summary,
                 description: issue.description || '',
                 pic: issue.assignee || 'Unassigned',
+                startDate: startDateStr,
                 deadline: deadlineStr,
                 status: localStatus,
                 completed: isDone,
@@ -294,6 +304,7 @@ export async function POST(request: NextRequest) {
               data: {
                 title: issue.summary,
                 description: issue.description || `Ditarik dari Jira (${issue.key})`,
+                startDate: startDateStr,
                 deadline: deadlineStr,
                 pic: issue.assignee || 'Unassigned',
                 status: localStatus,

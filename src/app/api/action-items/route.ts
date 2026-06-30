@@ -1,8 +1,13 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyCapability } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'view_action_items');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const searchParams = request.nextUrl.searchParams;
     const projectId = searchParams.get('projectId');
     const completedParam = searchParams.get('completed');
@@ -63,12 +68,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'manage_action_items');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
 
     if (!body.title) {
-      return Response.json({ error: 'Title is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
     const settings = await prisma.systemSetting.findUnique({

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useModalDialog } from '@/components/ModalProvider';
 import * as XLSX from 'xlsx';
@@ -87,6 +88,7 @@ const getResolvedStatus = (item: ActionItem, statuses: string[]) => {
 };
 
 export default function ActionItemsPage() {
+  const router = useRouter();
   const { confirm, alert } = useModalDialog();
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -157,6 +159,21 @@ export default function ActionItemsPage() {
 
   const fetchData = async () => {
     try {
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) {
+        router.push('/login');
+        return;
+      }
+      const meData = await meRes.json();
+      const user = meData.user;
+      const roles = user?.roles || [];
+      const caps = user?.capabilities || [];
+
+      if (!roles.includes('Super Admin') && !caps.includes('view_action_items')) {
+        router.push('/unauthorized');
+        return;
+      }
+
       const [actionRes, projRes, settingsRes] = await Promise.all([
         fetch('/api/action-items'),
         fetch('/api/projects'),

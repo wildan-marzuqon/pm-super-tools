@@ -225,6 +225,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [settingsPic, setSettingsPic] = useState('');
   const [settingsDeadline, setSettingsDeadline] = useState('');
   const [settingsJiraProjectKey, setSettingsJiraProjectKey] = useState('');
+  const [settingsVisibility, setSettingsVisibility] = useState('public');
   
   // Custom Stages builder list state
   const [stagesList, setStagesList] = useState<Array<{ id?: string; name: string; completed_at?: string }>>([]);
@@ -233,6 +234,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const fetchProjectDetail = async () => {
     try {
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) {
+        router.push('/login');
+        return;
+      }
+      const meData = await meRes.json();
+      const user = meData.user;
+      const roles = user?.roles || [];
+      const caps = user?.capabilities || [];
+
+      if (!roles.includes('Super Admin') && !caps.includes('view_projects')) {
+        router.push('/unauthorized');
+        return;
+      }
+
       const res = await fetch(`/api/projects/${id}`);
       if (res.ok) {
         const data = await res.json();
@@ -245,6 +261,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setSettingsGDriveUrl(data.google_drive_folder_url || '');
         setSettingsGDriveApiKey(data.google_api_key || '');
         setSettingsJiraProjectKey(data.jira_project_key || '');
+        setSettingsVisibility(data.visibility || 'public');
         setStagesList(data.stages);
       } else {
         router.push('/projects');
@@ -686,6 +703,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           description: settingsDesc,
           pic: settingsPic,
           deadline: settingsDeadline,
+          visibility: settingsVisibility,
           google_drive_folder_url: settingsGDriveUrl,
           google_api_key: settingsGDriveApiKey,
           jira_project_key: settingsJiraProjectKey
@@ -1561,6 +1579,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     value={settingsDeadline}
                     onChange={(e) => setSettingsDeadline(e.target.value)}
                   />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Visibilitas Proyek</label>
+                  <select
+                    value={settingsVisibility}
+                    onChange={(e) => setSettingsVisibility(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--card-border)',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: 'var(--background)',
+                      color: 'var(--foreground)'
+                    }}
+                  >
+                    <option value="public">🔓 Publik (Semua pengguna bisa melihat)</option>
+                    <option value="private">🔒 Privat (Hanya Anda & Admin/PM yang bisa melihat)</option>
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Link Folder Google Drive (Auto-Sync)</label>

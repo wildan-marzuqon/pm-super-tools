@@ -1,15 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyCapability } from '@/lib/auth';
 
 // POST /api/daily-plan/bulk
 // Body: { actionItemIds: string[], date: string }
 // Creates one DailyPlanEntry per action item with no scheduled time (unscheduled)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'manage_daily_plan');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
     const { actionItemIds, date } = body;
 
     if (!date || !Array.isArray(actionItemIds) || actionItemIds.length === 0) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'date and actionItemIds[] are required' },
         { status: 400 }
       );
@@ -21,7 +28,7 @@ export async function POST(request: Request) {
     });
 
     if (actionItems.length === 0) {
-      return Response.json({ error: 'No valid action items found' }, { status: 404 });
+      return NextResponse.json({ error: 'No valid action items found' }, { status: 404 });
     }
 
     // Create a daily plan entry for each action item
@@ -45,9 +52,9 @@ export async function POST(request: Request) {
       )
     );
 
-    return Response.json({ created: created.length, entries: created }, { status: 201 });
+    return NextResponse.json({ created: created.length, entries: created }, { status: 201 });
   } catch (error) {
     console.error('Error bulk-creating daily plan entries:', error);
-    return Response.json({ error: 'Failed to bulk create daily plan entries' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to bulk create daily plan entries' }, { status: 500 });
   }
 }

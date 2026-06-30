@@ -1,8 +1,13 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyCapability } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'view_settings');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const setting = await prisma.systemSetting.findUnique({
       where: { id: 'default' }
     });
@@ -39,15 +44,19 @@ export async function GET() {
       jiraSyncMaxResults: 500
     };
 
-    return Response.json(responseData);
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return Response.json({ error: 'Failed to fetch settings' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'manage_settings');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const body = await request.json();
     const finalAppUrl = body.appUrl || 'https://pm-super-tools.vercel.app';
     
@@ -111,14 +120,14 @@ export async function POST(request: Request) {
       }
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       setting: updatedSetting,
       webhookRegistered,
       webhookError: webhookRegistered ? null : webhookError
     });
-  } catch (error) {
-    console.error('Error updating settings:', error);
-    return Response.json({ error: 'Failed to update settings' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error saving settings:', error);
+    return NextResponse.json({ error: error.message || 'Failed to save settings' }, { status: 500 });
   }
 }

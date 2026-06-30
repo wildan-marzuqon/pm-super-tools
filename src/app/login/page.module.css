@@ -1,0 +1,131 @@
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 10% 20%, rgb(253, 240, 233) 0%, rgb(255, 255, 255) 90%);
+  padding: 20px;
+  font-family: inherit;
+}
+
+.loginCard {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 24px;
+}
+
+.cardHeader {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background-color: #FFFDF5;
+  border: 1px solid #FEF08A;
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.cardHeader h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1E293B;
+  margin: 0 0 6px 0;
+}
+
+.cardHeader p {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.errorMessage {
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputGroup label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.inputGroup input {
+  padding: 10px 14px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  background-color: #F8FAFC;
+}
+
+.inputGroup input:focus {
+  border-color: #B45309;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+  background-color: #ffffff;
+}
+
+.loginBtn {
+  background-color: #B45309;
+  color: #ffffff;
+  border: 1px solid #9A3412;
+  padding: 11px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 6px;
+}
+
+.loginBtn:hover {
+  background-color: #9A3412;
+}
+
+.loginBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cardFooter {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed #E2E8F0;
+}
+
+.cardFooter p {
+  font-size: 11px;
+  color: #64748B;
+  margin: 0;
+}

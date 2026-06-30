@@ -1,0 +1,59 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 10% 20%, rgb(253, 240, 233) 0%, rgb(255, 255, 255) 90%);
+  padding: 20px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.icon {
+  font-size: 60px;
+  margin-bottom: 18px;
+}
+
+.card h1 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1E293B;
+  margin: 0 0 12px 0;
+}
+
+.card p {
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0 0 28px 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
+
+.primaryBtn {
+  background-color: #B45309;
+  color: #ffffff;
+  border: 1px solid #9A3412;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.primaryBtn:hover {
+  background-color: #9A3412;
+}

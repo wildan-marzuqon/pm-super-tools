@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyCapability } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'manage_daily_plan');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
     const { sourceDate, targetDate, excludeDone } = body;
 

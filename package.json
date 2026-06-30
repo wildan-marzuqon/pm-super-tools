@@ -17,6 +17,8 @@
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
     "adm-zip": "^0.5.17",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
     "localtunnel": "^2.0.2",
     "next": "16.2.9",
     "react": "19.2.4",
@@ -25,6 +27,8 @@
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

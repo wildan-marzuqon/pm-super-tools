@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useModalDialog } from '@/components/ModalProvider';
 
@@ -19,6 +20,7 @@ interface JiraIssue {
 }
 
 export default function TeamsLoadPage() {
+  const router = useRouter();
   const { alert } = useModalDialog();
   const [issues, setIssues] = useState<JiraIssue[]>([]);
   const [activeIssues, setActiveIssues] = useState<JiraIssue[]>([]);
@@ -89,6 +91,21 @@ export default function TeamsLoadPage() {
   // Fetch initial Jira issues
   const fetchIssues = async () => {
     try {
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) {
+        router.push('/login');
+        return;
+      }
+      const meData = await meRes.json();
+      const user = meData.user;
+      const roles = user?.roles || [];
+      const caps = user?.capabilities || [];
+
+      if (!roles.includes('Super Admin') && !caps.includes('view_teams_load')) {
+        router.push('/unauthorized');
+        return;
+      }
+
       const [issuesRes, settingsRes] = await Promise.all([
         fetch('/api/jira-issues'),
         fetch('/api/wa-copilot/settings')

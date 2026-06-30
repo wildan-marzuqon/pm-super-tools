@@ -165,6 +165,21 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
+        const meRes = await fetch('/api/auth/me');
+        if (!meRes.ok) {
+          router.push('/login');
+          return;
+        }
+        const meData = await meRes.json();
+        const user = meData.user;
+        const roles = user?.roles || [];
+        const caps = user?.capabilities || [];
+
+        if (!roles.includes('Super Admin') && !caps.includes('view_dashboard')) {
+          router.push('/unauthorized');
+          return;
+        }
+
         const [projRes, actionRes, notesRes, dailyPlanRes, settingsRes] = await Promise.all([
           fetch('/api/projects'),
           fetch('/api/action-items'),

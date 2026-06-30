@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 interface ProjectStage {
@@ -17,12 +18,14 @@ interface Project {
   description: string;
   deadline: string;
   pic: string;
+  visibility: string;
   current_stage_index: number;
   stages: ProjectStage[];
   currentStage: ProjectStage | null;
 }
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
@@ -36,11 +39,27 @@ export default function ProjectsPage() {
     description: '',
     deadline: '',
     pic: 'Wildan',
-    stagesInput: 'Ideation, POC, Kick Off, Implementation, Live'
+    stagesInput: 'Ideation, POC, Kick Off, Implementation, Live',
+    visibility: 'public'
   });
 
   const fetchProjects = async () => {
     try {
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) {
+        router.push('/login');
+        return;
+      }
+      const meData = await meRes.json();
+      const user = meData.user;
+      const roles = user?.roles || [];
+      const caps = user?.capabilities || [];
+
+      if (!roles.includes('Super Admin') && !caps.includes('view_projects')) {
+        router.push('/unauthorized');
+        return;
+      }
+
       const res = await fetch('/api/projects');
       if (res.ok) {
         const data = await res.json();
@@ -77,6 +96,7 @@ export default function ProjectsPage() {
           description: newProject.description,
           deadline: newProject.deadline,
           pic: newProject.pic,
+          visibility: newProject.visibility,
           stages: parsedStages
         })
       });
@@ -88,7 +108,8 @@ export default function ProjectsPage() {
           description: '',
           deadline: '',
           pic: 'Wildan',
-          stagesInput: 'Ideation, POC, Kick Off, Implementation, Live'
+          stagesInput: 'Ideation, POC, Kick Off, Implementation, Live',
+          visibility: 'public'
         });
         fetchProjects();
       }
@@ -223,9 +244,14 @@ export default function ProjectsPage() {
               <div key={proj.id} className={styles.projCard}>
                 <div className={styles.cardHeader}>
                   <h3 className={styles.projName}>{proj.name}</h3>
-                  <span className={`${styles.statusBadge} ${isCompleted ? styles.liveBadge : styles.activeBadge}`}>
-                    {isCompleted ? '✓ LIVE' : `Tahap: ${activeStage?.name || 'Selesai'}`}
-                  </span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className={`${styles.statusBadge} ${isCompleted ? styles.liveBadge : styles.activeBadge}`}>
+                      {isCompleted ? '✓ LIVE' : `Tahap: ${activeStage?.name || 'Selesai'}`}
+                    </span>
+                    <span className={`${styles.visibilityBadge} ${proj.visibility === 'private' ? styles.privateBadge : styles.publicBadge}`}>
+                      {proj.visibility === 'private' ? '🔒 Privat' : '🔓 Publik'}
+                    </span>
+                  </div>
                 </div>
 
                 <p className={styles.projDesc}>
@@ -336,6 +362,25 @@ export default function ProjectsPage() {
                       onChange={(e) => setNewProject({ ...newProject, deadline: e.target.value })}
                     />
                   </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Visibilitas Proyek</label>
+                  <select
+                    value={newProject.visibility}
+                    onChange={(e) => setNewProject({ ...newProject, visibility: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--card-border)',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: 'var(--background)',
+                      color: 'var(--foreground)'
+                    }}
+                  >
+                    <option value="public">🔓 Publik (Semua pengguna bisa melihat)</option>
+                    <option value="private">🔒 Privat (Hanya Anda & Admin/PM yang bisa melihat)</option>
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
                   <label>Urutan Tahapan / Stages (pisahkan dengan koma)</label>

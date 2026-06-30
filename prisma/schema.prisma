@@ -64,6 +64,7 @@ model Project {
   googleDriveFolderUrl String?           @map("google_drive_folder_url")
   googleApiKey         String?           @map("google_api_key")
   jiraProjectKey       String?           @map("jira_project_key")
+  visibility           String            @default("public")
   createdAt            DateTime          @default(now()) @map("created_at")
   stages               ProjectStage[]
   actions              ActionItem[]
@@ -232,4 +233,56 @@ model DailyPlanEntry {
   updatedAt    DateTime    @updatedAt        @map("updated_at")
 
   @@map("daily_plan_entries")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  roles     UserRole[]
+
+  @@map("users")
+}
+
+model Role {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  description  String           @default("")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  users        UserRole[]
+  capabilities RoleCapability[]
+
+  @@map("roles")
+}
+
+model Capability {
+  id          String           @id
+  description String           @default("")
+  roles       RoleCapability[]
+
+  @@map("capabilities")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RoleCapability {
+  roleId       String     @map("role_id")
+  capabilityId String     @map("capability_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  capability   Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, capabilityId])
+  @@map("role_capabilities")
 }

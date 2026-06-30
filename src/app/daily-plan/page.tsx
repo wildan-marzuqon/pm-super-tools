@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 interface ActionItem {
@@ -91,6 +92,8 @@ function getDatesInRange(start: string, end: string): string[] {
 type DateFilterMode = 'today' | 'week' | 'custom';
 
 export default function DailyPlanPage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterMode, setFilterMode] = useState<DateFilterMode>('today');
   const [customDate, setCustomDate] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -188,8 +191,30 @@ export default function DailyPlanPage() {
 
   // Fetch initial action items and today's entries for banner reminder
   useEffect(() => {
-    fetchActionItems();
-    fetchTodayEntries();
+    const verifyAccess = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          router.push('/login');
+          return;
+        }
+        const data = await res.json();
+        setCurrentUser(data.user);
+        const roles = data.user?.roles || [];
+        const caps = data.user?.capabilities || [];
+        if (!roles.includes('Super Admin') && !caps.includes('view_daily_plan')) {
+          router.push('/unauthorized');
+          return;
+        }
+
+        fetchActionItems();
+        fetchTodayEntries();
+      } catch (err) {
+        console.error('Error verifying access:', err);
+      }
+    };
+
+    verifyAccess();
 
     const interval = setInterval(fetchTodayEntries, 60000);
     return () => clearInterval(interval);

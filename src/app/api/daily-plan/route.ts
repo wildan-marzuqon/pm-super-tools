@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyCapability } from '@/lib/auth';
 
 // Helper to convert time "HH:MM" to minutes (handles null)
 function timeToMinutes(t: string | null): number {
@@ -35,6 +36,10 @@ function getJakartaCurrentMinutes(): number {
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'view_daily_plan');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const searchParams = request.nextUrl.searchParams;
     let dateStr = searchParams.get('date');
     const badge = searchParams.get('badge') === 'true';
@@ -127,8 +132,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCapability(request, 'manage_daily_plan');
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
     const body = await request.json();
     const { date, startTime, endTime, type, title, notes, status, actionItemId, createActionItem } = body;
 

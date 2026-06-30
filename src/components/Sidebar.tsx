@@ -8,8 +8,33 @@ import styles from './Sidebar.module.css';
 export default function Sidebar() {
   const pathname = usePathname();
   const [badgeType, setBadgeType] = useState<'ongoing' | 'upcoming' | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data.user);
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', { method: 'POST' });
+      if (res.ok) {
+        window.location.href = '/login';
+      }
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
 
   useEffect(() => {
+    fetchCurrentUser();
     async function checkBadge() {
       try {
         const res = await fetch('/api/daily-plan?date=today&badge=true');
@@ -167,8 +192,26 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        <span className={styles.version}>PM Workspace v1.0</span>
-        <span className={styles.statusBadge}>Local Mode</span>
+        {currentUser && (
+          <div className={styles.userProfile}>
+            <div className={styles.userAvatar}>
+              {currentUser.name.charAt(0).toUpperCase()}
+            </div>
+            <div className={styles.userInfo}>
+              <span className={styles.userName}>{currentUser.name}</span>
+              <span className={styles.userRole}>
+                {currentUser.roles.join(', ')}
+              </span>
+            </div>
+            <button onClick={handleLogout} className={styles.logoutBtn} title="Log Out">
+              🚪
+            </button>
+          </div>
+        )}
+        <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+          <span className={styles.version}>v1.0 RBAC</span>
+          <span className={styles.statusBadge}>Online</span>
+        </div>
       </div>
     </aside>
   );

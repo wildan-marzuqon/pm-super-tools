@@ -611,3 +611,21 @@
   text-align: left;
 }
 
+.visibilityBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.publicBadge {
+  background-color: #ECFDF5;
+  color: #047857;
+}
+
+.privateBadge {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+}
+

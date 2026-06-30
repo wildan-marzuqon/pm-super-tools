@@ -129,6 +129,7 @@ export default function DailyPlanPage() {
   // Duplicate Plan States
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [duplicateOption, setDuplicateOption] = useState<'all' | 'pending'>('all');
 
   // Initialize selectedDate on mount
   useEffect(() => {
@@ -242,6 +243,7 @@ export default function DailyPlanPage() {
       alert('Tidak ada rencana di hari ini untuk diduplikasi!');
       return;
     }
+    setDuplicateOption('all');
     setShowDuplicateModal(true);
   };
 
@@ -255,7 +257,8 @@ export default function DailyPlanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sourceDate: selectedDate,
-          targetDate: nextDate
+          targetDate: nextDate,
+          excludeDone: duplicateOption === 'pending'
         })
       });
 
@@ -987,9 +990,39 @@ export default function DailyPlanPage() {
               </button>
             </div>
             <div className={styles.modalBody}>
-              <p style={{ margin: '0 0 12px 0' }}>
-                Apakah Anda yakin ingin menduplikasi seluruh agenda pada tanggal <strong>{new Date(selectedDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> ke hari selanjutnya?
+              <p style={{ margin: '0 0 16px 0' }}>
+                Apakah Anda yakin ingin menduplikasi agenda pada tanggal <strong>{new Date(selectedDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> ke hari selanjutnya?
               </p>
+
+              {/* Duplicate Option Radio Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '0 0 16px 0', padding: '12px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted-text)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pilih Agenda Yang Diduplikasi:</span>
+                
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  <input
+                    type="radio"
+                    name="duplicateOption"
+                    value="all"
+                    checked={duplicateOption === 'all'}
+                    onChange={() => setDuplicateOption('all')}
+                    style={{ accentColor: '#B45309' }}
+                  />
+                  <span>📋 Semua Jadwal (Tanpa Terkecuali)</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  <input
+                    type="radio"
+                    name="duplicateOption"
+                    value="pending"
+                    checked={duplicateOption === 'pending'}
+                    onChange={() => setDuplicateOption('pending')}
+                    style={{ accentColor: '#B45309' }}
+                  />
+                  <span>⏳ Kecualikan yang Selesai (Hanya yang belum dikerjakan)</span>
+                </label>
+              </div>
+
               <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '10px 12px', borderRadius: '6px', color: '#92400E', fontSize: '12px' }}>
                 <strong>⚠️ Peringatan:</strong> Seluruh data rencana/agenda yang sudah ada di tanggal <strong>{new Date(getNextDateStr(selectedDate) + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> akan <strong>tertimpa secara permanen</strong>.
               </div>

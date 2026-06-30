@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sourceDate, targetDate } = body;
+    const { sourceDate, targetDate, excludeDone } = body;
 
     if (!sourceDate || !targetDate) {
       return NextResponse.json(
@@ -25,6 +25,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Filter if excludeDone is true
+    let entriesToDuplicate = sourceEntries;
+    if (excludeDone) {
+      entriesToDuplicate = sourceEntries.filter(entry => {
+        const normStatus = (entry.status || '').toLowerCase();
+        return normStatus !== 'done' && normStatus !== 'selesai' && normStatus !== 'skipped';
+      });
+    }
+
+    if (entriesToDuplicate.length === 0) {
+      return NextResponse.json(
+        { error: 'Tidak ada agenda aktif (belum selesai) untuk diduplikasi.' },
+        { status: 400 }
+      );
+    }
+
     // 2. Delete all existing entries on targetDate (to overwrite)
     await prisma.dailyPlanEntry.deleteMany({
       where: { date: targetDate }
@@ -32,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Create duplicates for targetDate
     const createdEntries = await Promise.all(
-      sourceEntries.map((entry) => {
+      entriesToDuplicate.map((entry) => {
         // Reset status for the next day
         const defaultStatus = entry.type === 'task' ? 'open' : 'pending';
         

@@ -232,9 +232,13 @@ export default function DailyPlanPage() {
 
   const getNextDateStr = (dateStr: string): string => {
     if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
     d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const rDay = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${rDay}`;
   };
 
   const handleOpenDuplicateConfirm = () => {

@@ -126,6 +126,10 @@ export default function DailyPlanPage() {
   const [quickCreateActionItem, setQuickCreateActionItem] = useState(false);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
+  // Duplicate Plan States
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
   // Initialize selectedDate on mount
   useEffect(() => {
     const today = getJakartaTodayStr();
@@ -222,6 +226,52 @@ export default function DailyPlanPage() {
       }
     } catch (error) {
       console.error('Error fetching today entries:', error);
+    }
+  };
+
+  const getNextDateStr = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const handleOpenDuplicateConfirm = () => {
+    const dayPlans = rangeEntries.filter(e => e.date === selectedDate);
+    if (dayPlans.length === 0) {
+      alert('Tidak ada rencana di hari ini untuk diduplikasi!');
+      return;
+    }
+    setShowDuplicateModal(true);
+  };
+
+  const handleDuplicateConfirm = async () => {
+    if (isDuplicating || !selectedDate) return;
+    setIsDuplicating(true);
+    try {
+      const nextDate = getNextDateStr(selectedDate);
+      const res = await fetch('/api/daily-plan/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceDate: selectedDate,
+          targetDate: nextDate
+        })
+      });
+
+      if (res.ok) {
+        // Refresh range entries to show new changes
+        await fetchRangeEntries();
+        setShowDuplicateModal(false);
+      } else {
+        const errorData = await res.json();
+        alert('Gagal menduplikasi: ' + (errorData.error || 'Terjadi kesalahan'));
+      }
+    } catch (error: any) {
+      console.error('Error duplicating daily plan:', error);
+      alert('Gagal menduplikasi: ' + error.message);
+    } finally {
+      setIsDuplicating(false);
     }
   };
 
@@ -555,9 +605,14 @@ export default function DailyPlanPage() {
             </div>
           </div>
 
-          {!isPastDate() && false && (
-            <button className={styles.addButton} onClick={() => {}}>+ Tambah</button>
-          )}
+          <button
+            type="button"
+            className={styles.duplicateBtn}
+            onClick={handleOpenDuplicateConfirm}
+            title="Duplikat jadwal hari ini ke hari selanjutnya"
+          >
+            👯 Duplikat ke Esok Hari
+          </button>
         </div>
 
         {/* QUICK ADD INLINE ROW (Only if selected day is NOT past) */}
@@ -916,6 +971,50 @@ export default function DailyPlanPage() {
           )}
         </div>
       </main>
+
+      {/* Duplicate Plan Confirmation Modal */}
+      {showDuplicateModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3>Konfirmasi Duplikasi Jadwal</h3>
+              <button 
+                type="button" 
+                className={styles.closeBtn} 
+                onClick={() => setShowDuplicateModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p style={{ margin: '0 0 12px 0' }}>
+                Apakah Anda yakin ingin menduplikasi seluruh agenda pada tanggal <strong>{new Date(selectedDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> ke hari selanjutnya?
+              </p>
+              <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '10px 12px', borderRadius: '6px', color: '#92400E', fontSize: '12px' }}>
+                <strong>⚠️ Peringatan:</strong> Seluruh data rencana/agenda yang sudah ada di tanggal <strong>{new Date(getNextDateStr(selectedDate) + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong> akan <strong>tertimpa secara permanen</strong>.
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button 
+                type="button" 
+                className={styles.modalCancelBtn} 
+                onClick={() => setShowDuplicateModal(false)}
+                disabled={isDuplicating}
+              >
+                Batal
+              </button>
+              <button 
+                type="button" 
+                className={styles.modalConfirmBtn} 
+                onClick={handleDuplicateConfirm}
+                disabled={isDuplicating}
+              >
+                {isDuplicating ? 'Menduplikasi...' : 'Ya, Duplikat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

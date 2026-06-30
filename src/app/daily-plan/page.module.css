@@ -1121,3 +1121,137 @@
   border-color: var(--primary, #F59E0B);
 }
 
+/* Duplicate Button style */
+.duplicateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #EEF2F6;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-md);
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.duplicateBtn:hover {
+  background-color: #E2E8F0;
+  color: #1F2937;
+  border-color: #9CA3AF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.duplicateBtn:active {
+  transform: translateY(0.5px);
+}
+
+/* Modal Overlay & Card style */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modalCard {
+  background-color: #ffffff;
+  width: 440px;
+  max-width: 90vw;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+.modalHeader {
+  padding: 14px 18px;
+  background-color: #F9FAFB;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalHeader h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.closeBtn {
+  font-size: 20px;
+  color: var(--muted-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: var(--foreground);
+}
+
+.modalBody {
+  padding: 20px 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4B5563;
+}
+
+.modalFooter {
+  padding: 12px 18px;
+  background-color: #F9FAFB;
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modalCancelBtn {
+  background-color: #ffffff;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.modalCancelBtn:hover {
+  background-color: #F3F4F6;
+  color: #1F2937;
+}
+
+.modalConfirmBtn {
+  background-color: #B45309; /* Matches orange/amber theme */
+  color: #ffffff;
+  border: 1px solid #9A3412;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.modalConfirmBtn:hover {
+  background-color: #9A3412;
+}
+
+.modalConfirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

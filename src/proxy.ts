@@ -11,8 +11,25 @@ async function verifyJwtEdge(token: string): Promise<any | null> {
 
     const [headerB64, payloadB64, signatureB64] = parts;
 
+    const base64UrlDecode = (str: string) => {
+      let output = str.replace(/-/g, '+').replace(/_/g, '/');
+      switch (output.length % 4) {
+        case 0:
+          break;
+        case 2:
+          output += '==';
+          break;
+        case 3:
+          output += '=';
+          break;
+        default:
+          throw new Error('Illegal base64url string!');
+      }
+      return atob(output);
+    };
+
     // Decode payload
-    const payloadStr = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+    const payloadStr = base64UrlDecode(payloadB64);
     const payload = JSON.parse(payloadStr);
 
     // Check expiration
@@ -34,8 +51,9 @@ async function verifyJwtEdge(token: string): Promise<any | null> {
     const data = encoder.encode(`${headerB64}.${payloadB64}`);
     
     // Decode signature
+    const signatureStr = base64UrlDecode(signatureB64);
     const signatureBin = Uint8Array.from(
-      atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')),
+      signatureStr,
       c => c.charCodeAt(0)
     );
 

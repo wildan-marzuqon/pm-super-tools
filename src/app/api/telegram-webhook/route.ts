@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { parseWhatsAppZip, filterChatByDate } from '@/lib/zip-parser';
 import { anonymize, deanonymize } from '@/lib/anonymizer';
 import { extractInsightsFromChat } from '@/lib/gemini';
+import { handleTelegramAgentMessage } from '@/lib/telegram-agent';
 
 // Helper to send messages to Telegram
 async function sendTelegramMessage(token: string, chatId: string, text: string, replyMarkup?: any, replyToMessageId?: number) {
@@ -44,6 +45,69 @@ async function editTelegramMessageText(token: string, chatId: string, messageId:
       text
     })
   });
+}
+
+// Helper to send typing indicator to Telegram
+async function sendTelegramTypingAction(token: string, chatId: string) {
+  const url = `https://api.telegram.org/bot${token}/sendChatAction`;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        action: 'typing'
+      })
+    });
+  } catch (err) {
+    console.error('Failed to send typing action:', err);
+  }
+}
+
+// Helper to generate dynamic greeting message
+async function getGreetingMessage(): Promise<string> {
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  // Fetch workspace stats
+  const projectsCount = await prisma.project.count();
+  const openActionItemsCount = await prisma.actionItem.count({
+    where: {
+      completed: false,
+      status: { not: 'Selesai' }
+    }
+  });
+  const todayPlansCount = await prisma.dailyPlanEntry.count({
+    where: { date: currentDate }
+  });
+
+  // Determine greeting prefix based on local hour
+  const hour = new Date().getHours();
+  let timeGreeting = "Halo Kak Wildan! Selamat pagi 🌅";
+  if (hour >= 11 && hour < 15) {
+    timeGreeting = "Halo Kak Wildan! Selamat siang ☀️";
+  } else if (hour >= 15 && hour < 19) {
+    timeGreeting = "Halo Kak Wildan! Selamat sore ⛅";
+  } else if (hour >= 19 || hour < 4) {
+    timeGreeting = "Halo Kak Wildan! Selamat malam 🌙";
+  }
+
+  return `${timeGreeting}\n\n` +
+    `Senang bertemu Anda kembali. Berikut ringkasan workspace Anda hari ini:\n` +
+    `• 📁 **${projectsCount}** Project aktif\n` +
+    `• 📝 **${openActionItemsCount}** Action Item terbuka\n` +
+    `• 📅 **${todayPlansCount}** Agenda jadwal hari ini\n\n` +
+    `**Apa yang bisa Anda lakukan di sini?**\n` +
+    `1. 💬 **Tanya Jawab / CRUD Agent**\n` +
+    `   Langsung ketik perintah natural Anda, misalnya:\n` +
+    `   👉 *"Tampilkan jadwal saya hari ini"*\n` +
+    `   👉 *"Buat action item baru: Meeting desain, pic Wildan, deadline besok"*\n` +
+    `   👉 *"Ubah status task 'Meeting desain' jadi Selesai"*\n` +
+    `   👉 *"Kasih rekap agenda hari ini dan task tertunda"*\n\n` +
+    `2. 📈 **WhatsApp Chat Analyzer**\n` +
+    `   Ekspor chat WhatsApp (.zip tanpa media) ke sini untuk diekstrak AI menjadi draf action items, keputusan, dan risiko.\n\n` +
+    `Command:\n` +
+    `/logout - Mengunci akses bot kembali\n` +
+    `/help - Menampilkan panduan ini`;
 }
 
 export async function POST(request: Request) {
@@ -359,7 +423,8 @@ export async function POST(request: Request) {
           where: { chatId },
           data: { isAuthorized: true }
         });
-        await sendTelegramMessage(token, chatId, 'Otorisasi sukses! 🔓\nSelamat datang di SuperPM AI Copilot Bot. Silakan kirimkan file ZIP ekspor obrolan WhatsApp Anda.');
+        const greeting = await getGreetingMessage();
+        await sendTelegramMessage(token, chatId, `Otorisasi sukses! 🔓\n\n${greeting}`);
       } else {
         await sendTelegramMessage(token, chatId, 'Akses dibatasi. Silakan masukkan PIN keamanan Anda untuk membuka akses:');
       }
@@ -368,16 +433,8 @@ export async function POST(request: Request) {
 
     // 2. Handle standard commands
     if (text === '/start' || text === '/help') {
-      const welcomeText = `Halo! Saya SuperPM AI Copilot Bot. ⚡\n\n` +
-        `Cara penggunaan:\n` +
-        `1. Masuk ke WhatsApp (HP Anda)\n` +
-        `2. Buka chat/grup -> Klik menu -> Ekspor Obrolan (Export Chat) -> Tanpa Media (Without Media).\n` +
-        `3. Kirim file .zip hasil ekspor tersebut ke bot ini.\n` +
-        `4. Bot akan mengekstrak berkas, menampilkan daftar tanggal unik, dan membiarkan Anda memilih hari apa yang ingin dianalisis.\n\n` +
-        `Command:\n` +
-        `/logout - Mengunci akses bot kembali\n` +
-        `/help - Menampilkan panduan ini`;
-      await sendTelegramMessage(token, chatId, welcomeText);
+      const greeting = await getGreetingMessage();
+      await sendTelegramMessage(token, chatId, greeting);
       return Response.json({ ok: true });
     }
 
@@ -503,8 +560,15 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    // Default response for unhandled input
-    await sendTelegramMessage(token, chatId, 'Input tidak dikenal. Harap kirimkan berkas ekspor obrolan WhatsApp (.zip) atau gunakan command /help.');
+    // Forward text to the conversational agent
+    await sendTelegramTypingAction(token, chatId);
+    try {
+      const agentResponse = await handleTelegramAgentMessage(text, chatId);
+      await sendTelegramMessage(token, chatId, agentResponse);
+    } catch (err: any) {
+      console.error('Error in Telegram Agent handler:', err);
+      await sendTelegramMessage(token, chatId, `Maaf, terjadi kesalahan saat memproses permintaan Anda: ${err.message || 'Error tidak diketahui'}`);
+    }
     return Response.json({ ok: true });
 
   } catch (error) {

@@ -9,22 +9,78 @@ async function executeListProjects() {
   return { success: true, count: projects.length, projects };
 }
 
-async function executeListActionItems(status?: string, pic?: string, projectId?: string) {
+async function executeListActionItems(
+  status?: string,
+  pic?: string,
+  projectId?: string,
+  excludeCompleted?: boolean,
+  deadlineStart?: string,
+  deadlineEnd?: string
+) {
   const where: any = {};
+  
   if (status) {
-    where.status = { equals: status, mode: 'insensitive' };
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus === 'open') {
+      where.OR = [
+        { status: { equals: 'open', mode: 'insensitive' } },
+        { status: { equals: 'to do', mode: 'insensitive' } },
+        { status: { equals: 'testing', mode: 'insensitive' } },
+        { status: { equals: 'in progress', mode: 'insensitive' } },
+        { status: { equals: 'pending', mode: 'insensitive' } },
+      ];
+    } else if (lowerStatus === 'completed' || lowerStatus === 'selesai' || lowerStatus === 'done') {
+      where.OR = [
+        { status: { equals: 'selesai', mode: 'insensitive' } },
+        { status: { equals: 'done', mode: 'insensitive' } },
+        { completed: true }
+      ];
+    } else {
+      where.status = { equals: status, mode: 'insensitive' };
+    }
   }
+
+  if (excludeCompleted) {
+    where.completed = false;
+    if (!status) {
+      if (where.OR) {
+        // keep existing OR filter
+      } else {
+        where.NOT = [
+          { status: { equals: 'selesai', mode: 'insensitive' } },
+          { status: { equals: 'done', mode: 'insensitive' } }
+        ];
+      }
+    }
+  }
+
   if (pic) {
     where.pic = { contains: pic, mode: 'insensitive' };
   }
   if (projectId) {
     where.projectId = projectId;
   }
+
+  if (deadlineStart || deadlineEnd) {
+    where.deadline = {};
+    if (deadlineStart) {
+      where.deadline.gte = deadlineStart;
+    }
+    if (deadlineEnd) {
+      where.deadline.lte = deadlineEnd;
+      where.deadline.not = "";
+    }
+  }
+
   const actionItems = await prisma.actionItem.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
-    take: 20
+    orderBy: [
+      { deadline: 'asc' },
+      { createdAt: 'desc' }
+    ],
+    take: 50
   });
+
   return { success: true, count: actionItems.length, actionItems };
 }
 
@@ -253,13 +309,16 @@ const agentTools = [
       },
       {
         name: "listActionItems",
-        description: "Get action items, optionally filtered by status, PIC name, or project ID.",
+        description: "Get action items, optionally filtered by status, PIC name, project ID, completion, or deadline range.",
         parameters: {
           type: "OBJECT",
           properties: {
-            status: { type: "STRING", description: "Filter by status: 'Pending', 'Open', 'In Progress', 'Selesai'" },
+            status: { type: "STRING", description: "Filter by status. Use 'open' to match active/incomplete tasks (TO DO, Testing, Open) or 'completed' for finished ones." },
             pic: { type: "STRING", description: "Filter by PIC name (case-insensitive)" },
-            projectId: { type: "STRING", description: "Filter by project ID" }
+            projectId: { type: "STRING", description: "Filter by project ID" },
+            excludeCompleted: { type: "BOOLEAN", description: "If true, excludes finished tasks. Defaults to true for active task lookups." },
+            deadlineStart: { type: "STRING", description: "Start of deadline range in YYYY-MM-DD format" },
+            deadlineEnd: { type: "STRING", description: "End of deadline range in YYYY-MM-DD format" }
           }
         }
       },
@@ -393,7 +452,8 @@ Rules:
 5. Provide helpful and formatted markdown responses. Present lists as bullet points or tables.
 6. If the user asks a general question unrelated to database operations, answer directly without calling any tools.
 7. Be proactive: if a task is updated or created, summarize the details nicely.
-8. If the database response is empty or errors, explain it clearly to the user in a friendly way.`;
+8. If the database response is empty or errors, explain it clearly to the user in a friendly way.
+9. IMPORTANT: The database contains tasks synced from Jira using statuses like 'TO DO', 'Testing', 'Done' as well as manual tasks using 'Open', 'Pending', 'In Progress', 'Selesai'. When the user asks for open/active tasks (e.g., 'ada task apa saja'), set excludeCompleted=true and DO NOT filter by status='open' unless explicitly asked, as this will filter out Jira's 'TO DO' and 'Testing' tasks. When displaying tasks, show their actual status from the database.`;
 
   // Start chat session with user input
   const contents: any[] = [
@@ -465,7 +525,14 @@ Rules:
             result = await executeListProjects();
             break;
           case 'listActionItems':
-            result = await executeListActionItems(args.status, args.pic, args.projectId);
+            result = await executeListActionItems(
+              args.status,
+              args.pic,
+              args.projectId,
+              args.excludeCompleted,
+              args.deadlineStart,
+              args.deadlineEnd
+            );
             break;
           case 'createActionItem':
             result = await executeCreateActionItem(args.title, args.description, args.deadline, args.pic, args.projectId);

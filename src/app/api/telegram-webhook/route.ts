@@ -5,15 +5,43 @@ import { anonymize, deanonymize } from '@/lib/anonymizer';
 import { extractInsightsFromChat } from '@/lib/gemini';
 import { handleTelegramAgentMessage } from '@/lib/telegram-agent';
 
+// Helper to format Markdown to Telegram HTML
+function formatMarkdownToTelegramHTML(text: string): string {
+  if (!text) return '';
+  
+  // 1. Escape HTML special characters (crucial for Telegram API)
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // 2. Convert Bold: **text** to <b>text</b>
+  html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+  // 3. Convert Italic: *text* or _text_ to <i>text</i>
+  html = html.replace(/\*([^\*]+)\*/g, '<i>$1</i>');
+  html = html.replace(/_([^_]+)_/g, '<i>$1</i>');
+
+  // 4. Convert Inline Code: `code` to <code>code</code>
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 5. Convert Links: [text](url) to <a href="$2">$1</a>
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  return html;
+}
+
 // Helper to send messages to Telegram
 async function sendTelegramMessage(token: string, chatId: string, text: string, replyMarkup?: any, replyToMessageId?: number) {
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const formattedText = formatMarkdownToTelegramHTML(text);
   await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text,
+      text: formattedText,
+      parse_mode: 'HTML',
       reply_markup: replyMarkup,
       reply_to_message_id: replyToMessageId
     })
